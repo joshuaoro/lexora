@@ -1,0 +1,142 @@
+// LEXORA — AI-Assisted Reading and Progress Tracking Web Application
+// SQLite has no enums, so role/type fields use validated strings.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("LEARNER") // LEARNER | SPECIALIST
+  createdAt DateTime @default(now())
+
+  learnerProfile LearnerProfile?
+  reviews        AttemptReview[]
+}
+
+model LearnerProfile {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level    Int    @default(1) // adaptive difficulty 1–5
+  stage    Int    @default(1) // Marungko stage reached 1–7
+  settings String @default("{}") // accessibility settings JSON
+
+  attempts      Attempt[]
+  sessions      ActivitySession[]
+  practiceItems PracticeItem[]
+}
+
+model Word {
+  id          String  @id @default(cuid())
+  text        String  @unique
+  syllables   String // hyphenated, e.g. "ba-hay"
+  pattern     String // CV, CVC, CVCV, CCV, CVCCV ...
+  stage       Int // Marungko stage 1–7 (letters required)
+  level       Int // difficulty 1–5
+  meaningEn   String? // English gloss shown to specialists
+  // Comma-separated spellings the ASR may legitimately return for a correct
+  // reading (loanwords and digraphs: "krus" often transcribes as "cross").
+  variants    String  @default("")
+  // Generated (neural TTS) pronunciation — `npm run audio:generate`
+  audioWord      String? // base64 data URL: whole word
+  audioSyll      String? // base64 data URL: syllable by syllable
+  // Reading specialist's own voice. Kept separate so it always takes priority
+  // and can be removed without losing the generated clip.
+  audioWordHuman String?
+  audioSyllHuman String?
+  // Bumped whenever any clip changes, so cached audio URLs refresh.
+  audioVersion   Int     @default(1)
+
+  attempts      Attempt[]
+  practiceItems PracticeItem[]
+}
+
+// Curated phonological-awareness items (e.g. rhyme sets)
+model PhonItem {
+  id      String @id @default(cuid())
+  type    String // RHYME
+  prompt  String // target word
+  options String // JSON array of choices
+  answer  String
+  level   Int    @default(1)
+}
+
+model ActivitySession {
+  id          String   @id @default(cuid())
+  learnerId   String
+  learner     LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  type        String // READ_ALOUD | LISTEN_CHOOSE | SYLLABLES | RHYME | PRACTICE | READER
+  total       Int      @default(0)
+  correct     Int      @default(0)
+  durationMs  Int      @default(0)
+  levelAtTime Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  attempts Attempt[]
+}
+
+model Attempt {
+  id           String   @id @default(cuid())
+  learnerId    String
+  learner      LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  wordId       String?
+  word         Word?    @relation(fields: [wordId], references: [id], onDelete: SetNull)
+  sessionId    String?
+  session      ActivitySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  activityType String // READ_ALOUD | LISTEN_CHOOSE | SYLLABLES | RHYME | PRACTICE
+  target       String // target word text (denormalized so history survives edits)
+  transcript   String? // what the ASR heard, or the option the learner chose
+  engine       String? // which ASR scored it: server (Whisper) | browser (Web Speech)
+  altTranscript String? // the other engine's transcript, when both ran
+  correct      Boolean
+  score        Float    @default(0) // similarity 0–1
+  errorType    String? // correct | substitution | omission | insertion | no_response
+  responseMs   Int      @default(0)
+  audio        String? // base64 data-URL recording of the oral reading (capped)
+  levelAtTime  Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  review AttemptReview?
+
+  @@index([learnerId, createdAt])
+  @@index([learnerId, activityType])
+}
+
+// A reading specialist's verdict on a system-scored oral reading.
+// Powers the human–system agreement metric (Objective 2 / Validation).
+model AttemptReview {
+  id           String   @id @default(cuid())
+  attemptId    String   @unique
+  attempt      Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  specialistId String
+  specialist   User     @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  agrees       Boolean // specialist agrees with the system's correct/incorrect verdict
+  note         String?
+  createdAt    DateTime @default(now())
+}
+
+// Personalized practice list: auto-added on misreads, or pinned by a specialist.
+model PracticeItem {
+  id        String   @id @default(cuid())
+  learnerId String
+  learner   LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  wordId    String
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  source    String   @default("AUTO") // AUTO | SPECIALIST
+  missCount Int      @default(1)
+  streak    Int      @default(0) // consecutive correct practice reads
+  mastered  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([learnerId, wordId])
+}

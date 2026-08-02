@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  /* LEXORA palette — warm cream surfaces, navy ink, muted steel-blue primary */
+  --color-cream: #faf5ec;
+  --color-cream-dark: #f2eadb;
+  --color-card: #ffffff;
+  --color-line: #eae0ce;
+  --color-ink: #22304a;
+  --color-ink-soft: #4a5872;
+  --color-ink-muted: #8c94a5;
+  --color-primary: #5b7ea8;
+  --color-primary-dark: #486890;
+  --color-primary-soft: #dce7f3;
+  --color-peach: #f3d2b8;
+  --color-peach-deep: #b06529;
+  --color-peach-soft: #fae4d0;
+  --color-green: #4f8a68;
+  --color-green-soft: #e1efe6;
+  --color-orange: #c07716;
+  --color-orange-soft: #fae8ce;
+  --color-red: #c25b4e;
+  --color-red-soft: #f8e1dc;
+  --color-plum: #a06a8c;
+
+  --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+}
+
+/* Friendly, visible focus for keyboard users and young learners */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
