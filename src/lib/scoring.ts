@@ -62,6 +62,16 @@ export function similarity(a: string, b: string): number {
 export const DEFAULT_SCORE_THRESHOLD = 0.95;
 
 /**
+ * The acceptance threshold actually in force, from SCORE_THRESHOLD when it is
+ * set to a sane value. Read through this everywhere so the scorer and anything
+ * that reports on it can never disagree.
+ */
+export function activeScoreThreshold(): number {
+  const raw = Number(process.env.SCORE_THRESHOLD);
+  return raw >= 0.5 && raw <= 1 ? raw : DEFAULT_SCORE_THRESHOLD;
+}
+
+/**
  * Score an oral reading of `target` given the raw ASR `transcript`.
  * The transcript may contain several tokens (the ASR can return a phrase),
  * so the best-matching token is used.

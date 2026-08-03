@@ -10,6 +10,7 @@ import {
 import { getDict, type Lang } from "@/lib/i18n";
 import AccuracyLine from "@/components/charts/AccuracyLine";
 import BarBlock from "@/components/charts/BarBlock";
+import DecodingTime from "@/components/DecodingTime";
 
 /** Shared progress report — used by the learner's Reports page and the specialist's learner view. */
 export default async function LearnerReport({
@@ -89,6 +90,8 @@ export default async function LearnerReport({
           />
         </section>
       </div>
+
+      <DecodingTime learnerId={learnerId} lang={lang} />
 
       {byPattern.length > 0 && (
         <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">

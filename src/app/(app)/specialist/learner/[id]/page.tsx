@@ -7,7 +7,12 @@ import LearnerReport from "@/components/LearnerReport";
 import PrintButton from "@/components/PrintButton";
 import LearnerControls from "@/components/specialist/LearnerControls";
 import LearnerDataControls from "@/components/specialist/LearnerDataControls";
+import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
+import { activeScoreThreshold } from "@/lib/scoring";
+
+/** How far below the threshold still counts as a borderline reading. */
+const BORDERLINE_BAND = 0.15;
 
 export default async function LearnerDetailPage({
   params,
@@ -23,7 +28,7 @@ export default async function LearnerDetailPage({
   });
   if (!profile) notFound();
 
-  const [attempts, reviewStats, words, practiceItems, recordingCount] = await Promise.all([
+  const [attempts, reviewStats, words, practiceItems, recordingCount, borderline] = await Promise.all([
     prisma.attempt.findMany({
       where: { learnerId: id, activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
       orderBy: { createdAt: "desc" },
@@ -43,6 +48,19 @@ export default async function LearnerDetailPage({
       take: 12,
     }),
     prisma.attempt.count({ where: { learnerId: id, audio: { not: null } } }),
+    // Readings that fell just short of being accepted — the evidence for
+    // whether the threshold sits in the right place.
+    prisma.attempt.findMany({
+      where: {
+        learnerId: id,
+        activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+        correct: false,
+        score: { gte: activeScoreThreshold() - BORDERLINE_BAND, lt: activeScoreThreshold() },
+      },
+      orderBy: { score: "desc" },
+      take: 15,
+      include: { review: { select: { agrees: true, note: true } } },
+    }),
   ]);
 
   const reviewed = reviewStats.reduce((n, g) => n + g._count, 0);
@@ -61,6 +79,23 @@ export default async function LearnerDetailPage({
     audio: a.audio,
     engine: a.engine,
     altTranscript: a.altTranscript,
+    score: a.score,
+    review: a.review,
+  }));
+
+  const borderlineAttempts: ReviewableAttempt[] = borderline.map((a) => ({
+    id: a.id,
+    target: a.target,
+    transcript: a.transcript,
+    correct: a.correct,
+    errorType: a.errorType,
+    activityType: a.activityType,
+    createdAt: a.createdAt.toISOString(),
+    hasAudio: Boolean(a.audio),
+    audio: a.audio,
+    engine: a.engine,
+    altTranscript: a.altTranscript,
+    score: a.score,
     review: a.review,
   }));
 
@@ -144,6 +179,12 @@ export default async function LearnerDetailPage({
           <ReviewList attempts={reviewable} />
         </div>
       </section>
+
+      <ThresholdCalibration
+        attempts={borderlineAttempts}
+        threshold={activeScoreThreshold()}
+        band={BORDERLINE_BAND}
+      />
 
       {/* Full progress report */}
       <div className="mt-5">

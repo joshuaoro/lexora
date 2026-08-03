@@ -15,6 +15,7 @@ export type ReviewableAttempt = {
   audio: string | null;
   engine: string | null; // "server" (Whisper) | "browser" (Web Speech)
   altTranscript: string | null;
+  score: number; // similarity to the target, 0–1
   review: { agrees: boolean; note: string | null } | null;
 };
 
@@ -120,6 +121,14 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
                     {ENGINE_LABELS[a.engine] ?? a.engine}
                   </span>
                 )}
+                {/* How close the reading was to the target — the number the
+                    accept/reject decision was actually made on. */}
+                <span
+                  className="inline-block rounded-full bg-cream px-2 py-0.5 text-xs font-bold text-ink-muted"
+                  title="Similarity to the target word"
+                >
+                  {a.score.toFixed(2)}
+                </span>
               </div>
             </div>
 

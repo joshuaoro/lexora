@@ -78,6 +78,68 @@ export async function learnerSummary(learnerId: string) {
   };
 }
 
+/**
+ * How long the learner takes to decode a word they get right.
+ *
+ * This is decoding latency on single words, not reading fluency: the study
+ * deliberately excludes connected-text and words-per-minute measures. It is
+ * reported because a child who reads accurately but slowly is still sounding
+ * words out rather than recognising them, and that is invisible in an accuracy
+ * percentage — two learners can both sit at 85% while one is effortful and the
+ * other automatic.
+ *
+ * The median is used rather than the mean because a single distraction
+ * mid-session would drag an average badly.
+ */
+const MIN_PLAUSIBLE_MS = 300; // faster than this is a mis-click, not a reading
+const MAX_PLAUSIBLE_MS = 60_000; // slower than this, the child walked away
+const SLOW_MULTIPLE = 1.6; // how much slower than their own norm counts as effortful
+
+function median(values: number[]): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+export async function decodingTime(learnerId: string) {
+  const attempts = await prisma.attempt.findMany({
+    where: {
+      learnerId,
+      activityType: { in: READ_TYPES },
+      correct: true,
+      responseMs: { gte: MIN_PLAUSIBLE_MS, lte: MAX_PLAUSIBLE_MS },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { responseMs: true, target: true, createdAt: true },
+  });
+
+  if (attempts.length < 5) {
+    return { medianMs: null, earlierMs: null, laterMs: null, slowWords: [], sampleSize: attempts.length };
+  }
+
+  const medianMs = median(attempts.map((a) => a.responseMs));
+
+  // Split the history in half to show whether decoding is speeding up.
+  const half = Math.floor(attempts.length / 2);
+  const earlierMs = median(attempts.slice(0, half).map((a) => a.responseMs));
+  const laterMs = median(attempts.slice(half).map((a) => a.responseMs));
+
+  // Words read correctly but slowly — still being decoded, not recognised.
+  const byWord = new Map<string, number[]>();
+  for (const a of attempts) {
+    byWord.set(a.target, [...(byWord.get(a.target) ?? []), a.responseMs]);
+  }
+  const slowWords = [...byWord.entries()]
+    .filter(([, times]) => times.length >= 2)
+    .map(([word, times]) => ({ word, ms: median(times)! }))
+    .filter((w) => medianMs !== null && w.ms > medianMs * SLOW_MULTIPLE)
+    .sort((a, b) => b.ms - a.ms)
+    .slice(0, 8);
+
+  return { medianMs, earlierMs, laterMs, slowWords, sampleSize: attempts.length };
+}
+
 /** Error-pattern distribution across all scored oral readings. */
 export async function errorPatterns(learnerId: string) {
   const groups = await prisma.attempt.groupBy({

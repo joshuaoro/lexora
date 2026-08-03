@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { scoreReading, DEFAULT_SCORE_THRESHOLD } from "@/lib/scoring";
+import { scoreReading, activeScoreThreshold } from "@/lib/scoring";
 import { transcribeAudio } from "@/lib/asr";
 import { updateAdaptiveLevel, recordMiss, recordPracticeResult } from "@/lib/adaptive";
 
@@ -22,11 +22,6 @@ const schema = z.object({
 });
 
 const ASR_TYPES = ["READ_ALOUD", "PRACTICE"];
-
-function scoreThreshold(): number {
-  const raw = Number(process.env.SCORE_THRESHOLD);
-  return raw >= 0.5 && raw <= 1 ? raw : DEFAULT_SCORE_THRESHOLD;
-}
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -87,7 +82,7 @@ export async function POST(req: Request) {
       engine = browserText !== null ? "browser" : null;
     }
 
-    const result = scoreReading(data.target, transcript, scoreThreshold(), variants);
+    const result = scoreReading(data.target, transcript, activeScoreThreshold(), variants);
     correct = result.correct;
     score = result.score;
     errorType = result.errorType;
