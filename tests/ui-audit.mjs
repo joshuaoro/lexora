@@ -50,21 +50,33 @@ for (const [slug, type, label] of [
 ]) {
   await p.goto(`${BASE}/exercises/${slug}`, { waitUntil: "networkidle" });
   await p.locator("button:has-text('Start!')").click();
-  await p.waitForTimeout(900);
 
-  // each item needs two passes: answer, then advance
-  for (let guard = 0; guard < 60; guard++) {
-    if (await p.locator("text=/Amazing!|Great work!|Good try!/").count()) break;
-    const next = p.locator("button:has-text('Next word'), button:has-text('Finish')");
-    if (await next.count()) {
-      await next.first().click();
-      await p.waitForTimeout(650);
+  // Wait on real state rather than fixed sleeps: answer buttons disable while
+  // the attempt is being scored, and a deployed server is far slower than a
+  // local one, so any hard-coded delay is wrong on one of the two.
+  const finished = p.locator("text=/Amazing!|Great work!|Good try!/");
+  const advance = p.locator("button:has-text('Next word'), button:has-text('Finish')");
+  const answerable = p.locator(
+    "div.grid > button:not([disabled]), div.flex-wrap > button.h-20:not([disabled])"
+  );
+
+  for (let guard = 0; guard < 40; guard++) {
+    if (await finished.count()) break;
+
+    if (await advance.count()) {
+      await advance.first().click();
+      // the next item's options, or the results screen
+      await Promise.race([
+        answerable.first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {}),
+        finished.first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {}),
+      ]);
       continue;
     }
-    const options = p.locator("div.grid > button, div.flex-wrap > button.h-20");
-    if (!(await options.count())) break;
-    await options.first().click();
-    await p.waitForTimeout(850);
+
+    await answerable.first().waitFor({ state: "visible", timeout: 30000 });
+    await answerable.first().click();
+    // scoring round-trip completes when the advance button appears
+    await advance.first().waitFor({ state: "visible", timeout: 45000 });
   }
 
   const done = await p.locator("text=/Amazing!|Great work!|Good try!/").count();
@@ -100,23 +112,34 @@ const overlay = await p.locator("div.relative.mt-5").first().evaluate((el) => ge
 check("Reader uses the colour overlay", overlay === "rgb(253, 246, 201)", overlay);
 
 section("[3] Reader plays the stored Filipino audio");
-const clips = [];
-p.on("response", (r) => r.url().includes("/api/word-audio/") && clips.push(r.status()));
-await p.locator("p.wrap-break-word button").first().click();
-await p.waitForTimeout(2000);
+// Wait for the actual response rather than guessing a duration.
 // 206 Partial Content is also a success — the browser range-requests audio.
-check("a stored clip is streamed", clips.length > 0 && [200, 206].includes(clips[0]), clips.join(", ") || "none");
+const clipResponse = p
+  .waitForResponse((r) => r.url().includes("/api/word-audio/"), { timeout: 30000 })
+  .catch(() => null);
+await p.locator("p.wrap-break-word button").first().click();
+const clip = await clipResponse;
+check("a stored clip is streamed", clip !== null && [200, 206].includes(clip.status()),
+  clip ? String(clip.status()) : "no request");
 
 section("[4] language toggle");
 await p.locator('button[aria-label="Filipino"]:visible').click();
-await p.waitForTimeout(1500);
-check("Reader switches to Filipino", (await p.locator("h1").first().innerText()).trim() === "Pagbasa");
+const filipino = await p
+  .locator("h1", { hasText: "Pagbasa" })
+  .first()
+  .waitFor({ state: "visible", timeout: 30000 })
+  .then(() => true)
+  .catch(() => false);
+check("Reader switches to Filipino", filipino);
 await p.locator('button[aria-label="English"]:visible').click();
-await p.waitForTimeout(1200);
+await p.locator("h1", { hasText: "Reader" }).first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
 
 section("[5] sign out and route guards");
-// Give the Reader's idle flush time to save the session before the cookie goes.
-await p.waitForTimeout(7000);
+// The Reader saves its session a few seconds after the last word plays; wait
+// for that PATCH so signing out does not race it.
+await p
+  .waitForResponse((r) => /\/api\/sessions\/[^/]+$/.test(r.url()) && r.request().method() === "PATCH", { timeout: 20000 })
+  .catch(() => {});
 await p.click("text=Sign out");
 await p.waitForURL("**/login", { timeout: 20000 });
 await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
@@ -135,12 +158,21 @@ await sp.waitForSelector("text=Scoring reliability check", { timeout: 20000 });
 const juanId = sp.url().split("/").pop();
 const levelBefore = (await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [juanId])).level;
 
+/** Poll the database until it reflects a UI action, or give up. */
+async function waitForLevel(id, want, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const row = await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [id]);
+    if (row?.level === want) return true;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
 await sp.selectOption("select", "3");
-await sp.waitForTimeout(2000);
-check("level dropdown updates the learner",
-  (await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [juanId])).level === 3);
+check("level dropdown updates the learner", await waitForLevel(juanId, 3));
 await sp.selectOption("select", String(levelBefore));
-await sp.waitForTimeout(1500);
+await waitForLevel(juanId, levelBefore);
 
 check("data-protection panel is present", (await sp.locator("text=Data protection").count()) === 1);
 
