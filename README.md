@@ -14,9 +14,9 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 |---|-----------|----------------|
 | 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus |
 | 2 | Pre-trained ASR scoring of word-level oral reading + specialist agreement check | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, agreement % is computed) |
-| 3 | AI-assisted reading assessment: immediate pronunciation feedback + personalized practice word list from frequently misread words | Exercise feedback panels; **Practice list** (auto-populated on misreads) |
+| 3 | AI-assisted reading assessment: immediate pronunciation feedback + personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read so the last time a child says a missed word they say it right; **Practice list** (auto-populated on misreads) |
 | 4 | Adaptive word-level exercises driven by recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`); specialists can override per learner |
-| 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable), **Specialist** learner views. Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there |
+| 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable), **Specialist** learner views, **Cohort overview** (all learners side by side, accuracy per syllable pattern). Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there. An activity left partway still counts its minutes but is not an activity *completed* |
 | 6 | ISO/IEC 25010 + user-acceptance evaluation | The app is the artifact under evaluation; reports are printable for instrument administration |
 
 ### Exercise modules
@@ -177,10 +177,31 @@ cannot be gathered again if it is lost, so back up before and after every testin
 
 ```bash
 npm run backup                                  # backups/lexora-<timestamp>.json.gz
+npm run backup -- --keep 30                     # how many to retain (default 14)
 npx tsx scripts/restore.ts <file> --dry-run     # compare row counts, change nothing
 npx tsx scripts/restore.ts <file> --verify      # full rehearsal, rolled back
 npx tsx scripts/restore.ts <file> --yes         # actually restore (destructive)
 ```
+
+### Backing up on a schedule
+
+Remembering to run it every session is the part that fails. Register a daily
+Windows task instead:
+
+```powershell
+.\scripts\schedule-backup.ps1                                   # daily at 20:00
+.\scripts\schedule-backup.ps1 -At 19:30 -BackupDir "$env:OneDrive\lexora-backups" -Keep 30
+.\scripts\schedule-backup.ps1 -Remove                           # unregister
+```
+
+It runs whether or not the laptop is on mains and catches up after it was asleep — a
+study laptop is closed most of the day, so a task that only fires at exactly 20:00 while
+plugged in would mostly never fire. Output goes to `backups/schedule.log`; check it after
+the first run, because a scheduled job that fails silently is worse than none.
+
+**The backup stays on your machine on purpose.** It contains children's voice recordings,
+and this repository is public — a GitHub Actions artifact would be downloadable by anyone.
+Point `-BackupDir` at a synced folder or copy to an encrypted drive for the off-site copy.
 
 The dump is a single gzipped file covering every table, written with the `pg` client so
 no Postgres tooling has to be installed. ~3 MB compressed, most of it pronunciation audio.
@@ -196,14 +217,31 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit        # all suites against http://localhost:3000
-npm run audit:api    # authorization, validation, erasure  (43 checks)
-npm run audit:logic  # scoring, adaptive difficulty, mastery, review  (22 checks)
-npm run audit:ui     # learner journeys, specialist workflows, responsive  (20 checks)
+npm run audit             # all 8 suites against http://localhost:3000 (205 checks)
+npm run audit -- <url>    # or against the deployment
+npm run audit:api         # authorization, validation, erasure  (43)
+npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
+npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
+npm run audit:links       # every route reachable from the navigation  (34)
+npm run audit:stale       # a learner or specialist erased mid-session  (21)
+npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (38)
+npm run audit:integrity   # language switch mid-exercise, partial progress  (13)
+npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (14)
+npm run audit:perf        # budgets on a throttled low-end device
+npm run audit:prod        # smoke test after a deployment
 ```
 
 The suites need the target running and seeded, and `DIRECT_URL` set so they can assert
-against the database. They create and delete their own `@lexora.test` accounts.
+against the database. They create and delete their own `@lexora.test` accounts, and sweep
+any left behind by a run that failed partway.
+
+Two conventions worth keeping if you extend them. **Wait on conditions, never on a fixed
+sleep** — a sleep tuned on localhost expires before the deployment has responded, and an
+assertion that runs early can pass for the wrong reason (a "the word did not change" check
+passed only because nothing had happened yet). **Assert what the child sees**, in a real
+browser, where the behaviour is about navigation: the app layout is async, so a guard's
+redirect arrives as a client-side redirect inside an HTTP 200, and asserting on the status
+code would pass a broken app.
 
 ### Demo accounts (password: `lexora123`)
 
@@ -226,13 +264,16 @@ disabled until it is set.
 4. Misread words are added to the learner's **practice list**; two consecutive correct practice reads master a word.
 5. **Adaptive difficulty** (`src/lib/adaptive.ts`): looking at the last 12 oral readings at the current level — accuracy ≥ 85 % over ≥ 8 attempts levels up (max 5); ≤ 50 % levels down. The Marungko stage widens with the level.
 6. **Reliability check**: in the specialist view, each system verdict can be confirmed or disputed after replaying the recording; the specialist–system **agreement percentage** is computed automatically (Objective 2).
+7. **Threshold calibration**: readings scoring within 0.15 *below* the acceptance line are listed separately with their audio. If a specialist listens and judges several of them correct, the threshold is too strict and is penalising children who read the word properly — which would depress accuracy and distort the agreement metric. This turns the choice of 0.95 from an assumption into something the Validation chapter can evidence.
+8. **What is excluded, and why.** Corrective re-reads (`is_retry`) are recorded but kept out of accuracy, decoding time, error patterns, adaptive level, practice mastery, the borderline panel **and the agreement sample**. A reading taken seconds after the word was modelled measures repetition, not decoding; including retries in the agreement sample in particular would bias it toward clear, correct takes and overstate how well the scorer performs on the readings actually being measured. They appear on their own in the **Self-correction** panel and as `retries` / `retry_success_pct` in the summary export. State this in the methodology — it is a defensible choice, but it is a choice.
 
 ## Browser & privacy notes
 
 - **Recording** works in Chrome, Edge, and Safari (iOS 14.3+). The page must be served over `http://localhost` or HTTPS for the microphone to be available.
 - **Speech recognition** sends the recording to the Groq API for transcription, so it needs internet. Audio is not retained by the provider for training.
 - **Word audio** is served from your own database (`/api/word-audio/…`), so pronunciation is correct on every device with no cloud TTS at runtime.
-- All learner data stays in the local SQLite database (`dev.db`); recordings are only used for the specialist reliability check.
+- **Learner data** lives in your own Supabase Postgres database and nowhere else. Recordings exist only for the specialist reliability check and the self-correction panel.
+- **Recordings are deleted automatically** after `RECORDING_RETENTION_DAYS` (default 180), swept when a learner next starts an activity. Only the audio goes — transcripts, scores, error types and reviews survive, so no reported figure changes. A specialist can also clear them at any time, or erase a participant entirely, from the learner page. `/privacy` states whichever window is configured.
 
 ## Project structure
 
