@@ -53,3 +53,6 @@ dev.db.backup
 /.claude/skills/
 /.windsurf/
 skills-lock.json
+
+# database backups (may contain learner data — never commit)
+/backups/

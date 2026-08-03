@@ -153,6 +153,29 @@ After deploying, point the audit suite at the live URL:
 npm run audit -- https://your-app.vercel.app
 ```
 
+## Backups
+
+**Supabase's free tier takes no automatic backups.** Reading data collected from children
+cannot be gathered again if it is lost, so back up before and after every testing session.
+
+```bash
+npm run backup                                  # backups/lexora-<timestamp>.json.gz
+npx tsx scripts/restore.ts <file> --dry-run     # compare row counts, change nothing
+npx tsx scripts/restore.ts <file> --verify      # full rehearsal, rolled back
+npx tsx scripts/restore.ts <file> --yes         # actually restore (destructive)
+```
+
+The dump is a single gzipped file covering every table, written with the `pg` client so
+no Postgres tooling has to be installed. ~3 MB compressed, most of it pronunciation audio.
+
+Run `--verify` after each backup: it performs the whole restore inside a transaction,
+checks every row count, then rolls back — proving the file is genuinely restorable
+without touching live data. An untested backup is not a backup.
+
+Restoring assumes the schema exists; run `npx prisma migrate deploy` first on a fresh
+database. `backups/` is gitignored — it contains learner data and must never be committed.
+Keep a copy off the machine that produced it.
+
 ## Tests
 
 ```bash
