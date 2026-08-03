@@ -14,6 +14,7 @@
     "audit:logic": "node tests/logic-audit.mjs",
     "audit:ui": "node tests/ui-audit.mjs",
     "audit:links": "node tests/links-audit.mjs",
+    "audit:a11y": "node tests/a11y-audit.mjs",
     "audit:prod": "node tests/prod-smoke.mjs"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "@types/pg": "^8.20.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "axe-core": "^4.12.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "playwright-core": "^1.62.1",

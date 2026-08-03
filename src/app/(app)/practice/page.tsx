@@ -65,7 +65,9 @@ export default async function PracticePage() {
                     {item.source === "SPECIALIST" ? t.fromTeacher : t.missed(item.missCount)}
                   </p>
                 </div>
-                <div className="flex gap-1" aria-label={t.streakAria(item.streak)}>
+                {/* role="img" so the stars are announced as one label rather
+                    than as decorative shapes a screen reader would skip */}
+                <div className="flex gap-1" role="img" aria-label={t.streakAria(item.streak)}>
                   {[0, 1].map((i) => (
                     <Star
                       key={i}

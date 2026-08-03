@@ -308,7 +308,7 @@ export default function ExerciseSession({
     const stars = pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0;
     return (
       <div className="mx-auto max-w-2xl rounded-3xl border border-line bg-card p-6 text-center shadow-sm sm:p-10">
-        <div className="flex justify-center gap-2" aria-label={`${stars}/3`}>
+        <div className="flex justify-center gap-2" role="img" aria-label={`${stars}/3`}>
           {[0, 1, 2].map((i) => (
             <Star
               key={i}

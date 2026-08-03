@@ -1,29 +1,57 @@
 @import "tailwindcss";
 
 @theme {
-  /* LEXORA palette — warm cream surfaces, navy ink, muted steel-blue primary */
+  /* LEXORA palette — warm cream surfaces, navy ink, muted steel-blue primary.
+     Every foreground below clears WCAG AA (4.5:1) against every surface it is
+     used on. That matters more here than usual: the readers are children with
+     a reading disability, and accessibility is scored under Interaction
+     Capability in ISO/IEC 25010:2023. Verified by `npm run audit:a11y` —
+     re-run it after changing any of these values. */
+
+  /* surfaces */
   --color-cream: #faf5ec;
   --color-cream-dark: #f2eadb;
   --color-card: #ffffff;
   --color-line: #eae0ce;
+
+  /* ink — ink-muted clears 4.5:1 on card, cream, cream-dark and primary-soft */
   --color-ink: #22304a;
   --color-ink-soft: #4a5872;
-  --color-ink-muted: #8c94a5;
-  --color-primary: #5b7ea8;
-  --color-primary-dark: #486890;
+  --color-ink-muted: #5f6779;
+
+  /* primary doubles as a button/nav background, so white text on it must also
+     clear 4.5:1 */
+  --color-primary: #4b698d;
+  --color-primary-dark: #3b5372;
   --color-primary-soft: #dce7f3;
+
+  /* status and accent inks, each paired with its own soft background */
   --color-peach: #f3d2b8;
-  --color-peach-deep: #b06529;
+  --color-peach-deep: #8b5020;
   --color-peach-soft: #fae4d0;
-  --color-green: #4f8a68;
+  --color-green: #437558;
   --color-green-soft: #e1efe6;
-  --color-orange: #c07716;
+  --color-orange: #965d11;
   --color-orange-soft: #fae8ce;
-  --color-red: #c25b4e;
+  --color-red: #ab483b;
   --color-red-soft: #f8e1dc;
-  --color-plum: #a06a8c;
+  --color-plum: #966082;
 
   --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+}
+
+/* Respect the OS "reduce motion" setting. Several controls pulse or animate —
+   the recording mic in particular — which can be distracting or uncomfortable
+   for some learners. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {

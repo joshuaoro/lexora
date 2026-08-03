@@ -115,7 +115,18 @@ section("[7] unknown resources return 404");
 check("unknown word audio", (await api("/api/word-audio/does-not-exist", { cookie: alice.cookie })).status === 404);
 check("unknown learner", (await api("/api/learners/nope", { cookie: specialist, method: "PATCH", body: { level: 3 } })).status === 404);
 check("unknown word generate", (await api("/api/words/nope/audio/generate", { cookie: specialist, method: "POST" })).status === 404);
-check("unknown exercise slug", (await api("/exercises/not-a-thing", { cookie: alice.cookie })).status === 404);
+// Assert what the learner actually sees, not the status line. The signed-in
+// layout is an async server component, so Next.js commits response headers
+// before `notFound()` runs deeper in the tree and the status stays 200 even
+// though the not-found page is what renders. That is framework behaviour, not
+// something LEXORA controls, and nothing here consumes the status code.
+const unknownSlug = await api("/exercises/not-a-thing", { cookie: alice.cookie });
+const unknownBody = await unknownSlug.text();
+check(
+  "unknown exercise slug renders the not-found page",
+  /couldn.t find that page|could not be found|404/i.test(unknownBody),
+  `HTTP ${unknownSlug.status}`
+);
 
 /* ── 8. erasure really cascades ────────────────────────────────────────── */
 section("[8] erasure removes every trace (RA 10173)");
