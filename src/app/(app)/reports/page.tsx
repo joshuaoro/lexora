@@ -1,17 +1,13 @@
 import { requireLearner } from "@/lib/guards";
-import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import LearnerReport from "@/components/LearnerReport";
 import PrintButton from "@/components/PrintButton";
 
 export default async function ReportsPage() {
-  const session = await requireLearner();
+  const { profile, ...session } = await requireLearner();
   const lang = await getLang();
   const dict = getDict(lang);
-  const profile = await prisma.learnerProfile.findUniqueOrThrow({
-    where: { id: session.learnerId },
-  });
 
   return (
     <div className="mx-auto max-w-6xl">

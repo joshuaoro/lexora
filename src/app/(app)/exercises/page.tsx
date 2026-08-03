@@ -1,16 +1,12 @@
 import Link from "next/link";
 import { Mic, Ear, Puzzle, Music, AudioLines } from "lucide-react";
 import { requireLearner } from "@/lib/guards";
-import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 
 export default async function ExercisesPage() {
-  const session = await requireLearner();
+  const { profile } = await requireLearner();
   const dict = getDict(await getLang());
-  const profile = await prisma.learnerProfile.findUniqueOrThrow({
-    where: { id: session.learnerId },
-  });
 
   const activities = [
     { type: "read-aloud", icon: Mic, tone: "bg-primary-soft text-primary", ...dict.exercises.readAloud },

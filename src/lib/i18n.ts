@@ -183,6 +183,17 @@ const en = {
     byPattern: "Accuracy by syllable structure",
     byPatternSub:
       "Which word shapes the learner decodes reliably, and which need teaching — the most directly actionable view for planning intervention.",
+    decodingTime: "How long a correct word takes",
+    decodingTimeSub:
+      "Decoding effort on single words. Two learners can share the same accuracy while one is still sounding words out and the other recognises them on sight.",
+    decodingMedian: (n: number) => `typical time per word, from ${n} correct readings`,
+    decodingFaster: (pct: number) => `${pct}% faster than earlier sessions`,
+    decodingSlower: (pct: number) => `${pct}% slower than earlier sessions`,
+    decodingTimeEmpty: (n: number) =>
+      `Needs a few more readings before a reliable figure can be shown (${n} so far).`,
+    effortfulWords: "Correct, but still effortful",
+    effortfulWordsSub:
+      "Read correctly yet noticeably slower than this learner's own pace — likely still being decoded rather than recognised.",
     errors: "Word-level error patterns",
     errorsSub: "What kind of reading errors happen most (all time).",
     recentActivities: "Recent activities",
@@ -219,6 +230,7 @@ const en = {
     password: "Password",
     signIn: "Sign in",
     signingIn: "Signing in…",
+    expired: "Your sign-in has ended. Please sign in again to keep reading.",
     newHere: "New to LEXORA?",
     createAccount: "Create an account",
     registerTitle: "Create your account",
@@ -454,6 +466,17 @@ const fil: Dict = {
     byPattern: "Accuracy ayon sa istruktura ng pantig",
     byPatternSub:
       "Kung aling hugis ng salita ang tiyak nang nababasa ng mag-aaral, at alin ang kailangan pang ituro.",
+    decodingTime: "Gaano katagal bago mabasa nang tama",
+    decodingTimeSub:
+      "Hirap sa pagbasa ng isang salita. Maaaring pareho ang accuracy ng dalawang mag-aaral pero ang isa ay pinapantig pa rin habang ang isa ay agad nang nakikilala ang salita.",
+    decodingMedian: (n) => `karaniwang oras kada salita, mula sa ${n} tamang pagbasa`,
+    decodingFaster: (pct) => `${pct}% mas mabilis kaysa dati`,
+    decodingSlower: (pct) => `${pct}% mas mabagal kaysa dati`,
+    decodingTimeEmpty: (n) =>
+      `Kailangan pa ng ilang pagbasa bago maipakita ang tiyak na bilang (${n} pa lang).`,
+    effortfulWords: "Tama, pero mahirap pa rin",
+    effortfulWordsSub:
+      "Nabasa nang tama pero mas mabagal kaysa sa karaniwang bilis ng mag-aaral — malamang pinapantig pa rin.",
     errors: "Mga uri ng pagkakamali sa salita",
     errorsSub: "Anong klaseng pagkakamali sa pagbasa ang madalas (lahat ng panahon).",
     recentActivities: "Mga nakaraang aktibidad",
@@ -490,6 +513,7 @@ const fil: Dict = {
     password: "Password",
     signIn: "Mag-sign in",
     signingIn: "Nagsa-sign in…",
+    expired: "Natapos na ang iyong sign-in. Mag-sign in ulit para makapagbasa.",
     newHere: "Bago sa LEXORA?",
     createAccount: "Gumawa ng account",
     registerTitle: "Gumawa ng account",

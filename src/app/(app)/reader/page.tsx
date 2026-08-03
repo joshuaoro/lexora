@@ -7,12 +7,11 @@ import { buildReaderSets } from "@/lib/reader-sets";
 import ReaderClient from "@/components/reader/ReaderClient";
 
 export default async function ReaderPage() {
-  const session = await requireLearner();
+  const { profile } = await requireLearner();
   const lang = await getLang();
   const dict = getDict(lang);
 
-  const [profile, words, withAudio] = await Promise.all([
-    prisma.learnerProfile.findUniqueOrThrow({ where: { id: session.learnerId } }),
+  const [words, withAudio] = await Promise.all([
     prisma.word.findMany({
       orderBy: [{ stage: "asc" }, { level: "asc" }],
       select: { id: true, text: true, level: true, stage: true, audioVersion: true },

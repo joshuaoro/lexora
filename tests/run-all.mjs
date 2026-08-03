@@ -18,6 +18,8 @@ const SUITES = [
   ["Logic (scoring, adaptive, mastery, review)", "logic-audit.mjs"],
   ["UI (journeys, specialist, responsive)", "ui-audit.mjs"],
   ["Links (every route reachable from the navigation)", "links-audit.mjs"],
+  ["Stale sessions (a record erased mid-session)", "stale-session-audit.mjs"],
+  ["Reporting (decoding time, calibration, cleanup)", "reporting-audit.mjs"],
   ["Accessibility (WCAG 2.1 AA, keyboard, reduced motion)", "a11y-audit.mjs"],
 ];
 

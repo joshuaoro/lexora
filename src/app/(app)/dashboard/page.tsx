@@ -9,11 +9,10 @@ import StatCard from "@/components/StatCard";
 import AccuracyLine from "@/components/charts/AccuracyLine";
 
 export default async function DashboardPage() {
-  const session = await requireLearner();
+  const { profile, ...session } = await requireLearner();
   const dict = getDict(await getLang());
 
-  const [profile, summary, series, tricky, recent] = await Promise.all([
-    prisma.learnerProfile.findUniqueOrThrow({ where: { id: session.learnerId } }),
+  const [summary, series, tricky, recent] = await Promise.all([
     learnerSummary(session.learnerId),
     dailyAccuracy(session.learnerId, 14),
     prisma.practiceItem.findMany({

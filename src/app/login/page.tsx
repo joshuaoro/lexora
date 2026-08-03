@@ -1,11 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import LangToggle, { useLang } from "@/components/LangToggle";
 import { getDict } from "@/lib/i18n";
+
+/**
+ * Shown when a guard sent the visitor here because their session pointed at a
+ * record that no longer exists — an erased learner, or a reseeded database.
+ * Without it they would arrive back at a blank sign-in screen with no idea why.
+ *
+ * It reads the query string, so it sits behind Suspense to keep the rest of the
+ * page prerendered.
+ */
+function ExpiredNotice({ message }: { message: string }) {
+  const expired = useSearchParams().get("expired") === "1";
+  if (!expired) return null;
+  return (
+    <p
+      role="status"
+      className="mt-4 rounded-xl bg-peach-soft px-4 py-2.5 text-sm font-semibold text-peach-deep"
+    >
+      {message}
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,6 +69,10 @@ export default function LoginPage() {
         <div className="rounded-3xl border border-line bg-card p-6 shadow-sm sm:p-8">
           <h1 className="text-xl font-extrabold text-ink">{t.signinTitle}</h1>
           <p className="mt-1 text-sm text-ink-muted">{t.signinSub}</p>
+
+          <Suspense fallback={null}>
+            <ExpiredNotice message={t.expired} />
+          </Suspense>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>

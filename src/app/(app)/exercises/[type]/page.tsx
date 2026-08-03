@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { requireLearner } from "@/lib/guards";
-import { prisma } from "@/lib/db";
 import { parseSettings } from "@/lib/settings";
 import { getLang } from "@/lib/lang";
 import { buildItems, type ExerciseType } from "@/lib/exercise-items";
@@ -23,12 +22,8 @@ export default async function ExerciseTypePage({
   const type = SLUGS[slug];
   if (!type) notFound();
 
-  const session = await requireLearner();
-  const [profile, items, lang] = await Promise.all([
-    prisma.learnerProfile.findUniqueOrThrow({ where: { id: session.learnerId } }),
-    buildItems(session.learnerId, type),
-    getLang(),
-  ]);
+  const { profile, learnerId } = await requireLearner();
+  const [items, lang] = await Promise.all([buildItems(learnerId, type), getLang()]);
 
   return (
     <ExerciseSession
