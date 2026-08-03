@@ -256,6 +256,7 @@ const en = {
     specCtaOpen: "Open specialist dashboard",
     specCta: "Create a specialist account",
     footerNote: "LEXORA is a reading support tool for word-level practice. It does not diagnose dyslexia and is not a substitute for the professional services of licensed educators, reading specialists, or health-care professionals.",
+    privacyLink: "Privacy Notice",
   },
 };
 
@@ -510,6 +511,7 @@ const fil: Dict = {
     specCtaOpen: "Buksan ang specialist dashboard",
     specCta: "Gumawa ng specialist account",
     footerNote: "Ang LEXORA ay kasangkapang pansuporta sa pagbasa ng salita. Hindi ito nagdadayagnos ng dyslexia at hindi kapalit ng serbisyo ng mga lisensyadong guro, reading specialist, o propesyonal sa kalusugan.",
+    privacyLink: "Paunawa sa Privacy",
   },
 };
 

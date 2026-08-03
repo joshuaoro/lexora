@@ -16,12 +16,13 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
-});
-const prisma = new PrismaClient({ adapter });
+// Scripts run outside the request path, so the direct (session) connection is
+// preferred; fall back to the pooled URL when only that is available.
+const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 type W = [text: string, syllables: string, pattern: string, stage: number, level: number, meaningEn: string];
 

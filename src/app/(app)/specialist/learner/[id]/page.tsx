@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import LearnerReport from "@/components/LearnerReport";
 import PrintButton from "@/components/PrintButton";
 import LearnerControls from "@/components/specialist/LearnerControls";
+import LearnerDataControls from "@/components/specialist/LearnerDataControls";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 
 export default async function LearnerDetailPage({
@@ -22,7 +23,7 @@ export default async function LearnerDetailPage({
   });
   if (!profile) notFound();
 
-  const [attempts, reviewStats, words, practiceItems] = await Promise.all([
+  const [attempts, reviewStats, words, practiceItems, recordingCount] = await Promise.all([
     prisma.attempt.findMany({
       where: { learnerId: id, activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
       orderBy: { createdAt: "desc" },
@@ -41,6 +42,7 @@ export default async function LearnerDetailPage({
       include: { word: true },
       take: 12,
     }),
+    prisma.attempt.count({ where: { learnerId: id, audio: { not: null } } }),
   ]);
 
   const reviewed = reviewStats.reduce((n, g) => n + g._count, 0);
@@ -147,6 +149,12 @@ export default async function LearnerDetailPage({
       <div className="mt-5">
         <LearnerReport learnerId={profile.id} />
       </div>
+
+      <LearnerDataControls
+        learnerId={profile.id}
+        learnerName={profile.user.name}
+        recordingCount={recordingCount}
+      />
     </div>
   );
 }

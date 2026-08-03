@@ -6,8 +6,11 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// Connection URLs live in prisma.config.ts (Prisma 7): the CLI/migrations use
+// DIRECT_URL (Supabase session pooler, 5432) and the runtime client uses
+// DATABASE_URL (transaction pooler, 6543) via the driver adapter in src/lib/db.ts.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {

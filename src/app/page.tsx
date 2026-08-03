@@ -196,7 +196,15 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="border-t border-line bg-cream-dark/60 py-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
-          <Logo />
+          <div>
+            <Logo />
+            <Link
+              href="/privacy"
+              className="mt-2 inline-block text-xs font-bold text-primary hover:underline"
+            >
+              {t.privacyLink}
+            </Link>
+          </div>
           <p className="max-w-xl text-xs font-semibold text-ink-muted">{t.footerNote}</p>
         </div>
       </footer>

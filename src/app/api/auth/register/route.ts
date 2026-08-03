@@ -3,7 +3,12 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createSessionCookie } from "@/lib/auth";
-import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { checkLimit, recordFailure, clientKey } from "@/lib/rate-limit";
+
+// Failures only: the risk is someone guessing the specialist access code, not
+// a school legitimately enrolling several learners in one sitting.
+const MAX_FAILURES = 10;
+const WINDOW_MS = 15 * 60 * 1000;
 
 // Specialist accounts require the partner-institution access code so that
 // learner data is only visible to authorized reading specialists. There is no
@@ -20,11 +25,11 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  // Also throttled: registration is where the specialist code could be guessed.
-  const limit = rateLimit(clientKey(req, "register"), 10, 15 * 60 * 1000);
+  const limitKey = clientKey(req, "register");
+  const limit = checkLimit(limitKey, MAX_FAILURES);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Please wait a few minutes and try again." },
+      { error: "Too many failed attempts. Please wait a few minutes and try again." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
     );
   }
@@ -41,12 +46,14 @@ export async function POST(req: Request) {
   if (role === "SPECIALIST") {
     // An unset server code must never match a blank submitted code.
     if (!SPECIALIST_CODE) {
+      recordFailure(limitKey, WINDOW_MS);
       return NextResponse.json(
         { error: "Specialist registration is disabled. Contact the system administrator." },
         { status: 403 }
       );
     }
     if (code !== SPECIALIST_CODE) {
+      recordFailure(limitKey, WINDOW_MS);
       return NextResponse.json(
         { error: "Invalid specialist access code. Ask your institution administrator." },
         { status: 403 }

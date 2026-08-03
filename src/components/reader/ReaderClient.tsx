@@ -15,6 +15,9 @@ import { sayWord, stopSpeaking, ttsSupported } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
 import type { ReaderSet, ReaderWord } from "@/lib/reader-sets";
 
+/** Save the reading session this long after the last word is played. */
+const IDLE_FLUSH_MS = 6000;
+
 export default function ReaderClient({
   settings,
   sets,
@@ -44,6 +47,7 @@ export default function ReaderClient({
   const sessionIdRef = useRef<string | null>(null);
   const startedAtRef = useRef(0);
   const wordsPlayedRef = useRef(0);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // SSR assumes TTS support; the client value takes over after hydration.
   const noTts = !useSyncExternalStore(() => () => {}, ttsSupported, () => true);
@@ -70,6 +74,13 @@ export default function ReaderClient({
 
   const countWordPlayed = useCallback(() => {
     wordsPlayedRef.current += 1;
+
+    // Save a short while after the learner stops playing words, rather than
+    // waiting for the page to close. Unmounting is too late when they sign out
+    // from here: the session cookie is already gone and the save would 401.
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => finishSession(), IDLE_FLUSH_MS);
+
     if (sessionIdRef.current) return;
     startedAtRef.current = Date.now();
     fetch("/api/sessions", {
@@ -82,15 +93,16 @@ export default function ReaderClient({
         sessionIdRef.current = d.id ?? null;
       })
       .catch(() => {});
-  }, []);
+  }, [finishSession]);
 
   useEffect(() => {
     const onHide = () => finishSession();
     window.addEventListener("pagehide", onHide);
     return () => {
       window.removeEventListener("pagehide", onHide);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       stopSpeaking();
-      finishSession();
+      finishSession(); // backstop for a quick exit before the idle timer fires
     };
   }, [finishSession]);
 
