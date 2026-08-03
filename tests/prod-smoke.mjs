@@ -123,17 +123,28 @@ check("five concurrent page loads succeed", pages.every((s) => s === 200), pages
 
 /* ── 6. study data integrity ───────────────────────────────────────────── */
 section("[6] study data integrity");
+// Depth thresholds, not exact counts: an 8-item session needs enough items
+// that it does not repeat, and the banks are expected to keep growing.
 const stats = await one(`
   SELECT
     (SELECT COUNT(*) FROM "Word")::int AS words,
     (SELECT COUNT(*) FROM "Word" WHERE "audioWord" IS NULL AND "audioWordHuman" IS NULL)::int AS no_audio,
-    (SELECT COUNT(*) FROM "PhonItem")::int AS rhymes,
+    (SELECT COUNT(*) FROM "PhonItem" WHERE type = 'RHYME')::int AS rhymes,
+    (SELECT COUNT(*) FROM "PhonItem" WHERE type = 'FIRST_SOUND')::int AS first_sounds,
+    (SELECT COUNT(*) FROM "PhonItem" pi
+       LEFT JOIN "Word" w ON w.text = pi.prompt WHERE w.id IS NULL)::int AS promptless,
     (SELECT COUNT(*) FROM "Attempt" a
        WHERE NOT EXISTS (SELECT 1 FROM "LearnerProfile" lp WHERE lp.id = a."learnerId"))::int AS orphans
 `);
-check("word bank intact", stats.words >= 115, `${stats.words} words`);
+check("word bank has depth", stats.words >= 200, `${stats.words} words`);
 check("every word has pronunciation audio", stats.no_audio === 0, `${stats.no_audio} missing`);
-check("rhyme bank intact", stats.rhymes === 10, `${stats.rhymes} items`);
+check("rhyme bank has depth", stats.rhymes >= 24, `${stats.rhymes} items`);
+check("sound-isolation bank has depth", stats.first_sounds >= 24, `${stats.first_sounds} items`);
+check(
+  "every phonological prompt resolves to a bank word",
+  stats.promptless === 0,
+  stats.promptless ? `${stats.promptless} would use browser TTS` : "all have Filipino audio"
+);
 check("no orphaned rows", stats.orphans === 0, `${stats.orphans}`);
 
 await deleteTestLearner(learner.email);
