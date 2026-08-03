@@ -15,6 +15,7 @@
     "audit:ui": "node tests/ui-audit.mjs",
     "audit:links": "node tests/links-audit.mjs",
     "audit:a11y": "node tests/a11y-audit.mjs",
+    "audit:perf": "node tests/perf-audit.mjs",
     "audit:prod": "node tests/prod-smoke.mjs"
   },
   "dependencies": {
