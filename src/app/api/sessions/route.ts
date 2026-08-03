@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getLearnerContext, sessionExpired } from "@/lib/guards";
+import { purgeExpiredRecordings } from "@/lib/retention";
 
 const schema = z.object({
   type: z.enum(["READ_ALOUD", "LISTEN_CHOOSE", "SYLLABLES", "RHYME", "FIRST_SOUND", "PRACTICE", "READER"]),
@@ -23,6 +24,10 @@ export async function POST(req: Request) {
   await prisma.activitySession.deleteMany({
     where: { learnerId: ctx.learnerId, total: 0, createdAt: { lt: staleBefore } },
   });
+
+  // Recordings past the retention window go at the same time. Scores and
+  // transcripts are untouched, so no reported figure moves.
+  await purgeExpiredRecordings(ctx.learnerId);
 
   const activity = await prisma.activitySession.create({
     data: {

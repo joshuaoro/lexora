@@ -27,6 +27,7 @@ const en = {
     reports: "Reports",
     settings: "Settings",
     learners: "Learners",
+    cohort: "Cohort",
     wordBank: "Word bank",
   },
   activity: {
@@ -314,6 +315,7 @@ const fil: Dict = {
     reports: "Mga Ulat",
     settings: "Mga Setting",
     learners: "Mga Mag-aaral",
+    cohort: "Kabuuang Grupo",
     wordBank: "Bangko ng Salita",
   },
   activity: {

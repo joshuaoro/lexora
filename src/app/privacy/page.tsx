@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Logo from "@/components/Logo";
+import { retentionDays } from "@/lib/retention-policy";
 
 export const metadata = {
   title: "Privacy Notice — LEXORA",
@@ -86,10 +87,12 @@ const SECTIONS: { heading: string; body: React.ReactNode }[] = [
     heading: "How long it is kept",
     body: (
       <>
-        Voice recordings are deleted as soon as the scoring-reliability check for that
-        learner is complete; a specialist can clear them at any time from the learner&apos;s
-        page. Reading records are retained for the duration of the study and are deleted
-        once the research has been completed and defended.
+        Voice recordings are deleted automatically once they are{" "}
+        {retentionDays() === 0 ? "no longer needed" : `${retentionDays()} days old`}, and a
+        specialist can clear them at any time from the learner&apos;s page — normally as soon
+        as the scoring-reliability check for that learner is complete. Deleting a recording
+        leaves the reading record itself intact. Reading records are retained for the duration
+        of the study and are deleted once the research has been completed and defended.
       </>
     ),
   },

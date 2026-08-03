@@ -21,7 +21,7 @@ import Logo from "./Logo";
 import LangToggle from "./LangToggle";
 import { getDict, type Lang } from "@/lib/i18n";
 
-type NavItem = { href: string; key: "dashboard" | "reader" | "exercises" | "practice" | "reports" | "settings" | "learners" | "wordBank"; icon: LucideIcon };
+type NavItem = { href: string; key: "dashboard" | "reader" | "exercises" | "practice" | "reports" | "settings" | "learners" | "cohort" | "wordBank"; icon: LucideIcon };
 
 const LEARNER_NAV: NavItem[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutGrid },
@@ -34,6 +34,7 @@ const LEARNER_NAV: NavItem[] = [
 
 const SPECIALIST_NAV: NavItem[] = [
   { href: "/specialist", key: "learners", icon: Users },
+  { href: "/specialist/cohort", key: "cohort", icon: LayoutGrid },
   { href: "/specialist/words", key: "wordBank", icon: Library },
 ];
 

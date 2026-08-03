@@ -33,6 +33,7 @@ import {
   one,
   createTestLearner,
   deleteTestLearner,
+  until,
 } from "./helpers.mjs";
 
 console.log(`Session-integrity audit against ${BASE}`);
@@ -86,7 +87,7 @@ async function main() {
 
   await page.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Start!/i }).click();
-  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: /Skip this word/i }).waitFor({ timeout: 30000 });
 
   const before = await shownWord(page);
   check("a word is shown to read", before.length > 0, `“${before}”`);
@@ -107,7 +108,7 @@ async function main() {
 
   // Skipping counts as no response — a miss, without synthesising speech.
   await page.getByRole("button", { name: /Skip this word/i }).click();
-  await page.waitForTimeout(2500);
+  await page.getByRole("button", { name: /Next word|Finish/i }).waitFor({ timeout: 45000 });
 
   const inFeedback = await page.locator("main").innerText();
   check("feedback is on screen", /Not quite/i.test(inFeedback), "missed the word");
@@ -143,23 +144,29 @@ async function main() {
 
   await qpage.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
   await qpage.getByRole("button", { name: /Start!/i }).click();
-  await qpage.waitForTimeout(1000);
+
+  const skip = qpage.getByRole("button", { name: /Skip this word/i });
+  const advance = qpage.getByRole("button", { name: /Next word|Finish/i });
 
   // Answer two of the eight words, then walk away to the dashboard.
   for (let i = 0; i < 2; i++) {
-    await qpage.getByRole("button", { name: /Skip this word/i }).click();
-    await qpage.waitForTimeout(2200);
-    await qpage.getByRole("button", { name: /Next word/i }).click();
-    await qpage.waitForTimeout(600);
+    await skip.waitFor({ timeout: 30000 });
+    await skip.click();
+    await advance.waitFor({ timeout: 45000 });
+    await advance.click();
   }
   await qpage.getByRole("link", { name: /^Dashboard$/ }).first().click();
   await qpage.waitForURL(/\/dashboard/, { timeout: 15000 });
-  await qpage.waitForTimeout(2500);
 
-  const partial = await one(
-    `SELECT total, correct, "durationMs", "completedAt"
-       FROM "ActivitySession" WHERE "learnerId" = $1 ORDER BY "createdAt" DESC LIMIT 1`,
-    [quitter.learnerId]
+  // The flush goes out as the exercise unmounts, so there is nothing on screen
+  // to wait for — poll until it lands rather than guessing how long it takes.
+  const partial = await until(() =>
+    one(
+      `SELECT total, correct, "durationMs", "completedAt"
+         FROM "ActivitySession"
+        WHERE "learnerId" = $1 AND total > 0 ORDER BY "createdAt" DESC LIMIT 1`,
+      [quitter.learnerId]
+    )
   );
 
   check("the partial session recorded the words answered", partial?.total === 2, `total=${partial?.total}`);
@@ -208,7 +215,6 @@ async function main() {
   await qpage.getByRole("button", { name: /Start!/i }).click();
 
   const option = qpage.locator("main button").filter({ hasText: /^[1-4]$/ }).first();
-  const advance = qpage.getByRole("button", { name: /Next word|Finish/i });
 
   for (let i = 0; i < 8; i++) {
     await option.waitFor({ state: "visible", timeout: 30000 });
@@ -225,10 +231,13 @@ async function main() {
 
   await qpage.locator("text=/Amazing!|Great work!|Good try!/").first().waitFor({ timeout: 30000 });
 
-  const finished = await one(
-    `SELECT total, "completedAt" FROM "ActivitySession"
-      WHERE "learnerId" = $1 AND type = 'SYLLABLES' ORDER BY "createdAt" DESC LIMIT 1`,
-    [quitter.learnerId]
+  const finished = await until(() =>
+    one(
+      `SELECT total, "completedAt" FROM "ActivitySession"
+        WHERE "learnerId" = $1 AND type = 'SYLLABLES' AND "completedAt" IS NOT NULL
+        ORDER BY "createdAt" DESC LIMIT 1`,
+      [quitter.learnerId]
+    )
   );
   check("the finished activity is marked completed", Boolean(finished?.completedAt), String(finished?.completedAt));
 

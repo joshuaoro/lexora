@@ -97,6 +97,29 @@ export async function closeDb() {
   pool = undefined;
 }
 
+/* ── waiting ───────────────────────────────────────────────────────────── */
+
+/**
+ * Poll until `probe` returns something truthy, or give up.
+ *
+ * For the cases a DOM wait cannot cover: a keepalive request sent as the page
+ * unmounts lands in the database with no on-screen signal that it arrived. A
+ * fixed sleep there is tuned to whichever machine it was written on — it passed
+ * locally and failed against the deployment more than once — and, worse, an
+ * assertion that runs before the write lands can pass for the wrong reason.
+ *
+ * Returns the probe's value, or null if the deadline passed.
+ */
+export async function until(probe, { timeout = 30000, interval = 500 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const value = await probe();
+    if (value) return value;
+    if (Date.now() > deadline) return null;
+    await new Promise((r) => setTimeout(r, interval));
+  }
+}
+
 /* ── fixtures ──────────────────────────────────────────────────────────── */
 
 /** Register a throwaway learner and return { email, cookie, learnerId }. */

@@ -3,6 +3,7 @@
  *
  *   npm run backup                  # write backups/lexora-<timestamp>.json.gz
  *   npm run backup -- --out path    # write somewhere specific
+ *   npm run backup -- --keep 30     # how many to retain (default 14)
  *
  * Why this exists: Supabase's free tier takes no automatic backups. Reading
  * data collected from children cannot be re-gathered if it is lost, so run
@@ -13,7 +14,7 @@
  */
 import "dotenv/config";
 import { createWriteStream } from "node:fs";
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, readdir, stat, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
@@ -67,8 +68,36 @@ async function main() {
   const { size } = await stat(outPath);
   console.log(`\nWrote ${outPath}`);
   console.log(`${totalRows} rows, ${(size / 1024 / 1024).toFixed(2)} MB compressed`);
+
+  await prune(dirname(outPath));
+
   console.log("\nKeep a copy somewhere other than this laptop — a drive failure");
   console.log("would otherwise take the study data with it.");
+}
+
+/**
+ * Keep the most recent backups and delete the rest.
+ *
+ * Each file holds every recording in the database, so an unattended daily
+ * backup would otherwise fill the disk — and a scheduled job that eventually
+ * fails on a full disk is worse than no scheduled job, because it looks like it
+ * is still working.
+ */
+async function prune(dir: string) {
+  const keepFlag = process.argv.indexOf("--keep");
+  const keep = keepFlag !== -1 ? Number(process.argv[keepFlag + 1]) : 14;
+  if (!Number.isFinite(keep) || keep < 1) return;
+
+  const files = (await readdir(dir))
+    .filter((f) => /^lexora-.*\.json\.gz$/.test(f))
+    .sort()
+    .reverse(); // timestamped names sort chronologically
+
+  const stale = files.slice(keep);
+  if (stale.length === 0) return;
+
+  for (const f of stale) await unlink(join(dir, f));
+  console.log(`Pruned ${stale.length} older backup(s); ${keep} kept.`);
 }
 
 main().catch((err) => {

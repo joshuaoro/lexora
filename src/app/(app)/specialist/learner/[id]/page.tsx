@@ -9,8 +9,10 @@ import LearnerControls from "@/components/specialist/LearnerControls";
 import LearnerDataControls from "@/components/specialist/LearnerDataControls";
 import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
 import SessionPhases, { type PhaseSession } from "@/components/specialist/SessionPhases";
+import SelfCorrection, { type CorrectionPair } from "@/components/specialist/SelfCorrection";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
+import { retentionDays } from "@/lib/retention-policy";
 
 /** How far below the threshold still counts as a borderline reading. */
 const BORDERLINE_BAND = 0.15;
@@ -29,8 +31,16 @@ export default async function LearnerDetailPage({
   });
   if (!profile) notFound();
 
-  const [attempts, reviewStats, words, practiceItems, recordingCount, borderline, sessionRows] =
-    await Promise.all([
+  const [
+    attempts,
+    reviewStats,
+    words,
+    practiceItems,
+    recordingCount,
+    borderline,
+    retryRows,
+    sessionRows,
+  ] = await Promise.all([
     // First readings only. A retry is taken seconds after the child heard the
     // word pronounced, so it skews clear and correct; including retries would
     // bias the agreement sample toward easy cases and overstate how well the
@@ -72,6 +82,21 @@ export default async function LearnerDetailPage({
       take: 15,
       include: { review: { select: { agrees: true, note: true } } },
     }),
+    // Re-reads, newest first. Each is paired below with the miss it followed.
+    prisma.attempt.findMany({
+      where: { learnerId: id, isRetry: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        target: true,
+        correct: true,
+        transcript: true,
+        audio: true,
+        createdAt: true,
+        sessionId: true,
+      },
+    }),
     // Completed sessions only — an abandoned one is not a data point to tag.
     prisma.activitySession.findMany({
       where: { learnerId: id, total: { gt: 0 } },
@@ -80,6 +105,44 @@ export default async function LearnerDetailPage({
       select: { id: true, createdAt: true, type: true, total: true, correct: true, phase: true },
     }),
   ]);
+
+  // Pair each re-read with the failed reading it followed: the same word, in
+  // the same session, immediately before it. Matching on the word rather than
+  // on an explicit link keeps the schema simple and is unambiguous in practice,
+  // because the re-read is offered the instant the word is missed.
+  const firstReadings = retryRows.length
+    ? await prisma.attempt.findMany({
+        where: {
+          learnerId: id,
+          isRetry: false,
+          correct: false,
+          target: { in: [...new Set(retryRows.map((r) => r.target))] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { target: true, transcript: true, audio: true, createdAt: true, sessionId: true },
+      })
+    : [];
+
+  const corrections: CorrectionPair[] = retryRows.map((r) => {
+    const first = firstReadings.find(
+      (f) => f.target === r.target && f.sessionId === r.sessionId && f.createdAt <= r.createdAt
+    );
+    return {
+      id: r.id,
+      word: r.target,
+      date: r.createdAt.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      firstHeard: first?.transcript ?? null,
+      firstAudio: first?.audio ?? null,
+      retryCorrect: r.correct,
+      retryHeard: r.transcript,
+      retryAudio: r.audio,
+    };
+  });
 
   const phaseSessions: PhaseSession[] = sessionRows.map((s) => ({
     id: s.id,
@@ -218,6 +281,8 @@ export default async function LearnerDetailPage({
         band={BORDERLINE_BAND}
       />
 
+      <SelfCorrection pairs={corrections} />
+
       <SessionPhases sessions={phaseSessions} />
 
       {/* Full progress report */}
@@ -229,6 +294,11 @@ export default async function LearnerDetailPage({
         learnerId={profile.id}
         learnerName={profile.user.name}
         recordingCount={recordingCount}
+        retentionNote={
+          retentionDays() === 0
+            ? "Automatic deletion is switched off, so recordings are kept until you clear them."
+            : `Recordings are also deleted automatically once they are ${retentionDays()} days old.`
+        }
       />
     </div>
   );

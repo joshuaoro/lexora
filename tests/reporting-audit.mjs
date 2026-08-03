@@ -38,6 +38,7 @@ import {
   one,
   createTestLearner,
   deleteTestLearner,
+  until,
 } from "./helpers.mjs";
 
 console.log(`Reporting audit against ${BASE}`);
@@ -331,26 +332,34 @@ async function main() {
 
   await upage.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
   await upage.getByRole("button", { name: /Start!/i }).click();
-  await upage.waitForTimeout(1200);
+  const skip = upage.getByRole("button", { name: /Skip this word/i });
+  await skip.waitFor({ timeout: 30000 });
   // Skipping counts as no response, which is a miss — the same path as a
   // misread word, without needing to synthesise speech.
-  await upage.getByRole("button", { name: /Skip this word/i }).click();
-  await upage.waitForTimeout(2500);
+  await skip.click();
 
+  const sayIt = upage.getByRole("button", { name: /^Say it$/ });
+  await sayIt.waitFor({ timeout: 45000 });
   const missText = await upage.locator("body").innerText();
   check("a missed word offers 'Now you try it!'", missText.includes("Now you try it!"), "");
 
-  await upage.getByRole("button", { name: /^Say it$/ }).click();
-  await upage.waitForTimeout(11000);
-
-  const uiRows = await query(
-    `SELECT correct, "isRetry" FROM "Attempt" WHERE "learnerId" = $1 ORDER BY "createdAt"`,
-    [ui.learnerId]
+  await sayIt.click();
+  // The take runs to its own timeout on a silent device, then is scored, so the
+  // row appears well after the click. Poll for it rather than sleeping past it.
+  const uiRows = await until(
+    async () => {
+      const rows = await query(
+        `SELECT correct, "isRetry" FROM "Attempt" WHERE "learnerId" = $1 ORDER BY "createdAt"`,
+        [ui.learnerId]
+      );
+      return rows.length >= 2 ? rows : null;
+    },
+    { timeout: 60000 }
   );
   check(
     "the re-read is stored as a retry of the same word",
-    uiRows.length === 2 && uiRows[0].isRetry === false && uiRows[1].isRetry === true,
-    JSON.stringify(uiRows)
+    uiRows?.length === 2 && uiRows[0].isRetry === false && uiRows[1].isRetry === true,
+    JSON.stringify(uiRows ?? "timed out waiting for the retry row")
   );
 
   const afterRetry = await upage.locator("body").innerText();
@@ -440,6 +449,57 @@ async function main() {
       summary.includes("retry_success_pct"),
       summary.split("\r\n")[0].slice(-60)
     );
+
+    /* ── 7. the re-reads are audible somewhere ────────────────────────── */
+
+    section("[7] self-correction recordings are reachable");
+
+    // Retries are excluded from accuracy and from the reliability sample, which
+    // left their audio stored but unplayable. It has its own panel now — audio
+    // held for children and never listenable would be storage without purpose.
+    const rid = cuid("att");
+    await query(
+      `INSERT INTO "Attempt"
+         (id, "learnerId", "activityType", target, transcript, score, correct,
+          "responseMs", engine, "isRetry", audio, "createdAt")
+       VALUES ($1, $2, 'READ_ALOUD', 'zzcorrected', 'zzcorrected', 1, true,
+               2500, 'server', true, 'data:audio/webm;base64,AAAA', NOW())`,
+      [rid, id]
+    );
+
+    const spage2 = await (await contextWithCookie(specCookie)).newPage();
+    await spage2.goto(`${BASE}/specialist/learner/${id}`, { waitUntil: "networkidle" });
+    const panel2 = await panelText(spage2, "Self-correction");
+
+    check("the self-correction panel is shown", panel2.length > 0, "section present");
+    check("the re-read word is listed", panel2.includes("zzcorrected"), "");
+    check(
+      "the re-read has a play control",
+      (await spage2.getByRole("button", { name: /Play the re-read of zzcorrected/i }).count()) > 0,
+      "audio is reachable"
+    );
+    await spage2.context().close();
+
+    /* ── 8. the cohort view ───────────────────────────────────────────── */
+
+    section("[8] the cohort view compares every learner");
+
+    const cpage = await (await contextWithCookie(specCookie)).newPage();
+    await cpage.goto(`${BASE}/specialist/cohort`, { waitUntil: "networkidle" });
+    const cohort = await cpage.locator("main").innerText();
+
+    check("the cohort page loads", /Cohort overview/i.test(cohort), "");
+    check(
+      "it lists the pattern grid the group is compared on",
+      /Accuracy by syllable pattern/i.test(cohort),
+      ""
+    );
+    check(
+      "a learner is reachable from it",
+      (await cpage.getByRole("link", { name: "AuditBot" }).count()) > 0,
+      "learner links present"
+    );
+    await cpage.context().close();
   }
 
   await deleteTestLearner(rl.email);

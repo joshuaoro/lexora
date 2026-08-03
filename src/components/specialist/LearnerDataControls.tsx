@@ -13,10 +13,13 @@ export default function LearnerDataControls({
   learnerId,
   learnerName,
   recordingCount,
+  retentionNote,
 }: {
   learnerId: string;
   learnerName: string;
   recordingCount: number;
+  /** Stated by the server so this matches the policy actually enforced. */
+  retentionNote: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -64,6 +67,9 @@ export default function LearnerDataControls({
         Voice recordings are kept only so you can replay a reading during the scoring
         reliability check. Clear them once you are done, and erase a participant entirely if
         their parent or guardian withdraws consent.
+      </p>
+      <p className="mt-1 text-sm font-semibold text-ink-muted">
+        {retentionNote}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">

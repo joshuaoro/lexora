@@ -199,7 +199,9 @@ for (const [label, viewport, mobile] of [
   let worst = 0;
   for (const path of PAGES) {
     await rp.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
-    await rp.waitForTimeout(500);
+    // Fonts change text metrics, so measuring overflow before they land reads
+    // the fallback face's widths rather than the ones a learner will see.
+    await rp.evaluate(() => document.fonts.ready);
     worst = Math.max(
       worst,
       await rp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
