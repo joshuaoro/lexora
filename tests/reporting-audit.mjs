@@ -502,6 +502,58 @@ async function main() {
     await cpage.context().close();
   }
 
+  /* ── 9. recordings are retired on schedule ──────────────────────────── */
+
+  section("[9] recordings past the retention window are dropped");
+
+  const days = Number(process.env.RECORDING_RETENTION_DAYS ?? 180);
+  const keeper = cuid("att");
+  const expired = cuid("att");
+
+  // One recording well inside the window, one well past it.
+  for (const [attId, age] of [
+    [keeper, Math.max(1, Math.floor(days / 2))],
+    [expired, days + 30],
+  ]) {
+    await query(
+      `INSERT INTO "Attempt"
+         (id, "learnerId", "activityType", target, transcript, score, correct,
+          "responseMs", engine, audio, "createdAt")
+       VALUES ($1, $2, 'READ_ALOUD', 'zzretention', 'zzretention', 1, true, 2000,
+               'server', 'data:audio/webm;base64,AAAA', NOW() - ($3 || ' days')::interval)`,
+      [attId, rl.learnerId, String(age)]
+    );
+  }
+
+  if (days === 0) {
+    check("retention is switched off, so nothing is swept", true, "RECORDING_RETENTION_DAYS=0");
+  } else {
+    // Starting an activity triggers the sweep.
+    await api("/api/sessions", {
+      cookie: rl.cookie,
+      method: "POST",
+      body: { type: "READ_ALOUD" },
+    });
+
+    const [old] = await query(
+      `SELECT audio, score, correct, transcript FROM "Attempt" WHERE id = $1`,
+      [expired]
+    );
+    const [recent] = await query(`SELECT audio FROM "Attempt" WHERE id = $1`, [keeper]);
+
+    check("an expired recording is deleted", old.audio === null, `${days + 30} days old`);
+    check(
+      "its score and transcript survive the deletion",
+      old.score === 1 && old.correct === true && old.transcript === "zzretention",
+      "no reported figure moves"
+    );
+    check(
+      "a recording inside the window is kept",
+      recent.audio !== null,
+      `${Math.max(1, Math.floor(days / 2))} days old, window is ${days}`
+    );
+  }
+
   await deleteTestLearner(rl.email);
   await deleteTestLearner(learner.email);
   report("Reporting audit");
