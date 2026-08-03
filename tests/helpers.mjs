@@ -148,3 +148,21 @@ export async function cleanupTestAccounts() {
   const { rowCount } = await getPool().query(`DELETE FROM "User" WHERE email LIKE '%@lexora.test'`);
   return rowCount;
 }
+
+/**
+ * End a suite: remove any throwaway accounts it left behind, then close the
+ * pool.
+ *
+ * A suite that throws partway skips its own deletes, so the accounts stay in
+ * the study database — which is how three of them came to be sitting in
+ * production. Sweeping on the way out means a failed run tidies up after
+ * itself rather than leaving it for whoever next reads the smoke test.
+ *
+ * Only ever touches @lexora.test addresses, so a real participant is never at
+ * risk. Suites run one at a time, so a sweep cannot pull the rug from another.
+ */
+export async function endSuite() {
+  const removed = await cleanupTestAccounts().catch(() => 0);
+  if (removed) console.log(`\nCleaned up ${removed} leftover test account(s).`);
+  await closeDb();
+}

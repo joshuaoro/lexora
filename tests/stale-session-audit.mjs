@@ -29,7 +29,7 @@ import {
   check,
   section,
   report,
-  closeDb,
+  endSuite,
   query,
   createTestLearner,
   deleteTestLearner,
@@ -199,5 +199,5 @@ main()
   })
   .finally(async () => {
     await browser.close();
-    await closeDb();
+    await endSuite();
   });

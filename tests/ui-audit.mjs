@@ -9,7 +9,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE, PASSWORD, check, section, report, one, query,
-  createTestLearner, deleteTestLearner, closeDb,
+  createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`UI audit against ${BASE}`);
@@ -215,6 +215,6 @@ check("no uncaught console/page errors", errors.length === 0, errors.slice(0, 3)
 
 await browser.close();
 await deleteTestLearner(learner.email);
-await closeDb();
+await endSuite();
 
 report("UI audit");

@@ -33,6 +33,7 @@ import {
   one,
   createTestLearner,
   deleteTestLearner,
+  cleanupTestAccounts,
   until,
 } from "./helpers.mjs";
 
@@ -265,5 +266,10 @@ main()
   })
   .finally(async () => {
     await browser.close();
+    // A suite that throws partway skips its own deletes and leaves throwaway
+    // accounts in the study database. Sweeping here means a failed run cleans
+    // up after itself instead of leaving the next person to notice.
+    const removed = await cleanupTestAccounts().catch(() => 0);
+    if (removed) console.log(`\nCleaned up ${removed} leftover test account(s).`);
     await closeDb();
   });

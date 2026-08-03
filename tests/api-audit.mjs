@@ -7,7 +7,7 @@
  */
 import {
   BASE, api, json, login, check, section, report, query, one,
-  createTestLearner, deleteTestLearner, closeDb,
+  createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`API audit against ${BASE}`);
@@ -157,6 +157,6 @@ check(
 /* ── cleanup ───────────────────────────────────────────────────────────── */
 await deleteTestLearner(alice.email);
 await deleteTestLearner(bob.email);
-await closeDb();
+await endSuite();
 
 report("API audit");

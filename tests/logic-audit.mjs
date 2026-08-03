@@ -5,7 +5,7 @@
  */
 import {
   BASE, json, login, check, section, report, query, one,
-  createTestLearner, deleteTestLearner, closeDb,
+  createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`Logic audit against ${BASE}`);
@@ -172,6 +172,6 @@ check("the scored attempts survive", after.total > 0, `${after.total} attempts k
 
 /* ── cleanup ───────────────────────────────────────────────────────────── */
 await deleteTestLearner(learner.email);
-await closeDb();
+await endSuite();
 
 report("Logic audit");
