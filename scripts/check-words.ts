@@ -12,6 +12,31 @@ import { WORDS, ASR_VARIANTS } from "../prisma/word-bank";
 import { stageForWord, syllableCount } from "../prisma/marungko-stage";
 
 const MIN_PER_LEVEL = 20; // an 8-item session needs real choice to draw from
+
+/**
+ * Words to keep out of a reading list for 7–12 year olds.
+ *
+ * Filipino has several everyday words whose colloquial sense is adult — a
+ * reading specialist reviewing the content would flag them, and a child might
+ * be embarrassed reading one aloud to an adult. The point is not squeamishness:
+ * an awkward word costs the child's attention at exactly the moment the study
+ * is measuring their decoding.
+ */
+const AVOID: Record<string, string> = {
+  kabit: 'colloquially "mistress"',
+  buntis: "pregnant",
+  suso: "also means breast",
+  titi: "vulgar",
+  puki: "vulgar",
+  utot: "flatulence",
+  tae: "faeces",
+  bala: "bullet",
+  patay: "dead",
+  bugbog: "beaten",
+  lasing: "drunk",
+  sugat: "wound",
+  dugo: "blood",
+};
 let errors = 0;
 let warnings = 0;
 
@@ -39,6 +64,7 @@ for (const [text, syllables, pattern, level, meaning] of WORDS) {
   if (joined !== text) fail(`"${text}" syllabified as "${syllables}" spells "${joined}"`);
 
   if (!/^[a-zñ]+$/.test(text)) fail(`"${text}" contains characters the word bank does not allow`);
+  if (AVOID[text]) fail(`"${text}" is not suitable for a children's reading list — ${AVOID[text]}`);
   if (level < 1 || level > 5) fail(`"${text}" has level ${level}, outside 1–5`);
   if (!pattern) fail(`"${text}" has no syllable pattern`);
   if (!meaning) warn(`"${text}" has no English gloss`);
