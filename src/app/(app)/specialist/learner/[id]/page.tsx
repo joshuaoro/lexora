@@ -8,6 +8,7 @@ import PrintButton from "@/components/PrintButton";
 import LearnerControls from "@/components/specialist/LearnerControls";
 import LearnerDataControls from "@/components/specialist/LearnerDataControls";
 import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
+import SessionPhases, { type PhaseSession } from "@/components/specialist/SessionPhases";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
 
@@ -28,9 +29,18 @@ export default async function LearnerDetailPage({
   });
   if (!profile) notFound();
 
-  const [attempts, reviewStats, words, practiceItems, recordingCount, borderline] = await Promise.all([
+  const [attempts, reviewStats, words, practiceItems, recordingCount, borderline, sessionRows] =
+    await Promise.all([
+    // First readings only. A retry is taken seconds after the child heard the
+    // word pronounced, so it skews clear and correct; including retries would
+    // bias the agreement sample toward easy cases and overstate how well the
+    // scorer performs on the readings the study actually measures.
     prisma.attempt.findMany({
-      where: { learnerId: id, activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
+      where: {
+        learnerId: id,
+        activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+        isRetry: false,
+      },
       orderBy: { createdAt: "desc" },
       take: 30,
       include: { review: { select: { agrees: true, note: true } } },
@@ -54,6 +64,7 @@ export default async function LearnerDetailPage({
       where: {
         learnerId: id,
         activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+        isRetry: false,
         correct: false,
         score: { gte: activeScoreThreshold() - BORDERLINE_BAND, lt: activeScoreThreshold() },
       },
@@ -61,7 +72,28 @@ export default async function LearnerDetailPage({
       take: 15,
       include: { review: { select: { agrees: true, note: true } } },
     }),
+    // Completed sessions only — an abandoned one is not a data point to tag.
+    prisma.activitySession.findMany({
+      where: { learnerId: id, total: { gt: 0 } },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: { id: true, createdAt: true, type: true, total: true, correct: true, phase: true },
+    }),
   ]);
+
+  const phaseSessions: PhaseSession[] = sessionRows.map((s) => ({
+    id: s.id,
+    date: s.createdAt.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    type: s.type.replace(/_/g, " ").toLowerCase(),
+    total: s.total,
+    correct: s.correct,
+    phase: s.phase,
+  }));
 
   const reviewed = reviewStats.reduce((n, g) => n + g._count, 0);
   const agreed = reviewStats.find((g) => g.agrees)?._count ?? 0;
@@ -185,6 +217,8 @@ export default async function LearnerDetailPage({
         threshold={activeScoreThreshold()}
         band={BORDERLINE_BAND}
       />
+
+      <SessionPhases sessions={phaseSessions} />
 
       {/* Full progress report */}
       <div className="mt-5">

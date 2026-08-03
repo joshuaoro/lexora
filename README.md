@@ -74,11 +74,28 @@ Specialists can download analysis-ready CSVs (UTF-8 with BOM, opens cleanly in E
 
 | Export | Where | Contents |
 |---|---|---|
-| `Summary CSV` | Specialist dashboard | One row per learner: accuracy, error-type counts, sessions, minutes, practice words, specialist–system agreement % |
-| `All attempts CSV` | Specialist dashboard (or per learner) | One row per scored word reading: target, transcript, **ASR engine**, **alternate transcript**, correct, similarity score, error type, response time, review verdict |
-| `All sessions CSV` | Specialist dashboard (or per learner) | One row per completed activity: type, items, correct, accuracy %, duration |
+| `Summary CSV` | Specialist dashboard | One row per learner: accuracy, error-type counts, sessions, minutes, practice words, specialist–system agreement %, self-correction rate |
+| `All attempts CSV` | Specialist dashboard (or per learner) | One row per scored word reading: target, transcript, **ASR engine**, **alternate transcript**, correct, similarity score, error type, response time, review verdict, `is_retry`, `study_phase` |
+| `All sessions CSV` | Specialist dashboard (or per learner) | One row per completed activity: type, items, correct, accuracy %, duration, `study_phase` |
 
 Endpoints: `/api/export?what=summary|attempts|sessions[&learnerId=…]` (specialist only; learners can export their own attempts/sessions).
+
+**Two columns matter before you compute anything:**
+
+- `is_retry = 1` marks a second reading of a word, taken right after the correct
+  pronunciation was played. It is the closing step of the corrective sequence —
+  the child hears the word, then says it, so their last attempt at a word they
+  missed is a correct one. Statistically it is *not* an independent measure of
+  decoding, because they have just been told the answer. **Filter these rows out
+  before computing accuracy.** Every figure inside the app already does: accuracy,
+  decoding time, error patterns, adaptive level, practice mastery, the borderline
+  panel, and the agreement sample all use first readings only. The summary export
+  reports retries separately as `retries` / `retries_correct` /
+  `retry_success_pct`.
+- `study_phase` is `BASELINE`, `REGULAR` or `ENDLINE`, tagged per session by a
+  specialist on the learner page ("Study timeline"). Tagging is retroactive and
+  deliberate: it lets the pre/post comparison rest on sessions you chose rather
+  than a cut-off inferred from dates.
 
 ### Device support
 Fully responsive: desktop/laptop (persistent sidebar), tablet and phone (top bar + slide-out drawer). Tables scroll horizontally on small screens; exercise text scales with `clamp()` so long words never overflow.

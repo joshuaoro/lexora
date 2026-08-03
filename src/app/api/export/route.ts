@@ -59,6 +59,7 @@ export async function GET(req: Request) {
         learner: { include: { user: { select: { name: true } } } },
         word: { select: { stage: true, level: true, pattern: true, syllables: true } },
         review: { select: { agrees: true } },
+        session: { select: { phase: true } },
       },
     });
 
@@ -83,6 +84,8 @@ export async function GET(req: Request) {
       a.responseMs,
       a.audio ? 1 : 0,
       a.review ? (a.review.agrees ? "agree" : "disagree") : "",
+      a.isRetry ? 1 : 0,
+      a.session?.phase ?? "",
     ]);
 
     return csvResponse(
@@ -92,6 +95,11 @@ export async function GET(req: Request) {
           "syllables", "pattern", "pattern_family", "word_stage", "word_level", "level_at_time",
           "transcript", "asr_engine", "alt_transcript", "correct", "similarity_score",
           "error_type", "response_ms", "has_audio", "specialist_review",
+          // is_retry = 1 marks a second reading taken after the correct word was
+          // modelled. Filter these out before computing accuracy: they measure
+          // repetition, not decoding. study_phase tags the session as
+          // BASELINE / REGULAR / ENDLINE for pre-post comparison.
+          "is_retry", "study_phase",
         ],
         rows
       ),
@@ -116,11 +124,12 @@ export async function GET(req: Request) {
       s.total ? ((s.correct / s.total) * 100).toFixed(1) : "",
       s.durationMs,
       s.levelAtTime,
+      s.phase,
     ]);
 
     return csvResponse(
       toCsv(
-        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time"],
+        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase"],
         rows
       ),
       `lexora-sessions-${stamp()}.csv`
@@ -135,15 +144,19 @@ export async function GET(req: Request) {
 
     const rows = [];
     for (const l of learners) {
-      const [attempts, errorGroups, sessions, practice, reviews] = await Promise.all([
+      // Every figure below is over first readings only; retries are counted
+      // separately as self-correction so they can never inflate accuracy.
+      const measured = { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false };
+
+      const [attempts, errorGroups, sessions, practice, reviews, retries] = await Promise.all([
         prisma.attempt.groupBy({
           by: ["correct"],
-          where: { learnerId: l.id, activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
+          where: { learnerId: l.id, ...measured },
           _count: true,
         }),
         prisma.attempt.groupBy({
           by: ["errorType"],
-          where: { learnerId: l.id, correct: false, activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
+          where: { learnerId: l.id, correct: false, ...measured },
           _count: true,
         }),
         prisma.activitySession.aggregate({
@@ -157,6 +170,11 @@ export async function GET(req: Request) {
           where: { attempt: { learnerId: l.id } },
           _count: true,
         }),
+        prisma.attempt.groupBy({
+          by: ["correct"],
+          where: { learnerId: l.id, activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: true },
+          _count: true,
+        }),
       ]);
 
       const total = attempts.reduce((n, g) => n + g._count, 0);
@@ -164,6 +182,8 @@ export async function GET(req: Request) {
       const err = (type: string) => errorGroups.find((g) => g.errorType === type)?._count ?? 0;
       const reviewed = reviews.reduce((n, g) => n + g._count, 0);
       const agreed = reviews.find((g) => g.agrees)?._count ?? 0;
+      const retriesTotal = retries.reduce((n, g) => n + g._count, 0);
+      const retriesCorrect = retries.find((g) => g.correct)?._count ?? 0;
 
       rows.push([
         l.user.name,
@@ -184,6 +204,9 @@ export async function GET(req: Request) {
         reviewed,
         agreed,
         reviewed ? ((agreed / reviewed) * 100).toFixed(1) : "",
+        retriesTotal,
+        retriesCorrect,
+        retriesTotal ? ((retriesCorrect / retriesTotal) * 100).toFixed(1) : "",
       ]);
     }
 
@@ -196,6 +219,9 @@ export async function GET(req: Request) {
           "sessions_completed", "minutes_practiced",
           "practice_words_active", "practice_words_mastered",
           "attempts_reviewed", "reviews_agreed", "agreement_pct",
+          // Self-correction: how often a second reading, taken after the word
+          // was modelled, came out right. Reported apart from accuracy.
+          "retries", "retries_correct", "retry_success_pct",
         ],
         rows
       ),
