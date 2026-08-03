@@ -59,6 +59,23 @@ async function shownWord(page) {
   return (await page.locator("main p.wrap-break-word").first().textContent())?.trim() ?? "";
 }
 
+/**
+ * Switch the interface language and wait until the new copy is actually on
+ * screen.
+ *
+ * The toggle triggers a server round-trip, so a fixed sleep is both flaky and
+ * unsound: if it elapses before the refresh lands, "the word did not change" is
+ * true only because nothing has happened yet, and the assertion passes without
+ * testing anything. Waiting for the copy to change proves the refresh completed
+ * — which is the moment the words were at risk of being swapped.
+ */
+async function switchLanguage(page, to) {
+  const marker =
+    to === "fil" ? /Pindutin|Basahin|Laktawan/i : /Press the mic|Read this word aloud|Skip this word/i;
+  await page.getByRole("button", { name: to === "fil" ? "Filipino" : "English" }).click();
+  await page.locator("main").getByText(marker).first().waitFor({ timeout: 30000 });
+}
+
 async function main() {
   /* ── 1. the language toggle must not change the words ────────────────── */
 
@@ -74,18 +91,13 @@ async function main() {
   const before = await shownWord(page);
   check("a word is shown to read", before.length > 0, `“${before}”`);
 
-  await page.getByRole("button", { name: "Filipino" }).click();
-  await page.waitForTimeout(1500);
+  // The wait inside switchLanguage is the proof the refresh landed; the
+  // assertion that follows is therefore about a real re-render, not a no-op.
+  await switchLanguage(page, "fil");
   const afterFil = await shownWord(page);
   check("the word is unchanged after switching to Filipino", afterFil === before, `“${afterFil}”`);
-  check(
-    "the interface did switch language",
-    /Pindutin|Basahin|Laktawan/i.test(await page.locator("main").innerText()),
-    "Filipino copy is showing"
-  );
 
-  await page.getByRole("button", { name: "English" }).click();
-  await page.waitForTimeout(1500);
+  await switchLanguage(page, "en");
   const afterEn = await shownWord(page);
   check("the word is still unchanged after switching back", afterEn === before, `“${afterEn}”`);
 
@@ -100,19 +112,22 @@ async function main() {
   const inFeedback = await page.locator("main").innerText();
   check("feedback is on screen", /Not quite/i.test(inFeedback), "missed the word");
 
+  // In the feedback phase the word is shown as syllables, so wait on the
+  // Filipino feedback copy rather than the item-phase prompts.
   await page.getByRole("button", { name: "Filipino" }).click();
-  await page.waitForTimeout(1500);
+  await page.locator("main").getByText(/Hindi pa tama|Ngayon, subukan mo/i).first().waitFor({
+    timeout: 30000,
+  });
 
   const feedbackFil = await page.locator("main").innerText();
-  const wordDuringFeedback = await shownWord(page);
   check(
     "the word under the feedback did not change",
-    wordDuringFeedback === before || feedbackFil.includes(before),
-    `“${wordDuringFeedback}” vs “${before}”`
+    feedbackFil.includes(before),
+    `looking for “${before}” in the feedback panel`
   );
   check(
     "the feedback is still showing, now in Filipino",
-    /Hindi tama|Muntik na|Subukan|Ngayon/i.test(feedbackFil),
+    /Hindi pa tama|Ngayon, subukan mo/i.test(feedbackFil),
     feedbackFil.replace(/\s+/g, " ").slice(0, 70)
   );
 
@@ -191,20 +206,24 @@ async function main() {
 
   await qpage.goto(`${BASE}/exercises/syllables`, { waitUntil: "networkidle" });
   await qpage.getByRole("button", { name: /Start!/i }).click();
-  await qpage.waitForTimeout(800);
+
+  const option = qpage.locator("main button").filter({ hasText: /^[1-4]$/ }).first();
+  const advance = qpage.getByRole("button", { name: /Next word|Finish/i });
 
   for (let i = 0; i < 8; i++) {
-    await qpage.locator("main button").filter({ hasText: /^[1-4]$/ }).first().click();
-    await qpage.waitForTimeout(700);
-    const done = qpage.getByRole("button", { name: /Finish/i });
-    if (await done.isVisible().catch(() => false)) {
-      await done.click();
-      break;
-    }
-    await qpage.getByRole("button", { name: /Next word/i }).click();
-    await qpage.waitForTimeout(400);
+    await option.waitFor({ state: "visible", timeout: 30000 });
+    await option.click();
+    // Wait for the scoring round-trip to land rather than guessing at it: the
+    // last item's button reads "Finish", not "Next word", and a fixed sleep
+    // that expires before either appears sends the run after a button that
+    // will never exist.
+    await advance.waitFor({ state: "visible", timeout: 45000 });
+    const label = (await advance.textContent()) ?? "";
+    await advance.click();
+    if (/Finish/i.test(label)) break;
   }
-  await qpage.waitForTimeout(2500);
+
+  await qpage.locator("text=/Amazing!|Great work!|Good try!/").first().waitFor({ timeout: 30000 });
 
   const finished = await one(
     `SELECT total, "completedAt" FROM "ActivitySession"
