@@ -109,16 +109,61 @@ Specialists can extend the bank in **Word bank → Add word**.
 
 ## Getting started
 
-Requirements: **Node.js 20+**, a working **microphone**, and an internet connection (for speech recognition).
+Requirements: **Node.js 20+**, a **Supabase** project (free tier), a working **microphone**, and an internet connection.
 
 ```bash
 npm install
-cp .env.example .env       # then paste your GROQ_API_KEY (free, console.groq.com)
-npx prisma migrate dev     # creates dev.db
+cp .env.example .env       # fill in the Supabase URLs, AUTH_SECRET, SPECIALIST_CODE, GROQ_API_KEY
+npx prisma migrate deploy  # creates the schema
 npx prisma db seed         # word bank + demo accounts + sample history
 npm run audio:generate     # Filipino pronunciation clips for all 115 words (~2 min)
 npm run dev                # http://localhost:3000
 ```
+
+### Database
+
+Postgres via Prisma's driver adapter. Supabase gives two connection strings and both are
+needed — this is the step that most often trips people up:
+
+| Variable | Supabase string | Used by |
+|---|---|---|
+| `DATABASE_URL` | **Transaction pooler**, port `6543`, keep `?pgbouncer=true&connection_limit=1` | the running app (serverless opens many short connections) |
+| `DIRECT_URL` | **Session pooler**, port `5432` | `prisma migrate`, `db seed`, `audio:generate`, and the audit suite — migrations cannot run through the transaction pooler |
+
+Supabase is used purely as managed Postgres. LEXORA keeps its own JWT-cookie auth, so
+Supabase Auth, Storage, and Row Level Security are not involved; every access check happens
+server-side and is covered by the audit suite.
+
+## Deploying (Vercel)
+
+1. Push the repository to GitHub, then import it at **vercel.com/new**.
+2. Set the environment variables (Project → Settings → Environment Variables):
+   `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SPECIALIST_CODE`, `GROQ_API_KEY`.
+   Use a **fresh** `AUTH_SECRET` and a **private** `SPECIALIST_CODE` — not the local ones.
+3. Deploy. Vercel runs `vercel-build`, which regenerates the Prisma client, applies
+   migrations, then builds.
+
+The database already holds the word bank and audio, so no seeding step runs on deploy.
+If the ✨ generate-audio button ever fails on serverless, run `npm run audio:generate`
+locally against the same `DIRECT_URL` — it writes to the same database.
+
+After deploying, point the audit suite at the live URL:
+
+```bash
+npm run audit -- https://your-app.vercel.app
+```
+
+## Tests
+
+```bash
+npm run audit        # all suites against http://localhost:3000
+npm run audit:api    # authorization, validation, erasure  (43 checks)
+npm run audit:logic  # scoring, adaptive difficulty, mastery, review  (22 checks)
+npm run audit:ui     # learner journeys, specialist workflows, responsive  (20 checks)
+```
+
+The suites need the target running and seeded, and `DIRECT_URL` set so they can assert
+against the database. They create and delete their own `@lexora.test` accounts.
 
 ### Demo accounts (password: `lexora123`)
 

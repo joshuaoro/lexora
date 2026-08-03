@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { synthesizeWord } from "@/lib/word-tts";
 
-export const maxDuration = 30;
+// Synthesis streams over a WebSocket to Microsoft's voice service, making this
+// the slowest route. 60s is the Vercel Hobby ceiling.
+export const maxDuration = 60;
 
 /**
  * Generate the neural Filipino pronunciation clips for one word on demand,
