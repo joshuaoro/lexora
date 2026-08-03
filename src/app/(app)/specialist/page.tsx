@@ -18,7 +18,8 @@ export default async function SpecialistPage() {
   const [accGroups, lastAttempts] = await Promise.all([
     prisma.attempt.groupBy({
       by: ["learnerId", "correct"],
-      where: { activityType: { in: ["READ_ALOUD", "PRACTICE"] } },
+      // First readings only — retries follow the word being modelled.
+      where: { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false },
       _count: true,
     }),
     prisma.attempt.groupBy({

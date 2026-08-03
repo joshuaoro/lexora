@@ -1,5 +1,6 @@
 // LEXORA — AI-Assisted Reading and Progress Tracking Web Application
-// SQLite has no enums, so role/type fields use validated strings.
+// Role/type fields are validated strings rather than Postgres enums: the study
+// adds activity types as it goes, and a string avoids a migration each time.
 
 generator client {
   provider = "prisma-client"
@@ -82,6 +83,10 @@ model ActivitySession {
   correct     Int      @default(0)
   durationMs  Int      @default(0)
   levelAtTime Int      @default(1)
+  // Where this session sits in the study timeline, tagged by a specialist.
+  // BASELINE | REGULAR | ENDLINE — lets pre/post comparison be selected
+  // explicitly instead of inferred from timestamps.
+  phase       String   @default("REGULAR")
   createdAt   DateTime @default(now())
 
   attempts Attempt[]
@@ -106,6 +111,12 @@ model Attempt {
   responseMs   Int      @default(0)
   audio        String? // base64 data-URL recording of the oral reading (capped)
   levelAtTime  Int      @default(1)
+  // A second reading of the same word, taken *after* the correct pronunciation
+  // was modelled. Instructionally the point of the exercise; statistically it
+  // is not an independent measure of decoding, because the child has just been
+  // told the answer. Excluded from accuracy, adaptive level, error patterns,
+  // decoding time and mastery — reported only as self-correction.
+  isRetry      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   review AttemptReview?

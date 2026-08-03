@@ -79,6 +79,13 @@ export default function ExerciseSession({
   const [leveledUp, setLeveledUp] = useState(false);
   const [posting, setPosting] = useState(false);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  /**
+   * The corrective re-read offered after a missed word: "offered" until the
+   * child takes it, then the outcome. It is deliberately kept out of `results`
+   * — the score for the item is the first reading, and a retry taken straight
+   * after hearing the word is repetition rather than decoding.
+   */
+  const [retry, setRetry] = useState<"offered" | "correct" | "incorrect" | null>(null);
 
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef(0);
@@ -102,6 +109,7 @@ export default function ExerciseSession({
     (i: number) => {
       setIndex(i);
       setFeedback(null);
+      setRetry(null);
       setPhase("item");
       itemStartRef.current = now();
       const next = items[i];
@@ -129,6 +137,10 @@ export default function ExerciseSession({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     });
+    if (res.status === 401) {
+      router.push("/login?expired=1");
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     sessionIdRef.current = data.id ?? null;
     sessionStartRef.current = now();
@@ -143,6 +155,7 @@ export default function ExerciseSession({
     choiceCorrect?: boolean;
     chosen?: string | null;
     audio?: string | null;
+    isRetry?: boolean;
   }) {
     setPosting(true);
     setScoreError(null);
@@ -159,11 +172,18 @@ export default function ExerciseSession({
         choiceCorrect: payload.choiceCorrect,
         responseMs: Math.min(600000, now() - itemStartRef.current),
         audio: payload.audio ?? undefined,
+        isRetry: payload.isRetry ?? false,
       }),
     });
     const data = await res.json().catch(() => ({}));
     setPosting(false);
 
+    // The record this session belongs to is gone — signing in again is the
+    // only way forward, and it beats retrying a microphone that works.
+    if (res.status === 401) {
+      router.push("/login?expired=1");
+      return;
+    }
     // No recognizer could score the recording — nothing was saved, let them retry.
     if (!res.ok) {
       setScoreError(t.scoringUnavailable);
@@ -171,15 +191,41 @@ export default function ExerciseSession({
     }
 
     const correct: boolean = Boolean(data.correct);
+
+    // A re-read never changes the item's score, the level, or the run of
+    // results — it exists so the child's last go at the word is a correct one.
+    if (payload.isRetry) {
+      setRetry(correct ? "correct" : "incorrect");
+      playChime(correct);
+      return;
+    }
+
     if (data.levelChanged === "up") setLeveledUp(true);
     setResults((r) => [...r, correct]);
     setFeedback({ correct, heard: data.heard || null, chosen: payload.chosen ?? null });
     setPhase("feedback");
     playChime(correct);
     if (!correct) {
-      // Immediate corrective feedback: hear the right word
+      // Immediate corrective feedback: hear the right word, then take a turn.
       setTimeout(() => sayTarget(), 700);
+      if (isOral && micOk) setRetry("offered");
     }
+  }
+
+  /**
+   * "Now you try" — the closing step of the corrective sequence. Without it the
+   * child's last spoken version of a word they missed is the wrong one, which
+   * is the production that sticks.
+   */
+  async function onRetryPress() {
+    if (micState === "listening") {
+      stopListening();
+      return;
+    }
+    if (micState !== "idle" || posting) return;
+    stopSpeaking();
+    const { audio, browserTranscript } = await listen(item.target);
+    await submitAttempt({ audio, browserTranscript, isRetry: true });
   }
 
   async function onMicPress() {
@@ -590,6 +636,38 @@ export default function ExerciseSession({
                 >
                   <Volume2 size={16} /> {t.hearItAgain}
                 </button>
+
+                {/* "Now you try" — closes the corrective sequence so the last
+                    time the child says this word, they say it right. */}
+                {retry === "offered" && (
+                  <div className="mt-4 border-t border-red/20 pt-4">
+                    <p className="text-sm font-extrabold text-ink">{t.nowYouTry}</p>
+                    <button
+                      onClick={onRetryPress}
+                      disabled={posting}
+                      className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-base font-extrabold text-white shadow-sm transition disabled:opacity-60 ${
+                        micState === "listening"
+                          ? "animate-pulse bg-red"
+                          : "bg-primary hover:bg-primary-dark"
+                      }`}
+                    >
+                      <Mic size={20} />
+                      {micState === "listening" ? t.tapWhenDone : t.tryItNow}
+                    </button>
+                  </div>
+                )}
+
+                {retry === "correct" && (
+                  <p className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-green-soft px-4 py-3 text-base font-extrabold text-green">
+                    <Check size={20} /> {t.retryGood}
+                  </p>
+                )}
+
+                {retry === "incorrect" && (
+                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-ink-soft">
+                    {t.retryKeepGoing}
+                  </p>
+                )}
               </div>
             )}
 

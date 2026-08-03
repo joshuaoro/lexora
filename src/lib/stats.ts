@@ -4,6 +4,17 @@ export type DailyAccuracy = { day: string; accuracy: number | null };
 
 const READ_TYPES = ["READ_ALOUD", "PRACTICE"];
 
+/**
+ * The filter every measurement shares: oral readings that were a first attempt.
+ *
+ * A retry is taken after the child has just heard the word pronounced, so it
+ * measures repetition rather than decoding. Counting retries would inflate
+ * accuracy, shorten decoding time, and hide the very errors the study exists to
+ * describe — so they are excluded from every figure here and reported
+ * separately as self-correction.
+ */
+const MEASURED = { activityType: { in: READ_TYPES }, isRetry: false };
+
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -19,7 +30,7 @@ export async function dailyAccuracy(learnerId: string, days = 14): Promise<Daily
   start.setDate(start.getDate() - (days - 1));
 
   const attempts = await prisma.attempt.findMany({
-    where: { learnerId, activityType: { in: READ_TYPES }, createdAt: { gte: start } },
+    where: { learnerId, ...MEASURED, createdAt: { gte: start } },
     select: { correct: true, createdAt: true },
   });
 
@@ -53,11 +64,11 @@ export async function learnerSummary(learnerId: string) {
   const [allReads, reads14, sessionAgg, sessionCount] = await Promise.all([
     prisma.attempt.groupBy({
       by: ["correct"],
-      where: { learnerId, activityType: { in: READ_TYPES } },
+      where: { learnerId, ...MEASURED },
       _count: true,
     }),
     prisma.attempt.count({
-      where: { learnerId, activityType: { in: READ_TYPES }, createdAt: { gte: since14 } },
+      where: { learnerId, ...MEASURED, createdAt: { gte: since14 } },
     }),
     prisma.activitySession.aggregate({
       where: { learnerId },
@@ -106,7 +117,7 @@ export async function decodingTime(learnerId: string) {
   const attempts = await prisma.attempt.findMany({
     where: {
       learnerId,
-      activityType: { in: READ_TYPES },
+      ...MEASURED,
       correct: true,
       responseMs: { gte: MIN_PLAUSIBLE_MS, lte: MAX_PLAUSIBLE_MS },
     },
@@ -144,7 +155,7 @@ export async function decodingTime(learnerId: string) {
 export async function errorPatterns(learnerId: string) {
   const groups = await prisma.attempt.groupBy({
     by: ["errorType"],
-    where: { learnerId, activityType: { in: READ_TYPES }, correct: false },
+    where: { learnerId, ...MEASURED, correct: false },
     _count: true,
   });
   const order = ["substitution", "omission", "insertion", "no_response"];
@@ -163,7 +174,7 @@ export async function errorPatterns(learnerId: string) {
 /** Accuracy grouped by word difficulty level (1–5). */
 export async function accuracyByLevel(learnerId: string) {
   const attempts = await prisma.attempt.findMany({
-    where: { learnerId, activityType: { in: READ_TYPES }, word: { isNot: null } },
+    where: { learnerId, ...MEASURED, word: { isNot: null } },
     select: { correct: true, word: { select: { level: true } } },
   });
   const buckets = new Map<number, { correct: number; total: number }>();
@@ -217,7 +228,7 @@ export function patternFamily(pattern: string, syllables: string): PatternFamily
 
 export async function accuracyByPattern(learnerId: string) {
   const attempts = await prisma.attempt.findMany({
-    where: { learnerId, activityType: { in: READ_TYPES }, word: { isNot: null } },
+    where: { learnerId, ...MEASURED, word: { isNot: null } },
     select: { correct: true, word: { select: { pattern: true, syllables: true } } },
   });
 
@@ -252,7 +263,7 @@ export async function accuracyByPattern(learnerId: string) {
 /** Accuracy grouped by Marungko stage (1–7). */
 export async function accuracyByStage(learnerId: string) {
   const attempts = await prisma.attempt.findMany({
-    where: { learnerId, activityType: { in: READ_TYPES }, word: { isNot: null } },
+    where: { learnerId, ...MEASURED, word: { isNot: null } },
     select: { correct: true, word: { select: { stage: true } } },
   });
   const buckets = new Map<number, { correct: number; total: number }>();

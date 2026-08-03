@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getLearnerContext, sessionExpired } from "@/lib/guards";
 import { scoreReading, activeScoreThreshold } from "@/lib/scoring";
 import { transcribeAudio } from "@/lib/asr";
 import { updateAdaptiveLevel, recordMiss, recordPracticeResult } from "@/lib/adaptive";
@@ -19,25 +19,26 @@ const schema = z.object({
   choiceCorrect: z.boolean().optional(),
   responseMs: z.number().int().min(0).max(600_000).default(0),
   audio: z.string().optional(), // base64 data URL of the oral reading
+  // A second reading taken after the word was modelled. Recorded, but kept out
+  // of every measure — see the note on Attempt.isRetry.
+  isRetry: z.boolean().optional(),
 });
 
 const ASR_TYPES = ["READ_ALOUD", "PRACTICE"];
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session?.learnerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const learnerId = session.learnerId;
+  const ctx = await getLearnerContext();
+  if (!ctx) return sessionExpired();
+  const { learnerId, profile } = ctx;
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid attempt" }, { status: 400 });
   const data = parsed.data;
+  const isRetry = data.isRetry === true;
 
-  const [profile, wordRow] = await Promise.all([
-    prisma.learnerProfile.findUniqueOrThrow({ where: { id: learnerId } }),
-    data.wordId
-      ? prisma.word.findUnique({ where: { id: data.wordId }, select: { variants: true } })
-      : Promise.resolve(null),
-  ]);
+  const wordRow = data.wordId
+    ? await prisma.word.findUnique({ where: { id: data.wordId }, select: { variants: true } })
+    : null;
   const variants = (wordRow?.variants ?? "")
     .split(",")
     .map((v) => v.trim())
@@ -109,11 +110,15 @@ export async function POST(req: Request) {
       responseMs: data.responseMs,
       audio,
       levelAtTime: profile.level,
+      isRetry,
     },
   });
 
-  // Personalized practice list bookkeeping
-  if (data.wordId) {
+  // Practice-list and difficulty bookkeeping run on first readings only. A
+  // retry says whether the child could repeat a word just modelled for them,
+  // which is worth recording but is not evidence that they can decode it — so
+  // it must not master a practice word or move them up a level.
+  if (data.wordId && !isRetry) {
     if (data.activityType === "PRACTICE") {
       await recordPracticeResult(learnerId, data.wordId, correct);
     } else if (!correct && ASR_TYPES.includes(data.activityType)) {
@@ -121,10 +126,9 @@ export async function POST(req: Request) {
     }
   }
 
-  // Adaptive difficulty runs on oral-reading performance
   let level = profile.level;
   let levelChanged: "up" | "down" | null = null;
-  if (ASR_TYPES.includes(data.activityType)) {
+  if (ASR_TYPES.includes(data.activityType) && !isRetry) {
     const res = await updateAdaptiveLevel(learnerId);
     level = res.level;
     levelChanged = res.changed;
