@@ -16,7 +16,7 @@ import { buildItems } from "../src/lib/exercise-items";
 
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
 
 const SESSIONS = 5;
 const ITEMS = 8;

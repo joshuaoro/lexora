@@ -77,7 +77,7 @@ function getPool() {
     if (!connectionString) {
       throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env to run the audits.");
     }
-    pool = new pg.Pool({ connectionString, max: 4 });
+    pool = new pg.Pool({ connectionString, max: 2 });
   }
   return pool;
 }

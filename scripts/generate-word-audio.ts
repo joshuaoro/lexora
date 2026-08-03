@@ -24,7 +24,7 @@ import { createSynthesizer, TTS_VOICE } from "../src/lib/word-tts";
 // Long-running script: use the direct (session) connection when available.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
 
 async function main() {
   const force = process.argv.includes("--force");

@@ -23,7 +23,7 @@ import { stageForWord } from "./marungko-stage";
 // preferred; fall back to the pooled URL when only that is available.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
 
 // Plausible dyslexic-style misreadings for demo history (letter reversals etc.)
 function mutate(word: string): string {
