@@ -18,13 +18,18 @@ export const MAX_LEVEL = 5;
 export async function updateAdaptiveLevel(
   learnerId: string
 ): Promise<{ level: number; changed: "up" | "down" | null }> {
-  const profile = await prisma.learnerProfile.findUniqueOrThrow({ where: { id: learnerId } });
+  // The learner may have been erased mid-session; nothing to adapt.
+  const profile = await prisma.learnerProfile.findUnique({ where: { id: learnerId } });
+  if (!profile) return { level: 1, changed: null };
 
   const recent = await prisma.attempt.findMany({
     where: {
       learnerId,
       levelAtTime: profile.level,
       activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+      // A retry follows the correct word being modelled, so letting it count
+      // would move the learner up on repetition rather than on decoding.
+      isRetry: false,
     },
     orderBy: { createdAt: "desc" },
     take: WINDOW,

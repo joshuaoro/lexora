@@ -36,6 +36,31 @@ export async function requireLearner(): Promise<LearnerContext> {
   return { ...session, learnerId: session.learnerId, profile };
 }
 
+/**
+ * API counterpart of requireLearner. Routes cannot redirect, so a stale session
+ * is reported as 401 and the client sends the visitor to sign in — the same
+ * outcome, reached differently. Without this a stale cookie reached
+ * findUniqueOrThrow and the route answered 500, which the exercise screen shows
+ * as "we couldn't hear that clearly": a child mid-activity would keep retrying
+ * a microphone that was never the problem.
+ */
+export async function getLearnerContext(): Promise<LearnerContext | null> {
+  const session = await getSession();
+  if (!session || session.role !== "LEARNER" || !session.learnerId) return null;
+
+  const profile = await prisma.learnerProfile.findUnique({
+    where: { id: session.learnerId },
+  });
+  if (!profile) return null;
+
+  return { ...session, learnerId: session.learnerId, profile };
+}
+
+/** 401 body shared by the API routes, so the client can detect a dead session. */
+export function sessionExpired() {
+  return Response.json({ error: "session_expired" }, { status: 401 });
+}
+
 export async function requireSpecialist(): Promise<SessionUser> {
   const session = await getSession();
   if (!session) redirect("/login");

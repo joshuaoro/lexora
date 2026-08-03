@@ -6,7 +6,10 @@ import ExerciseSession from "@/components/exercises/ExerciseSession";
 
 export default async function PracticeSessionPage() {
   const { profile, learnerId } = await requireLearner();
-  const [items, lang] = await Promise.all([buildItems(learnerId, "PRACTICE"), getLang()]);
+  const [items, lang] = await Promise.all([
+    buildItems(learnerId, "PRACTICE", 8, profile),
+    getLang(),
+  ]);
 
   return (
     <ExerciseSession

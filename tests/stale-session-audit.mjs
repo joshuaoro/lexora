@@ -106,6 +106,31 @@ async function main() {
     body.slice(0, 80).replace(/\s+/g, " ")
   );
 
+  section("[1b] the API answers a stale session with 401, not 500");
+
+  // Pages redirect; routes cannot, so they must say the session is dead. A 500
+  // here surfaced in the exercise screen as "we couldn't hear that clearly",
+  // leaving a child retrying a microphone that was never the problem.
+  const API_CALLS = [
+    ["GET", "/api/settings", null],
+    ["PATCH", "/api/settings", { fontSize: 32 }],
+    ["POST", "/api/sessions", { type: "READ_ALOUD" }],
+    [
+      "POST",
+      "/api/attempts",
+      { activityType: "READ_ALOUD", target: "bata", transcript: "bata", responseMs: 2000 },
+    ],
+  ];
+
+  for (const [method, path, payload] of API_CALLS) {
+    const res = await api(path, { cookie: learner.cookie, method, body: payload ?? undefined });
+    check(
+      `${method} ${path} returns 401`,
+      res.status === 401,
+      `HTTP ${res.status}${res.status >= 500 ? " (server error)" : ""}`
+    );
+  }
+
   section("[2] the sign-in page says why they were sent back");
 
   check(

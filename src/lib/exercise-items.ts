@@ -113,12 +113,17 @@ async function wordPool(learnerId: string, level: number, stage: number): Promis
 export async function buildItems(
   learnerId: string,
   type: ExerciseType,
-  count = 8
+  count = 8,
+  // Pages already hold the profile from requireLearner; passing it avoids a
+  // second lookup and the crash when the row has been erased mid-session.
+  known?: { level: number; stage: number }
 ): Promise<ExerciseItem[]> {
-  const [profile, audio] = await Promise.all([
-    prisma.learnerProfile.findUniqueOrThrow({ where: { id: learnerId } }),
+  const [loaded, audio] = await Promise.all([
+    known ? null : prisma.learnerProfile.findUnique({ where: { id: learnerId } }),
     audioIndex(),
   ]);
+  const profile = known ?? loaded;
+  if (!profile) return [];
   const stage = Math.max(profile.stage, Math.min(7, profile.level + 2));
 
   const flags = (id: string | null) => ({

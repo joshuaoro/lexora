@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getLearnerContext, sessionExpired } from "@/lib/guards";
 import { parseSettings } from "@/lib/settings";
 
 const schema = z.object({
@@ -16,28 +16,22 @@ const schema = z.object({
 });
 
 export async function GET() {
-  const session = await getSession();
-  if (!session?.learnerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const profile = await prisma.learnerProfile.findUniqueOrThrow({
-    where: { id: session.learnerId },
-  });
-  return NextResponse.json(parseSettings(profile.settings));
+  const ctx = await getLearnerContext();
+  if (!ctx) return sessionExpired();
+  return NextResponse.json(parseSettings(ctx.profile.settings));
 }
 
 export async function PATCH(req: Request) {
-  const session = await getSession();
-  if (!session?.learnerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getLearnerContext();
+  if (!ctx) return sessionExpired();
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid settings" }, { status: 400 });
 
-  const profile = await prisma.learnerProfile.findUniqueOrThrow({
-    where: { id: session.learnerId },
-  });
-  const merged = { ...parseSettings(profile.settings), ...parsed.data };
+  const merged = { ...parseSettings(ctx.profile.settings), ...parsed.data };
   await prisma.learnerProfile.update({
-    where: { id: session.learnerId },
+    where: { id: ctx.learnerId },
     data: { settings: JSON.stringify(merged) },
   });
   return NextResponse.json(merged);

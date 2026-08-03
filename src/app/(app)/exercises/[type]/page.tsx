@@ -23,7 +23,7 @@ export default async function ExerciseTypePage({
   if (!type) notFound();
 
   const { profile, learnerId } = await requireLearner();
-  const [items, lang] = await Promise.all([buildItems(learnerId, type), getLang()]);
+  const [items, lang] = await Promise.all([buildItems(learnerId, type, 8, profile), getLang()]);
 
   return (
     <ExerciseSession
