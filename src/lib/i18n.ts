@@ -34,6 +34,7 @@ const en = {
     LISTEN_CHOOSE: "Listen & choose",
     SYLLABLES: "Count syllables",
     RHYME: "Rhyme time",
+    FIRST_SOUND: "First sound",
     PRACTICE: "Practice list",
     READER: "Reader",
   } as Record<string, string>,
@@ -80,6 +81,11 @@ const en = {
     listen: { title: "Listen & choose", desc: "Hear a word and find it among look-alike words.", skill: "Blending & word recognition" },
     syllables: { title: "Count the syllables", desc: "Break words into parts (pantig) and count them.", skill: "Segmentation" },
     rhyme: { title: "Rhyme time", desc: "Find words that end with the same sound.", skill: "Rhyming awareness" },
+    firstSound: {
+      title: "First sound",
+      desc: "Find the word that begins with the same sound.",
+      skill: "Sound isolation",
+    },
   },
   session: {
     intro: {
@@ -103,6 +109,11 @@ const en = {
         blurb: "Find the word that rhymes — the one that ends with the same sound.",
         how: "Listen to the big word, then tap its rhyming partner.",
       },
+      FIRST_SOUND: {
+        title: "First sound",
+        blurb: "Listen to the word, then find another word that starts the same way.",
+        how: "Say the first sound out loud — /m/ in “mama” — then look for it.",
+      },
       PRACTICE: {
         title: "My practice words",
         blurb: "These are your tricky words. Read each one out loud — you've got this!",
@@ -123,6 +134,8 @@ const en = {
     howManyParts: "How many parts (pantig)?",
     hearParts: "Hear the parts",
     whichRhymes: "Which word rhymes with…",
+    whichStartsSame: "Which word starts with the same sound as…",
+    startsAnswer: (w: string) => `The matching word is ${w}.`,
     correctFeedback: "Magaling! Great job!",
     wrongFeedback: "Not quite — let's learn it!",
     heard: "LEXORA heard:",
@@ -167,6 +180,9 @@ const en = {
     byLevelSub: "How the learner performs as word structures get harder.",
     byStage: "Accuracy by Marungko stage",
     byStageSub: "Letter-group coverage following the Marungko sequence.",
+    byPattern: "Accuracy by syllable structure",
+    byPatternSub:
+      "Which word shapes the learner decodes reliably, and which need teaching — the most directly actionable view for planning intervention.",
     errors: "Word-level error patterns",
     errorsSub: "What kind of reading errors happen most (all time).",
     recentActivities: "Recent activities",
@@ -289,6 +305,7 @@ const fil: Dict = {
     LISTEN_CHOOSE: "Makinig at pumili",
     SYLLABLES: "Bilangin ang pantig",
     RHYME: "Tugmaan",
+    FIRST_SOUND: "Unang tunog",
     PRACTICE: "Listahan ng praktis",
     READER: "Pagbasa",
   },
@@ -335,6 +352,11 @@ const fil: Dict = {
     listen: { title: "Makinig at pumili", desc: "Pakinggan ang salita at hanapin ito sa magkakahawig na salita.", skill: "Pag-uugnay ng tunog" },
     syllables: { title: "Bilangin ang pantig", desc: "Hatiin ang salita sa mga pantig at bilangin ang mga ito.", skill: "Paghahati ng pantig" },
     rhyme: { title: "Tugmaan", desc: "Hanapin ang mga salitang magkatugma ang dulong tunog.", skill: "Kamalayan sa tugma" },
+    firstSound: {
+      title: "Unang tunog",
+      desc: "Hanapin ang salitang pareho ang unang tunog.",
+      skill: "Pagkilala sa tunog",
+    },
   },
   session: {
     intro: {
@@ -358,6 +380,11 @@ const fil: Dict = {
         blurb: "Hanapin ang salitang katugma — 'yung pareho ang dulong tunog.",
         how: "Pakinggan ang malaking salita, tapos pindutin ang katugma nito.",
       },
+      FIRST_SOUND: {
+        title: "Unang tunog",
+        blurb: "Pakinggan ang salita, tapos hanapin ang salitang pareho ang unang tunog.",
+        how: "Sabihin ang unang tunog — /m/ sa “mama” — tapos hanapin ito.",
+      },
       PRACTICE: {
         title: "Mga praktis na salita ko",
         blurb: "Ito ang mga mahirap mong salita. Basahin ang bawat isa nang malakas — kaya mo 'yan!",
@@ -378,6 +405,8 @@ const fil: Dict = {
     howManyParts: "Ilang pantig?",
     hearParts: "Pakinggan ang mga pantig",
     whichRhymes: "Aling salita ang katugma ng…",
+    whichStartsSame: "Aling salita ang pareho ang unang tunog ng…",
+    startsAnswer: (w) => `Ang tamang salita ay ${w}.`,
     correctFeedback: "Magaling! Ang galing mo!",
     wrongFeedback: "Hindi pa tama — aralin natin!",
     heard: "Narinig ni LEXORA:",
@@ -422,6 +451,9 @@ const fil: Dict = {
     byLevelSub: "Kung paano bumabasa ang mag-aaral habang humihirap ang mga salita.",
     byStage: "Accuracy ayon sa Marungko stage",
     byStageSub: "Saklaw ng mga letra ayon sa Marungko sequence.",
+    byPattern: "Accuracy ayon sa istruktura ng pantig",
+    byPatternSub:
+      "Kung aling hugis ng salita ang tiyak nang nababasa ng mag-aaral, at alin ang kailangan pang ituro.",
     errors: "Mga uri ng pagkakamali sa salita",
     errorsSub: "Anong klaseng pagkakamali sa pagbasa ang madalas (lahat ng panahon).",
     recentActivities: "Mga nakaraang aktibidad",

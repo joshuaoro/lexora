@@ -122,6 +122,71 @@ export async function accuracyByLevel(learnerId: string) {
   });
 }
 
+/**
+ * Accuracy grouped by syllable structure.
+ *
+ * The most actionable view a reading specialist gets: "reads CVCV fine, fails
+ * on clusters" points straight at what to teach next, in a way that overall
+ * accuracy or a level number cannot. Raw patterns are collapsed into the
+ * families that matter instructionally.
+ */
+export type PatternFamily =
+  | "Open (CV·CV)"
+  | "Closed syllable"
+  | "Vowel pair"
+  | "Consonant cluster"
+  | "ng words"
+  | "Long (4+ syllables)";
+
+export function patternFamily(pattern: string, syllables: string): PatternFamily {
+  if (pattern.includes("(ng)")) return "ng words";
+  if (syllables.split("-").length >= 4) return "Long (4+ syllables)";
+
+  const VOWELS = "aeiou";
+  const hasOnsetCluster = syllables
+    .split("-")
+    .some((s) => s.length > 1 && !VOWELS.includes(s[0]) && !VOWELS.includes(s[1]));
+  if (hasOnsetCluster) return "Consonant cluster";
+
+  if (/VV/.test(pattern)) return "Vowel pair";
+  if (/C$/.test(pattern)) return "Closed syllable";
+  return "Open (CV·CV)";
+}
+
+export async function accuracyByPattern(learnerId: string) {
+  const attempts = await prisma.attempt.findMany({
+    where: { learnerId, activityType: { in: READ_TYPES }, word: { isNot: null } },
+    select: { correct: true, word: { select: { pattern: true, syllables: true } } },
+  });
+
+  const buckets = new Map<string, { correct: number; total: number }>();
+  for (const a of attempts) {
+    const family = patternFamily(a.word!.pattern, a.word!.syllables);
+    const b = buckets.get(family) ?? { correct: 0, total: 0 };
+    b.total++;
+    if (a.correct) b.correct++;
+    buckets.set(family, b);
+  }
+
+  const ORDER: PatternFamily[] = [
+    "Open (CV·CV)",
+    "Closed syllable",
+    "Vowel pair",
+    "Consonant cluster",
+    "ng words",
+    "Long (4+ syllables)",
+  ];
+
+  return ORDER.map((family) => {
+    const b = buckets.get(family);
+    return {
+      family,
+      accuracy: b && b.total > 0 ? Math.round((b.correct / b.total) * 100) : null,
+      attempts: b?.total ?? 0,
+    };
+  }).filter((row) => row.attempts > 0); // only show structures actually attempted
+}
+
 /** Accuracy grouped by Marungko stage (1–7). */
 export async function accuracyByStage(learnerId: string) {
   const attempts = await prisma.attempt.findMany({

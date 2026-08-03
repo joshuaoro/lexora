@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { patternFamily as patternFamilyFor } from "@/lib/stats";
 
 /**
  * CSV export of learner data for statistical treatment.
@@ -69,6 +70,7 @@ export async function GET(req: Request) {
       a.target,
       a.word?.syllables ?? "",
       a.word?.pattern ?? "",
+      a.word ? patternFamilyFor(a.word.pattern, a.word.syllables) : "",
       a.word?.stage ?? "",
       a.word?.level ?? "",
       a.levelAtTime,
@@ -87,7 +89,7 @@ export async function GET(req: Request) {
       toCsv(
         [
           "attempt_id", "learner", "timestamp_iso", "activity_type", "target_word",
-          "syllables", "pattern", "word_stage", "word_level", "level_at_time",
+          "syllables", "pattern", "pattern_family", "word_stage", "word_level", "level_at_time",
           "transcript", "asr_engine", "alt_transcript", "correct", "similarity_score",
           "error_type", "response_ms", "has_audio", "specialist_review",
         ],

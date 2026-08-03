@@ -11,6 +11,7 @@ const SLUGS: Record<string, ExerciseType> = {
   "listen-choose": "LISTEN_CHOOSE",
   syllables: "SYLLABLES",
   rhyme: "RHYME",
+  "first-sound": "FIRST_SOUND",
 };
 
 export default async function ExerciseTypePage({

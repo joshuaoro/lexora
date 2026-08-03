@@ -11,7 +11,7 @@ const MAX_AUDIO_BYTES = 600_000; // ~600 KB base64 cap per recording
 const schema = z.object({
   sessionId: z.string().optional(),
   wordId: z.string().nullable().optional(),
-  activityType: z.enum(["READ_ALOUD", "LISTEN_CHOOSE", "SYLLABLES", "RHYME", "PRACTICE"]),
+  activityType: z.enum(["READ_ALOUD", "LISTEN_CHOOSE", "SYLLABLES", "RHYME", "FIRST_SOUND", "PRACTICE"]),
   target: z.string().min(1),
   transcript: z.string().nullable().optional(), // choice made (choice types) / legacy oral transcript
   browserTranscript: z.string().nullable().optional(), // Web Speech fallback for oral types

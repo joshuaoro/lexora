@@ -1,6 +1,12 @@
 import { prisma } from "./db";
 
-export type ExerciseType = "READ_ALOUD" | "LISTEN_CHOOSE" | "SYLLABLES" | "RHYME" | "PRACTICE";
+export type ExerciseType =
+  | "READ_ALOUD"
+  | "LISTEN_CHOOSE"
+  | "SYLLABLES"
+  | "RHYME"
+  | "FIRST_SOUND"
+  | "PRACTICE";
 
 export type ExerciseItem = {
   wordId: string | null;
@@ -59,16 +65,49 @@ async function audioIndex(): Promise<{
   };
 }
 
-/** Word pool matched to the learner's adaptive level and Marungko stage. */
-async function wordPool(level: number, stage: number): Promise<WordRow[]> {
-  const pool = await prisma.word.findMany({
-    where: { level: { lte: level }, stage: { lte: stage } },
-    select: WORD_FIELDS,
+/** How many of the learner's most recent attempts count as "seen lately". */
+const RECENT_WINDOW = 40;
+
+/**
+ * Word pool matched to the learner's level and Marungko stage, ordered so the
+ * learner meets words they have not seen recently first.
+ *
+ * Without this, sessions draw from the same small level pool every time and a
+ * learner can memorise a handful of words rather than learn to decode them —
+ * which would make accuracy gains meaningless. Rotation keeps sessions varied
+ * while staying inside the level the adaptive logic has chosen.
+ */
+async function wordPool(learnerId: string, level: number, stage: number): Promise<WordRow[]> {
+  const [pool, recent] = await Promise.all([
+    prisma.word.findMany({
+      where: { level: { lte: level }, stage: { lte: stage } },
+      select: WORD_FIELDS,
+    }),
+    prisma.attempt.findMany({
+      where: { learnerId, wordId: { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: RECENT_WINDOW,
+      select: { wordId: true },
+    }),
+  ]);
+
+  // Most recent first, so index 0 is the freshest — a lower index means the
+  // word was seen more recently and should wait longer before returning.
+  const lastSeen = new Map<string, number>();
+  recent.forEach((a, i) => {
+    if (a.wordId && !lastSeen.has(a.wordId)) lastSeen.set(a.wordId, i);
   });
-  // Prefer words at the current level; pad with easier ones when scarce.
-  const atLevel = shuffle(pool.filter((w) => w.level === level));
-  const easier = shuffle(pool.filter((w) => w.level < level));
-  return [...atLevel, ...easier];
+
+  const rank = (w: WordRow) => {
+    const seenAt = lastSeen.get(w.id);
+    return seenAt === undefined ? Infinity : seenAt; // unseen words first
+  };
+
+  const order = (rows: WordRow[]) =>
+    shuffle(rows).sort((a, b) => rank(b) - rank(a));
+
+  // Words at the learner's level lead; easier ones pad a thin level.
+  return [...order(pool.filter((w) => w.level === level)), ...order(pool.filter((w) => w.level < level))];
 }
 
 export async function buildItems(
@@ -88,16 +127,16 @@ export async function buildItems(
     audioVersion: (id && audio.version.get(id)) || 1,
   });
 
-  if (type === "RHYME") {
-    // Match rhyme difficulty to the learner, widening the net if too few items
-    // exist at or below their level.
+  // Rhyming and sound isolation both come from the curated item bank and are
+  // presented the same way: hear the prompt, pick the matching word.
+  if (type === "RHYME" || type === "FIRST_SOUND") {
+    // Match difficulty to the learner, widening the net if too few items exist
+    // at or below their level.
     const atLevel = await prisma.phonItem.findMany({
-      where: { type: "RHYME", level: { lte: profile.level } },
+      where: { type, level: { lte: profile.level } },
     });
     const items =
-      atLevel.length >= count
-        ? atLevel
-        : await prisma.phonItem.findMany({ where: { type: "RHYME" } });
+      atLevel.length >= count ? atLevel : await prisma.phonItem.findMany({ where: { type } });
     const chosen = shuffle(items).slice(0, count);
 
     // Rhyme prompts are plain text, so match them to the word bank by text to
@@ -138,7 +177,7 @@ export async function buildItems(
     }));
   }
 
-  const pool = await wordPool(profile.level, stage);
+  const pool = await wordPool(learnerId, profile.level, stage);
   const targets = pool.slice(0, count);
 
   if (type === "READ_ALOUD") {

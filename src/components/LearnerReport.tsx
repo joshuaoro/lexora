@@ -5,6 +5,7 @@ import {
   errorPatterns,
   accuracyByLevel,
   accuracyByStage,
+  accuracyByPattern,
 } from "@/lib/stats";
 import { getDict, type Lang } from "@/lib/i18n";
 import AccuracyLine from "@/components/charts/AccuracyLine";
@@ -21,12 +22,13 @@ export default async function LearnerReport({
   const dict = getDict(lang);
   const t = dict.reports;
 
-  const [summary, series, errors, byLevel, byStage, sessions] = await Promise.all([
+  const [summary, series, errors, byLevel, byStage, byPattern, sessions] = await Promise.all([
     learnerSummary(learnerId),
     dailyAccuracy(learnerId, 14),
     errorPatterns(learnerId),
     accuracyByLevel(learnerId),
     accuracyByStage(learnerId),
+    accuracyByPattern(learnerId),
     prisma.activitySession.findMany({
       where: { learnerId, total: { gt: 0 } },
       orderBy: { createdAt: "desc" },
@@ -87,6 +89,23 @@ export default async function LearnerReport({
           />
         </section>
       </div>
+
+      {byPattern.length > 0 && (
+        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
+          <h2 className="text-lg font-extrabold text-ink">{t.byPattern}</h2>
+          <p className="mb-4 text-sm font-semibold text-ink-muted">{t.byPatternSub}</p>
+          <BarBlock
+            ariaLabel={t.byPattern}
+            data={byPattern.map((d) => ({
+              label: d.family,
+              value: d.accuracy,
+              hint: t.attempts(d.attempts),
+            }))}
+            suffix="%"
+            max={100}
+          />
+        </section>
+      )}
 
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">

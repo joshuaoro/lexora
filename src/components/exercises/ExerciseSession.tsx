@@ -106,7 +106,7 @@ export default function ExerciseSession({
       itemStartRef.current = now();
       const next = items[i];
       // Receptive activities speak the target automatically
-      if (next && (type === "LISTEN_CHOOSE" || type === "RHYME")) {
+      if (next && (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND")) {
         setTimeout(
           () =>
             sayWord({
@@ -499,11 +499,14 @@ export default function ExerciseSession({
           </>
         )}
 
-        {/* ——— Rhyme ——— */}
-        {type === "RHYME" && (
+        {/* ——— Rhyme and sound isolation ———
+             Same interaction: hear the prompt, pick the word that matches it.
+             Only the question changes — rhyme asks about the ending sound,
+             first-sound about the beginning. */}
+        {(type === "RHYME" || type === "FIRST_SOUND") && (
           <>
             <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-              {t.whichRhymes}
+              {type === "RHYME" ? t.whichRhymes : t.whichStartsSame}
             </p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <p
@@ -566,6 +569,11 @@ export default function ExerciseSession({
                 {type === "RHYME" && (
                   <p className="mt-2 text-sm font-semibold text-ink-soft">
                     {t.rhymeAnswer(item.answer ?? "")}
+                  </p>
+                )}
+                {type === "FIRST_SOUND" && (
+                  <p className="mt-2 text-sm font-semibold text-ink-soft">
+                    {t.startsAnswer(item.answer ?? "")}
                   </p>
                 )}
                 {type === "LISTEN_CHOOSE" && (

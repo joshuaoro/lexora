@@ -1,189 +1,29 @@
 /**
- * LEXORA seed — Marungko-staged Filipino word bank, rhyme item bank,
- * demo accounts, and sample reading history for demonstration.
+ * LEXORA seed — instructional content, demo accounts, and sample reading
+ * history for demonstration.
  *
- * Marungko letter sequence (stages used by LEXORA):
- *  1: m s a          2: + i o        3: + b e u       4: + t k l
- *  5: + y n g        6: + p r d h w  7: + ng, borrowed letters (ts, dy, ...)
+ * The content itself lives in its own modules so it can be reviewed and
+ * validated independently of the seeding logic:
+ *   prisma/word-bank.ts      the Filipino word bank and ASR spelling variants
+ *   prisma/phon-items.ts     rhyme and sound-isolation item banks
+ *   prisma/marungko-stage.ts derives each word's Marungko stage from its letters
  *
- * Difficulty levels:
- *  1: two-syllable open words (CV-CV)
- *  2: words with a closed syllable / vowel sequence
- *  3: three-syllable words and ng- words
- *  4: consonant clusters (CCV/CCVC) and complex codas
- *  5: four or more syllables
+ * Run `npm run words:check` before seeding — it verifies syllabification,
+ * levels, and that every level holds enough words that sessions do not repeat.
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { WORDS, ASR_VARIANTS } from "./word-bank";
+import { RHYMES, FIRST_SOUNDS } from "./phon-items";
+import { stageForWord } from "./marungko-stage";
 
 // Scripts run outside the request path, so the direct (session) connection is
 // preferred; fall back to the pooled URL when only that is available.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
-
-type W = [text: string, syllables: string, pattern: string, stage: number, level: number, meaningEn: string];
-
-const WORDS: W[] = [
-  // ── Stage 1: m, s, a ────────────────────────────────────────────────
-  ["mama", "ma-ma", "CVCV", 1, 1, "mom"],
-  ["ama", "a-ma", "VCV", 1, 1, "father"],
-  ["sama", "sa-ma", "CVCV", 1, 1, "to join / accompany"],
-  ["masa", "ma-sa", "CVCV", 1, 1, "dough"],
-  ["asa", "a-sa", "VCV", 1, 1, "to hope / rely"],
-  ["mas", "mas", "CVC", 1, 2, "more"],
-  // ── Stage 2: + i, o ─────────────────────────────────────────────────
-  ["aso", "a-so", "VCV", 2, 1, "dog"],
-  ["oso", "o-so", "VCV", 2, 1, "bear"],
-  ["misa", "mi-sa", "CVCV", 2, 1, "mass (church)"],
-  ["sisi", "si-si", "CVCV", 2, 1, "blame / regret"],
-  ["amo", "a-mo", "VCV", 2, 1, "boss / master"],
-  ["mais", "ma-is", "CVVC", 2, 2, "corn"],
-  // ── Stage 3: + b, e, u ──────────────────────────────────────────────
-  ["baso", "ba-so", "CVCV", 3, 1, "drinking glass"],
-  ["mesa", "me-sa", "CVCV", 3, 1, "table"],
-  ["abo", "a-bo", "VCV", 3, 1, "ash"],
-  ["ube", "u-be", "VCV", 3, 1, "purple yam"],
-  ["bibe", "bi-be", "CVCV", 3, 1, "duckling"],
-  ["baba", "ba-ba", "CVCV", 3, 1, "chin"],
-  ["sabi", "sa-bi", "CVCV", 3, 1, "said"],
-  ["ubas", "u-bas", "VCVC", 3, 2, "grapes"],
-  ["bus", "bus", "CVC", 3, 2, "bus"],
-  ["bumasa", "bu-ma-sa", "CVCVCV", 3, 3, "to read"],
-  // ── Stage 4: + t, k, l ──────────────────────────────────────────────
-  ["lata", "la-ta", "CVCV", 4, 1, "tin can"],
-  ["bola", "bo-la", "CVCV", 4, 1, "ball"],
-  ["tela", "te-la", "CVCV", 4, 1, "cloth"],
-  ["bato", "ba-to", "CVCV", 4, 1, "stone"],
-  ["tubo", "tu-bo", "CVCV", 4, 1, "pipe / sugarcane"],
-  ["talo", "ta-lo", "CVCV", 4, 1, "defeated"],
-  ["kuto", "ku-to", "CVCV", 4, 1, "head louse"],
-  ["tasa", "ta-sa", "CVCV", 4, 1, "cup"],
-  ["lobo", "lo-bo", "CVCV", 4, 1, "balloon"],
-  ["buko", "bu-ko", "CVCV", 4, 1, "young coconut"],
-  ["sulat", "su-lat", "CVCVC", 4, 2, "letter / to write"],
-  ["aklat", "ak-lat", "VCCVC", 4, 2, "book"],
-  ["takot", "ta-kot", "CVCVC", 4, 2, "fear"],
-  ["bukas", "bu-kas", "CVCVC", 4, 2, "tomorrow / open"],
-  ["salamat", "sa-la-mat", "CVCVCVC", 4, 3, "thank you"],
-  ["kamatis", "ka-ma-tis", "CVCVCVC", 4, 3, "tomato"],
-  ["makulit", "ma-ku-lit", "CVCVCVC", 4, 3, "naughty / persistent"],
-  ["kulambo", "ku-lam-bo", "CVCVCCV", 4, 3, "mosquito net"],
-  ["bulaklak", "bu-lak-lak", "CVCVCCVC", 4, 4, "flower"],
-  ["kalabasa", "ka-la-ba-sa", "CVCVCVCV", 4, 5, "squash"],
-  // ── Stage 5: + y, n, g ──────────────────────────────────────────────
-  ["gabi", "ga-bi", "CVCV", 5, 1, "night / taro"],
-  ["yelo", "ye-lo", "CVCV", 5, 1, "ice"],
-  ["yaya", "ya-ya", "CVCV", 5, 1, "nanny"],
-  ["nanay", "na-nay", "CVCVC", 5, 2, "mother"],
-  ["tatay", "ta-tay", "CVCVC", 5, 2, "father"],
-  ["gulay", "gu-lay", "CVCVC", 5, 2, "vegetable"],
-  ["gatas", "ga-tas", "CVCVC", 5, 2, "milk"],
-  ["bunso", "bun-so", "CVCCV", 5, 2, "youngest child"],
-  ["niyog", "ni-yog", "CVCVC", 5, 2, "coconut"],
-  ["bantay", "ban-tay", "CVCCVC", 5, 2, "guard"],
-  ["itlog", "it-log", "VCCVC", 5, 2, "egg"],
-  ["ulan", "u-lan", "VCVC", 5, 2, "rain"],
-  ["ilog", "i-log", "VCVC", 5, 2, "river"],
-  ["salamin", "sa-la-min", "CVCVCVC", 5, 3, "mirror / eyeglasses"],
-  ["nilaga", "ni-la-ga", "CVCVCV", 5, 3, "boiled dish"],
-  ["kaibigan", "ka-i-bi-gan", "CVVCVCVC", 5, 5, "friend"],
-  // ── Stage 6: + p, r, d, h, w ────────────────────────────────────────
-  ["puno", "pu-no", "CVCV", 6, 1, "tree"],
-  ["pera", "pe-ra", "CVCV", 6, 1, "money"],
-  ["pusa", "pu-sa", "CVCV", 6, 1, "cat"],
-  ["puso", "pu-so", "CVCV", 6, 1, "heart"],
-  ["dila", "di-la", "CVCV", 6, 1, "tongue"],
-  ["daga", "da-ga", "CVCV", 6, 1, "mouse"],
-  ["damo", "da-mo", "CVCV", 6, 1, "grass"],
-  ["relo", "re-lo", "CVCV", 6, 1, "watch / clock"],
-  ["wika", "wi-ka", "CVCV", 6, 1, "language"],
-  ["damit", "da-mit", "CVCVC", 6, 2, "clothes"],
-  ["dahon", "da-hon", "CVCVC", 6, 2, "leaf"],
-  ["bahay", "ba-hay", "CVCVC", 6, 2, "house"],
-  ["buhay", "bu-hay", "CVCVC", 6, 2, "life / alive"],
-  ["araw", "a-raw", "VCVC", 6, 2, "sun / day"],
-  ["ilaw", "i-law", "VCVC", 6, 2, "light"],
-  ["ulap", "u-lap", "VCVC", 6, 2, "cloud"],
-  ["hipon", "hi-pon", "CVCVC", 6, 2, "shrimp"],
-  ["hilaw", "hi-law", "CVCVC", 6, 2, "unripe / raw"],
-  ["isda", "is-da", "VCCV", 6, 2, "fish"],
-  ["pinto", "pin-to", "CVCCV", 6, 2, "door"],
-  ["radyo", "rad-yo", "CVCCV", 6, 2, "radio"],
-  ["hardin", "har-din", "CVCCVC", 6, 2, "garden"],
-  ["sampay", "sam-pay", "CVCCVC", 6, 2, "hung laundry"],
-  ["watawat", "wa-ta-wat", "CVCVCVC", 6, 3, "flag"],
-  ["tinapay", "ti-na-pay", "CVCVCVC", 6, 3, "bread"],
-  ["kandila", "kan-di-la", "CVCCVCV", 6, 3, "candle"],
-  ["diwata", "di-wa-ta", "CVCVCV", 6, 3, "fairy"],
-  ["payaso", "pa-ya-so", "CVCVCV", 6, 3, "clown"],
-  ["plato", "pla-to", "CCVCV", 6, 4, "plate"],
-  ["braso", "bra-so", "CCVCV", 6, 4, "arm"],
-  ["prito", "pri-to", "CCVCV", 6, 4, "fried"],
-  ["tren", "tren", "CCVC", 6, 4, "train"],
-  ["trak", "trak", "CCVC", 6, 4, "truck"],
-  ["krus", "krus", "CCVC", 6, 4, "cross"],
-  ["prutas", "pru-tas", "CCVCVC", 6, 4, "fruit"],
-  ["paaralan", "pa-a-ra-lan", "CVVCVCVC", 6, 5, "school"],
-  ["mahalaga", "ma-ha-la-ga", "CVCVCVCV", 6, 5, "important"],
-  ["karagatan", "ka-ra-ga-tan", "CVCVCVCVC", 6, 5, "ocean"],
-  // ── Stage 7: + ng and borrowed letters ──────────────────────────────
-  ["ngipin", "ngi-pin", "CVCVC(ng)", 7, 3, "tooth"],
-  ["ngiti", "ngi-ti", "CVCV(ng)", 7, 3, "smile"],
-  ["ngayon", "nga-yon", "CVCVC(ng)", 7, 3, "now / today"],
-  ["saging", "sa-ging", "CVCVC(ng)", 7, 3, "banana"],
-  ["payong", "pa-yong", "CVCVC(ng)", 7, 3, "umbrella"],
-  ["gunting", "gun-ting", "CVCCVC(ng)", 7, 3, "scissors"],
-  ["mangga", "mang-ga", "CVCCV(ng)", 7, 3, "mango"],
-  ["bangka", "bang-ka", "CVCCV(ng)", 7, 3, "boat"],
-  ["bangus", "ba-ngus", "CVCVC(ng)", 7, 3, "milkfish"],
-  ["tulong", "tu-long", "CVCVC(ng)", 7, 3, "help"],
-  ["gulong", "gu-long", "CVCVC(ng)", 7, 3, "wheel"],
-  ["tainga", "ta-i-nga", "CVVCV(ng)", 7, 4, "ear"],
-  ["pinggan", "ping-gan", "CVCCVC(ng)", 7, 4, "dish / plate"],
-  ["singkamas", "sing-ka-mas", "CVCCVCVC(ng)", 7, 4, "jicama"],
-  ["pangalan", "pa-nga-lan", "CVCVCVC(ng)", 7, 4, "name"],
-  ["pangako", "pa-nga-ko", "CVCVCV(ng)", 7, 4, "promise"],
-  ["kotse", "kot-se", "CVCCV", 7, 3, "car"],
-  ["dyip", "dyip", "CCVC", 7, 4, "jeepney"],
-  ["tsinelas", "tsi-ne-las", "CCVCVCVC", 7, 5, "slippers"],
-];
-
-// Rhyme bank: prompt + options (first option is the answer; shuffled at runtime)
-const RHYMES: [prompt: string, answer: string, distractors: string[], level: number][] = [
-  ["bahay", "buhay", ["bola", "gatas"], 1],
-  ["ilaw", "araw", ["mesa", "kuto"], 1],
-  ["bola", "lola", ["dahon", "mais"], 1],
-  ["bato", "plato", ["dila", "puno"], 2],
-  ["dila", "kandila", ["araw", "isda"], 2],
-  ["damit", "langit", ["baso", "ulap"], 2],
-  ["ulan", "buwan", ["tela", "oso"], 2],
-  ["saging", "gising", ["puno", "lata"], 3],
-  ["tasa", "masa", ["ilog", "yelo"], 1],
-  ["puso", "oso", ["ulan", "aklat"], 1],
-];
-
-/**
- * Spellings the speech recognizer legitimately returns for a *correct* reading.
- * Loanwords and digraphs (Marungko stage 7) are the usual offenders: Whisper
- * writes "krus" as "cross" and "dyip" as "deep". Without these, a child who
- * reads the word perfectly would be scored as making an error.
- * Reading specialists can extend this list per word in the Word bank.
- */
-const ASR_VARIANTS: Record<string, string> = {
-  krus: "cross, kurs",
-  dyip: "deep, jeep, dip, dape, dyp",
-  tsinelas: "chinelas, sinelas, sinilas, sinalas, tsinelas",
-  mangga: "manga",
-  bulaklak: "bulaklaq, bulaklac",
-  kotse: "kotche, coche",
-  radyo: "radio",
-  tren: "train",
-  plato: "platto",
-  bus: "boss, bas",
-};
 
 // Plausible dyslexic-style misreadings for demo history (letter reversals etc.)
 function mutate(word: string): string {
@@ -220,18 +60,38 @@ async function main() {
   await prisma.user.deleteMany();
 
   console.log(`Seeding ${WORDS.length} words…`);
-  for (const [text, syllables, pattern, stage, level, meaningEn] of WORDS) {
-    await prisma.word.create({
-      data: { text, syllables, pattern, stage, level, meaningEn, variants: ASR_VARIANTS[text] ?? "" },
-    });
-  }
+  await prisma.word.createMany({
+    data: WORDS.map(([text, syllables, pattern, level, meaningEn]) => ({
+      text,
+      syllables,
+      pattern,
+      level,
+      meaningEn,
+      // derived, never hand-typed, so no word can appear before its letters
+      stage: stageForWord(text),
+      variants: ASR_VARIANTS[text] ?? "",
+    })),
+  });
 
-  console.log(`Seeding ${RHYMES.length} rhyme items…`);
-  for (const [prompt, answer, distractors, level] of RHYMES) {
-    await prisma.phonItem.create({
-      data: { type: "RHYME", prompt, answer, options: JSON.stringify([answer, ...distractors]), level },
-    });
-  }
+  console.log(`Seeding ${RHYMES.length} rhyme and ${FIRST_SOUNDS.length} sound-isolation items…`);
+  await prisma.phonItem.createMany({
+    data: [
+      ...RHYMES.map(([prompt, answer, distractors, level]) => ({
+        type: "RHYME",
+        prompt,
+        answer,
+        options: JSON.stringify([answer, ...distractors]),
+        level,
+      })),
+      ...FIRST_SOUNDS.map(([prompt, answer, distractors, level]) => ({
+        type: "FIRST_SOUND",
+        prompt,
+        answer,
+        options: JSON.stringify([answer, ...distractors]),
+        level,
+      })),
+    ],
+  });
 
   console.log("Seeding demo accounts…");
   const password = await bcrypt.hash("lexora123", 10);
