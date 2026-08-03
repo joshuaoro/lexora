@@ -99,6 +99,7 @@ export const WORDS: WordEntry[] = [
   ["hilo", "hi-lo", "CVCV", 1, "dizzy"],
   ["sapa", "sa-pa", "CVCV", 1, "creek"],
   ["para", "pa-ra", "CVCV", 1, "for; stop"],
+  ["wala", "wa-la", "CVCV", 1, "none; nothing"],
 
   /* ── Level 2 — a closed syllable or vowel sequence ────────────────────── */
   ["mas", "mas", "CVC", 2, "more"],
@@ -169,6 +170,7 @@ export const WORDS: WordEntry[] = [
   ["kahoy", "ka-hoy", "CVCVC", 2, "wood"],
   ["sipon", "si-pon", "CVCVC", 2, "runny nose"],
   ["bakod", "ba-kod", "CVCVC", 2, "fence"],
+  ["pusod", "pu-sod", "CVCVC", 2, "navel"],
   ["dilaw", "di-law", "CVCVC", 2, "yellow"],
   ["pulot", "pu-lot", "CVCVC", 2, "honey"],
   ["duyan", "du-yan", "CVCVC", 2, "hammock"],

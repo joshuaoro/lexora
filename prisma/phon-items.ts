@@ -31,7 +31,7 @@ export const RHYMES: RhymeItem[] = [
   ["puno", "pito", ["wika", "labas"], 1],
   ["daga", "gabi", ["tasa", "kanin"], 1],
   ["hari", "mani", ["lobo", "gamit"], 1],
-  ["sala", "bala", ["puso", "tinig"], 1],
+  ["sala", "wala", ["puso", "tinig"], 1],
 
   // level 2 — closed syllables and vowel sequences
   ["ilaw", "araw", ["mesa", "kuto"], 2],
