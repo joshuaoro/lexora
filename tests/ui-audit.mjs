@@ -8,7 +8,7 @@
  */
 import { chromium } from "playwright-core";
 import {
-  BASE, PASSWORD, check, section, report, one,
+  BASE, PASSWORD, check, section, report, one, query,
   createTestLearner, deleteTestLearner, closeDb,
 } from "./helpers.mjs";
 
@@ -156,7 +156,8 @@ await signIn(sp, "specialist@lexora.ph", "/specialist");
 await sp.click("text=Juan");
 await sp.waitForSelector("text=Scoring reliability check", { timeout: 20000 });
 const juanId = sp.url().split("/").pop();
-const levelBefore = (await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [juanId])).level;
+const before = await one(`SELECT level, stage FROM "LearnerProfile" WHERE id = $1`, [juanId]);
+const levelBefore = before.level;
 
 /** Poll the database until it reflects a UI action, or give up. */
 async function waitForLevel(id, want, timeoutMs = 20000) {
@@ -173,6 +174,9 @@ await sp.selectOption("select", "3");
 check("level dropdown updates the learner", await waitForLevel(juanId, 3));
 await sp.selectOption("select", String(levelBefore));
 await waitForLevel(juanId, levelBefore);
+// Raising the level widens the Marungko stage, and stage never shrinks by
+// design — so restore it directly or the demo learner drifts on every run.
+await query(`UPDATE "LearnerProfile" SET stage = $2 WHERE id = $1`, [juanId, before.stage]);
 
 check("data-protection panel is present", (await sp.locator("text=Data protection").count()) === 1);
 

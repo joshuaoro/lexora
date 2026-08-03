@@ -12,7 +12,9 @@
     "audit": "node tests/run-all.mjs",
     "audit:api": "node tests/api-audit.mjs",
     "audit:logic": "node tests/logic-audit.mjs",
-    "audit:ui": "node tests/ui-audit.mjs"
+    "audit:ui": "node tests/ui-audit.mjs",
+    "audit:links": "node tests/links-audit.mjs",
+    "audit:prod": "node tests/prod-smoke.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
