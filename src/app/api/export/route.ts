@@ -125,11 +125,15 @@ export async function GET(req: Request) {
       s.durationMs,
       s.levelAtTime,
       s.phase,
+      s.completedAt ? 1 : 0,
     ]);
 
     return csvResponse(
       toCsv(
-        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase"],
+        // completed = 0 marks an activity the learner started and left partway.
+        // The words they read are real data; the session is just not a finished
+        // one, so exclude these when counting activities completed.
+        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase", "completed"],
         rows
       ),
       `lexora-sessions-${stamp()}.csv`
@@ -148,7 +152,8 @@ export async function GET(req: Request) {
       // separately as self-correction so they can never inflate accuracy.
       const measured = { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false };
 
-      const [attempts, errorGroups, sessions, practice, reviews, retries] = await Promise.all([
+      const [attempts, errorGroups, sessions, sessionsCompleted, practice, reviews, retries] =
+        await Promise.all([
         prisma.attempt.groupBy({
           by: ["correct"],
           where: { learnerId: l.id, ...measured },
@@ -159,10 +164,16 @@ export async function GET(req: Request) {
           where: { learnerId: l.id, correct: false, ...measured },
           _count: true,
         }),
+        // Minutes cover every session with work in it; the completed count only
+        // those the learner reached the end of. Keeping them apart means time
+        // on task is not lost to an activity that was abandoned partway.
         prisma.activitySession.aggregate({
           where: { learnerId: l.id, total: { gt: 0 } },
           _count: true,
           _sum: { durationMs: true },
+        }),
+        prisma.activitySession.count({
+          where: { learnerId: l.id, completedAt: { not: null } },
         }),
         prisma.practiceItem.groupBy({ by: ["mastered"], where: { learnerId: l.id }, _count: true }),
         prisma.attemptReview.groupBy({
@@ -197,7 +208,8 @@ export async function GET(req: Request) {
         err("omission"),
         err("insertion"),
         err("no_response"),
-        sessions._count,
+        sessionsCompleted,
+        sessions._count - sessionsCompleted,
         Math.round((sessions._sum.durationMs ?? 0) / 60000),
         practice.find((g) => !g.mastered)?._count ?? 0,
         practice.find((g) => g.mastered)?._count ?? 0,
@@ -216,7 +228,7 @@ export async function GET(req: Request) {
           "learner", "email", "level", "marungko_stage",
           "oral_attempts", "oral_correct", "oral_accuracy_pct",
           "substitution", "omission", "insertion", "no_response",
-          "sessions_completed", "minutes_practiced",
+          "sessions_completed", "sessions_partial", "minutes_practiced",
           "practice_words_active", "practice_words_mastered",
           "attempts_reviewed", "reviews_agreed", "agreement_pct",
           // Self-correction: how often a second reading, taken after the word

@@ -87,6 +87,10 @@ model ActivitySession {
   // BASELINE | REGULAR | ENDLINE — lets pre/post comparison be selected
   // explicitly instead of inferred from timestamps.
   phase       String   @default("REGULAR")
+  // Set only when the learner reached the end of the activity. Progress is
+  // saved as they go, so a session they walked away from still carries the
+  // words they read and the minutes they spent — it just isn't "completed".
+  completedAt DateTime?
   createdAt   DateTime @default(now())
 
   attempts Attempt[]

@@ -18,6 +18,7 @@
     "audit:perf": "node tests/perf-audit.mjs",
     "audit:stale": "node tests/stale-session-audit.mjs",
     "audit:reporting": "node tests/reporting-audit.mjs",
+    "audit:integrity": "node tests/session-integrity-audit.mjs",
     "audit:prod": "node tests/prod-smoke.mjs",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",

@@ -20,6 +20,7 @@ const SUITES = [
   ["Links (every route reachable from the navigation)", "links-audit.mjs"],
   ["Stale sessions (a record erased mid-session)", "stale-session-audit.mjs"],
   ["Reporting (decoding time, calibration, cleanup)", "reporting-audit.mjs"],
+  ["Session integrity (language switch, partial progress)", "session-integrity-audit.mjs"],
   ["Accessibility (WCAG 2.1 AA, keyboard, reduced motion)", "a11y-audit.mjs"],
 ];
 

@@ -20,7 +20,7 @@ const IDLE_FLUSH_MS = 6000;
 
 export default function ReaderClient({
   settings,
-  sets,
+  sets: serverSets,
   lang,
 }: {
   settings: ReaderSettings;
@@ -28,6 +28,14 @@ export default function ReaderClient({
   lang: Lang;
 }) {
   const dict = getDict(lang);
+  /**
+   * The word sets are shuffled on the server for every request, so any
+   * router.refresh() — switching the UI language is the one a learner will hit
+   * — would deal a new set while this component stays mounted, changing the
+   * words mid-read and leaving the highlight on a word that has moved. Held for
+   * the life of the page; a new visit brings a new mix.
+   */
+  const [sets] = useState(serverSets);
   const [setIndex, setSetIndex] = useState(0);
   const [customText, setCustomText] = useState("");
   const [useCustom, setUseCustom] = useState(false);
@@ -59,6 +67,9 @@ export default function ReaderClient({
       total: wordsPlayedRef.current,
       correct: 0, // the Reader is listening practice — nothing is scored
       durationMs: Math.min(3_600_000, Date.now() - startedAtRef.current),
+      // There is no end to reach in the Reader: any stretch of listening is a
+      // whole activity, so a flushed Reader session is a completed one.
+      completed: true,
     });
     sessionIdRef.current = null;
     wordsPlayedRef.current = 0;

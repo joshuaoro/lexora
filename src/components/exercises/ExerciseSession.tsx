@@ -59,7 +59,7 @@ function wordSize(base: number, factor: number) {
 
 export default function ExerciseSession({
   type,
-  items,
+  items: serverItems,
   settings,
   lang,
 }: {
@@ -71,6 +71,21 @@ export default function ExerciseSession({
   const router = useRouter();
   const dict = getDict(lang);
   const t = dict.session;
+
+  /**
+   * The words for this run, taken once and then held.
+   *
+   * The server picks them at random on every request, and any router.refresh()
+   * — switching the UI language mid-exercise is the obvious one — re-runs that
+   * pick and hands this component a different set. React keeps the component
+   * mounted, so the run's own state survives while the words underneath it
+   * change: the child ends up staring at feedback for a word that is no longer
+   * on screen, and the next answer is recorded against a word they never saw.
+   *
+   * Language is a property of the interface; the words are a property of the
+   * run. Fresh ones are adopted only when a new run starts.
+   */
+  const [items, setItems] = useState(serverItems);
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [index, setIndex] = useState(0);
@@ -90,6 +105,11 @@ export default function ExerciseSession({
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef(0);
   const itemStartRef = useRef(0);
+  /**
+   * Running tally, kept in a ref so the flush on the way out can read it
+   * without the effect re-subscribing after every answer.
+   */
+  const answeredRef = useRef({ total: 0, correct: 0 });
 
   const {
     state: micState,
@@ -103,16 +123,58 @@ export default function ExerciseSession({
   const isOral = type === "READ_ALOUD" || type === "PRACTICE";
   const intro = t.intro[type];
 
-  useEffect(() => () => stopSpeaking(), []);
+  /**
+   * Save what the learner has done so far.
+   *
+   * Totals used to be written only on the final screen, so a child who did five
+   * words and went back to the dashboard had their minutes discarded — the
+   * words and accuracy survived, because attempts are saved one by one, but the
+   * time did not. The Reader has always flushed on the way out; exercises now
+   * do the same, and the activity is marked completed only when it really is.
+   */
+  const flushProgress = useCallback((completed: boolean) => {
+    const id = sessionIdRef.current;
+    const { total, correct } = answeredRef.current;
+    if (!id || total === 0) return Promise.resolve();
+    if (completed) sessionIdRef.current = null; // nothing more to send
+    // keepalive lets the request outlive the page; sendBeacon only sends POST.
+    // The caller awaits this when finishing, so the refresh that follows reads
+    // the totals that were just written rather than the previous ones.
+    return fetch(`/api/sessions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        total,
+        correct,
+        durationMs: Math.min(3_600_000, now() - sessionStartRef.current),
+        completed,
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // pagehide covers closing the tab; the cleanup covers navigating away
+    // inside the app, which fires no page event at all.
+    const onHide = () => flushProgress(false);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      stopSpeaking();
+      flushProgress(false);
+    };
+  }, [flushProgress]);
 
   const beginItem = useCallback(
-    (i: number) => {
+    // `list` is passed explicitly when a new run starts, because the state
+    // holding the previous run's words has not been applied yet at that point.
+    (i: number, list: ExerciseItem[] = items) => {
       setIndex(i);
       setFeedback(null);
       setRetry(null);
       setPhase("item");
       itemStartRef.current = now();
-      const next = items[i];
+      const next = list[i];
       // Receptive activities speak the target automatically
       if (next && (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND")) {
         setTimeout(
@@ -144,9 +206,13 @@ export default function ExerciseSession({
     const data = await res.json().catch(() => ({}));
     sessionIdRef.current = data.id ?? null;
     sessionStartRef.current = now();
+    answeredRef.current = { total: 0, correct: 0 };
     setResults([]);
     setLeveledUp(false);
-    beginItem(0);
+    // Adopt whatever the server last sent — a replay should not repeat the
+    // same eight words — and start on those rather than the previous run's.
+    setItems(serverItems);
+    beginItem(0, serverItems);
   }
 
   async function submitAttempt(payload: {
@@ -201,6 +267,10 @@ export default function ExerciseSession({
     }
 
     if (data.levelChanged === "up") setLeveledUp(true);
+    answeredRef.current = {
+      total: answeredRef.current.total + 1,
+      correct: answeredRef.current.correct + (correct ? 1 : 0),
+    };
     setResults((r) => [...r, correct]);
     setFeedback({ correct, heard: data.heard || null, chosen: payload.chosen ?? null });
     setPhase("feedback");
@@ -257,20 +327,10 @@ export default function ExerciseSession({
       beginItem(index + 1);
       return;
     }
-    // Finish: persist session totals
-    const correct = results.filter(Boolean).length;
-    if (sessionIdRef.current) {
-      await fetch(`/api/sessions/${sessionIdRef.current}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          total: items.length,
-          correct,
-          durationMs: now() - sessionStartRef.current,
-        }),
-      });
-    }
+    await flushProgress(true);
     setPhase("done");
+    // Refresh so the dashboard and the next run pick up what just happened —
+    // the words for this run are already held in state and won't be disturbed.
     router.refresh();
   }
 

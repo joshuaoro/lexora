@@ -74,8 +74,10 @@ export async function learnerSummary(learnerId: string) {
       where: { learnerId },
       _sum: { durationMs: true },
     }),
-    // Abandoned sessions (started but never finished) don't count
-    prisma.activitySession.count({ where: { learnerId, total: { gt: 0 } } }),
+    // "Completed" means the learner reached the end. Time spent on an activity
+    // they left partway is still counted in minutes practiced above — they did
+    // the reading — but it is not an activity completed.
+    prisma.activitySession.count({ where: { learnerId, completedAt: { not: null } } }),
   ]);
 
   const total = allReads.reduce((n, g) => n + g._count, 0);
