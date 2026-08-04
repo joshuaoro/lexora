@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Volume2, Check } from "lucide-react";
+import Link from "next/link";
+import { Volume2, Check, Stethoscope } from "lucide-react";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
 import { speakOnce } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
@@ -196,6 +197,14 @@ export default function SettingsClient({
               {t.saveFailed}
             </p>
           )}
+
+          {/* For whoever sets the tablets up, not for the child. */}
+          <Link
+            href="/diagnostics"
+            className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-line bg-card py-2.5 text-sm font-bold text-ink-soft transition hover:bg-cream-dark"
+          >
+            <Stethoscope size={16} /> {t.deviceCheck}
+          </Link>
         </div>
       </div>
     </div>

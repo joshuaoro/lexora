@@ -15,6 +15,37 @@ export function getFilipinoVoice(): SpeechSynthesisVoice | null {
   );
 }
 
+/**
+ * Speak an interface instruction in the language it is written in.
+ *
+ * Distinct from speakOnce, which always asks for a Filipino voice because the
+ * reading content is always Filipino. An English instruction read by a Filipino
+ * voice — or the reverse — is exactly the kind of thing a child cannot decode
+ * and cannot report.
+ *
+ * A device with no Filipino voice falls back to whatever it has, which reads
+ * Tagalog with English phonics. That is poor but better than silence, and it is
+ * the same limitation the word bank works around with pre-recorded clips.
+ */
+export function speakUi(text: string, lang: "en" | "fil", rate = 0.95): Promise<void> {
+  return new Promise((resolve) => {
+    if (!ttsSupported()) return resolve();
+    stopSpeaking();
+
+    const voices = window.speechSynthesis.getVoices();
+    const wanted = lang === "fil" ? ["fil", "tl"] : ["en"];
+    const voice = voices.find((v) => wanted.some((p) => v.lang.toLowerCase().startsWith(p))) ?? null;
+
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang ?? (lang === "fil" ? "fil-PH" : "en-US");
+    u.rate = rate;
+    u.onend = () => resolve();
+    u.onerror = () => resolve();
+    window.speechSynthesis.speak(u);
+  });
+}
+
 let currentAudio: HTMLAudioElement | null = null;
 
 /**

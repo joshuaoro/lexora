@@ -14,7 +14,19 @@
 const DEFAULT_BASE_URL = "https://api.groq.com/openai/v1";
 const DEFAULT_MODEL = "whisper-large-v3-turbo";
 const TIMEOUT_MS = 8000;
-const RETRY_DELAY_MS = 1200;
+/**
+ * Retry delay, jittered.
+ *
+ * A fixed delay is the wrong shape here: when a group practises together the
+ * requests that get rate-limited are rate-limited at the same instant, so a
+ * constant wait sends them all back at the same instant too and they collide
+ * again. Measured at twelve concurrent readings, four in a round lost both
+ * attempts that way. Spreading the second attempt across a window costs a child
+ * nothing and breaks up the herd.
+ */
+const RETRY_MIN_MS = 700;
+const RETRY_MAX_MS = 2500;
+const retryDelay = () => RETRY_MIN_MS + Math.random() * (RETRY_MAX_MS - RETRY_MIN_MS);
 
 /**
  * Generic Tagalog context that anchors the recognizer to Filipino spelling.
@@ -46,7 +58,11 @@ export async function transcribeAudio(dataUrl: string): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY ?? process.env.ASR_API_KEY;
   if (!apiKey) return null;
 
-  const match = dataUrl.match(/^data:(audio\/[\w.+-]+)(?:;[\w=-]+)*;base64,([\s\S]+)$/);
+  // Media-type parameters may contain dots: Safari records
+  // `audio/mp4;codecs=mp4a.40.2`, and a pattern without the dot silently fails
+  // to parse it — every reading from that device would then fall through to the
+  // browser recognizer or go unscored, with nothing in the UI to say why.
+  const match = dataUrl.match(/^data:(audio\/[\w.+-]+)(?:;[\w.=+-]+)*;base64,([\s\S]+)$/);
   if (!match) return null;
   const mime = match[1];
   const bytes = Buffer.from(match[2], "base64");
@@ -95,6 +111,6 @@ export async function transcribeAudio(dataUrl: string): Promise<string | null> {
   const first = await attempt();
   if (first.text !== null || !first.retryable) return first.text;
 
-  await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+  await new Promise((r) => setTimeout(r, retryDelay()));
   return (await attempt()).text;
 }

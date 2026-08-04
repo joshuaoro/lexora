@@ -157,6 +157,10 @@ async function main() {
     await advance.click();
   }
   await qpage.getByRole("link", { name: /^Dashboard$/ }).first().click();
+  // Leaving mid-activity is confirmed now — section [6] covers the dialog
+  // itself; here it is just the door out.
+  await qpage.getByRole("dialog").waitFor({ timeout: 15000 }).catch(() => {});
+  await qpage.getByRole("button", { name: /^(Leave|Umalis)$/i }).click();
   await qpage.waitForURL(/\/dashboard/, { timeout: 15000 });
 
   // The flush goes out as the exercise unmounts, so there is nothing on screen
@@ -314,6 +318,87 @@ async function main() {
 
   await octx.close();
   await deleteTestLearner(dropped.email);
+
+  /* ── 6. leaving mid-activity is confirmed, and the claim is true ─────── */
+
+  section("[6] the leave guard, and whether it tells the truth");
+
+  const guarded = await createTestLearner("guard");
+  const { ctx: gctx, page: gpage } = await pageFor(guarded.cookie);
+
+  await gpage.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+
+  // Instructions are written for children who cannot reliably read them, so
+  // every prompt must be listenable.
+  check(
+    "the intro instruction can be played",
+    (await gpage.getByRole("button", { name: /Listen to the instruction/i }).count()) > 0,
+    "speak button present"
+  );
+
+  await gpage.getByRole("button", { name: /Start!/i }).click();
+  const gskip = gpage.getByRole("button", { name: /Skip this word/i });
+  await gskip.waitFor({ timeout: 30000 });
+  check(
+    "the instruction can be replayed mid-exercise",
+    (await gpage.getByRole("button", { name: /Listen to the instruction/i }).count()) > 0,
+    "speak button present"
+  );
+
+  // Answer one word so there is something to be truthful about.
+  await gskip.click();
+  await gpage.getByRole("button", { name: /Next word|Finish/i }).waitFor({ timeout: 45000 });
+
+  await gpage.getByRole("link", { name: /^Dashboard$/ }).first().click();
+  await gpage.getByRole("dialog").waitFor({ timeout: 15000 }).catch(() => {});
+  const dialog = gpage.getByRole("dialog");
+
+  check("leaving mid-activity asks first", (await dialog.count()) > 0, "dialog shown");
+  check(
+    "the exercise is still on screen behind it",
+    gpage.url().includes("/exercises/read-aloud"),
+    gpage.url()
+  );
+
+  const dialogText = (await dialog.count()) ? await dialog.innerText() : "";
+  // The wording matters. Telling a child their work will be lost would be
+  // false — attempts save as they are scored and the minutes flush on the way
+  // out — and false in a direction that discourages stopping when they need to.
+  check(
+    "it does not claim the work will be lost",
+    !/will not be (saved|recorded)|mawawala|hindi ma-?save/i.test(dialogText),
+    dialogText.replace(/\s+/g, " ").slice(0, 90)
+  );
+
+  await gpage.getByRole("button", { name: /Keep reading|Magpatuloy/i }).click();
+  check(
+    "'keep reading' stays in the activity",
+    gpage.url().includes("/exercises/read-aloud") &&
+      (await gpage.getByRole("dialog").count()) === 0,
+    "dismissed"
+  );
+
+  await gpage.getByRole("link", { name: /^Dashboard$/ }).first().click();
+  await gpage.getByRole("dialog").waitFor({ timeout: 15000 }).catch(() => {});
+  await gpage.getByRole("button", { name: /^(Leave|Umalis)$/i }).click();
+  await gpage.waitForURL(/\/dashboard/, { timeout: 20000 });
+  check("'leave' actually leaves", gpage.url().includes("/dashboard"), gpage.url());
+
+  const kept = await until(() =>
+    one(
+      `SELECT total, "durationMs" FROM "ActivitySession"
+        WHERE "learnerId" = $1 AND total > 0 ORDER BY "createdAt" DESC LIMIT 1`,
+      [guarded.learnerId]
+    )
+  );
+  check(
+    "and the work really was kept, as the dialog said",
+    Boolean(kept) && kept.total > 0 && kept.durationMs > 0,
+    kept ? `${kept.total} word(s), ${kept.durationMs}ms` : "nothing saved — the dialog lied"
+  );
+
+  await gctx.close();
+  await deleteTestLearner(guarded.email);
 
   report("Session-integrity audit");
 }

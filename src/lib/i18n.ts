@@ -122,6 +122,14 @@ const en = {
       },
     } as Record<string, { title: string; blurb: string; how: string }>,
     start: (n: number) => `Start! (${n} words)`,
+    listen: "Listen to this",
+    leaveTitle: "Leave this activity?",
+    // Deliberately not "your progress will be lost" — it would not be true.
+    // Every word is saved as it is read, and the minutes are saved on the way
+    // out. What the child gives up is finishing the round.
+    leaveBody: "The words you already read are saved. You just will not finish this round.",
+    leaveStay: "Keep reading",
+    leaveGo: "Leave",
     readWordAloud: "Read this word aloud",
     listening: "Listening… say the word!",
     checking: "Checking…",
@@ -228,6 +236,7 @@ const en = {
     save: "Save settings",
     saving: "Saving…",
     saved: "Saved ✓",
+    deviceCheck: "Check this device",
     saveFailed: "Could not save. Check the internet connection and try again — your choices are still on screen.",
   },
   auth: {
@@ -412,6 +421,11 @@ const fil: Dict = {
       },
     },
     start: (n) => `Simulan! (${n} salita)`,
+    listen: "Pakinggan ito",
+    leaveTitle: "Aalis ka na ba?",
+    leaveBody: "Naka-save na ang mga salitang nabasa mo. Hindi mo lang matatapos ang round na ito.",
+    leaveStay: "Magpatuloy",
+    leaveGo: "Umalis",
     readWordAloud: "Basahin nang malakas ang salitang ito",
     listening: "Nakikinig… sabihin ang salita!",
     checking: "Sinusuri…",
@@ -518,6 +532,7 @@ const fil: Dict = {
     save: "I-save ang mga setting",
     saving: "Sine-save…",
     saved: "Na-save ✓",
+    deviceCheck: "Suriin ang device na ito",
     saveFailed: "Hindi na-save. Pakicheck ang internet at subukan ulit — nandiyan pa ang mga pinili mo.",
   },
   auth: {

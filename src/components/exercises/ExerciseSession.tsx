@@ -17,8 +17,10 @@ import {
 } from "lucide-react";
 import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
-import { sayWord, playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
+import { sayWord, playAudioUrl, speakOnce, speakUi, stopSpeaking } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
+import SpeakButton from "@/components/SpeakButton";
+import LeaveGuard from "./LeaveGuard";
 import { tryFetch } from "@/lib/net";
 import { useOralReading } from "./useOralReading";
 
@@ -220,6 +222,13 @@ export default function ExerciseSession({
     // same eight words — and start on those rather than the previous run's.
     setItems(serverItems);
     beginItem(0, serverItems);
+
+    // Say what to do, once. This runs on the Start press, so the browser's
+    // autoplay rules are satisfied — a child who cannot read the instruction
+    // now hears it without having to know to ask for it. Only for the spoken
+    // activities: the receptive ones play the target word by themselves, and
+    // two voices at once helps nobody.
+    if (isOral) speakUi(intro.how, lang, settings.ttsRate);
   }
 
   async function submitAttempt(payload: {
@@ -408,6 +417,17 @@ export default function ExerciseSession({
         <h1 className="text-3xl font-extrabold text-ink">{intro.title}</h1>
         <p className="mt-3 text-lg text-ink-soft">{intro.blurb}</p>
         <p className="mt-2 text-sm font-semibold text-ink-muted">{intro.how}</p>
+        {/* The instructions above are text, aimed at children who struggle to
+            decode text. This reads them out. */}
+        <div className="mt-5 flex justify-center">
+          <SpeakButton
+            text={`${intro.blurb} ${intro.how}`}
+            lang={lang}
+            rate={settings.ttsRate}
+            label={t.listen}
+          />
+        </div>
+
         {isOral && !micOk && (
           <p className="mt-4 rounded-xl bg-orange-soft px-4 py-3 text-sm font-bold text-orange">
             {dict.common.noMic}
@@ -485,6 +505,19 @@ export default function ExerciseSession({
   /* item + feedback phases */
   return (
     <div className="mx-auto max-w-3xl">
+      {/* Only while a round is genuinely underway — not on the intro or the
+          results screen, where leaving costs nothing. */}
+      <LeaveGuard
+        active={phase === "item" || phase === "feedback"}
+        lang={lang}
+        rate={settings.ttsRate}
+        strings={{
+          title: t.leaveTitle,
+          body: t.leaveBody,
+          stay: t.leaveStay,
+          leave: t.leaveGo,
+        }}
+      />
       {/* Progress */}
       <div className="mb-6 flex items-center gap-3">
         <div className="h-3 flex-1 overflow-hidden rounded-full bg-cream-dark">
@@ -517,9 +550,12 @@ export default function ExerciseSession({
         {/* ——— Oral reading (READ_ALOUD / PRACTICE) ——— */}
         {isOral && (
           <>
-            <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-              {t.readWordAloud}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {t.readWordAloud}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
             <p
               className="wrap-break-word mt-6 font-bold text-ink"
               style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 1.6) }}
@@ -578,9 +614,12 @@ export default function ExerciseSession({
         {/* ——— Listen & choose ——— */}
         {type === "LISTEN_CHOOSE" && (
           <>
-            <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-              {t.tapHeard}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {t.tapHeard}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
             <button
               onClick={sayTarget}
               aria-label={t.hearAgainAria}
@@ -609,9 +648,12 @@ export default function ExerciseSession({
         {/* ——— Syllable counting ——— */}
         {type === "SYLLABLES" && (
           <>
-            <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-              {t.howManyParts}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {t.howManyParts}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
             <p
               className="wrap-break-word mt-6 font-bold text-ink"
               style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 1.4) }}
@@ -647,9 +689,12 @@ export default function ExerciseSession({
              first-sound about the beginning. */}
         {(type === "RHYME" || type === "FIRST_SOUND") && (
           <>
-            <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-              {type === "RHYME" ? t.whichRhymes : t.whichStartsSame}
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {type === "RHYME" ? t.whichRhymes : t.whichStartsSame}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
             <div className="mt-6 flex items-center justify-center gap-3">
               <p
                 className="wrap-break-word font-bold text-ink"
