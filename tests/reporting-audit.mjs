@@ -444,6 +444,15 @@ async function main() {
       sessionRow?.slice(0, 80) ?? "(row not found)"
     );
 
+    // The recording itself must never reach the CSV. `include` would have kept
+    // the base64 column and dragged every recording in the study through the
+    // function just to print a 1 or a 0.
+    check(
+      "the attempts CSV carries the audio flag, not the audio",
+      /(^|,)1(,|$)/m.test(csv) && !csv.includes("data:audio"),
+      `${Math.round(csv.length / 1024)}KB for ${csv.split("\r\n").length - 1} rows`
+    );
+
     const summary = await (await api("/api/export?what=summary", { cookie: specCookie })).text();
     check(
       "summary CSV reports self-correction separately",

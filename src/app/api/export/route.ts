@@ -13,6 +13,13 @@ import { patternFamily as patternFamilyFor } from "@/lib/stats";
  * Specialists can export everything; a learner may export only their own data.
  */
 
+/**
+ * An export at the end of the study walks every reading five children made.
+ * The default budget is generous for that, but the whole point of the export is
+ * that it works on the largest data set, not the smallest.
+ */
+export const maxDuration = 30;
+
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -52,16 +59,44 @@ export async function GET(req: Request) {
   }
 
   if (what === "attempts") {
-    const attempts = await prisma.attempt.findMany({
-      where: learnerId ? { learnerId } : {},
-      orderBy: { createdAt: "asc" },
-      include: {
-        learner: { include: { user: { select: { name: true } } } },
-        word: { select: { stage: true, level: true, pattern: true, syllables: true } },
-        review: { select: { agrees: true } },
-        session: { select: { phase: true } },
-      },
-    });
+    const scope = learnerId ? { learnerId } : {};
+
+    // Every field is named rather than using `include`, which keeps all scalar
+    // columns — and one of those columns is the base64 recording. The export
+    // only needs to know whether audio exists, so loading it would drag every
+    // recording in the study through a serverless function to compute a 1 or a
+    // 0. At a thousand readings that is tens of megabytes, and it would fail
+    // exactly when the data set is complete and the export matters most.
+    const [attempts, withAudio] = await Promise.all([
+      prisma.attempt.findMany({
+        where: scope,
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          createdAt: true,
+          activityType: true,
+          target: true,
+          transcript: true,
+          engine: true,
+          altTranscript: true,
+          correct: true,
+          score: true,
+          errorType: true,
+          responseMs: true,
+          levelAtTime: true,
+          isRetry: true,
+          learner: { select: { user: { select: { name: true } } } },
+          word: { select: { stage: true, level: true, pattern: true, syllables: true } },
+          review: { select: { agrees: true } },
+          session: { select: { phase: true } },
+        },
+      }),
+      prisma.attempt.findMany({
+        where: { ...scope, audio: { not: null } },
+        select: { id: true },
+      }),
+    ]);
+    const hasAudio = new Set(withAudio.map((a) => a.id));
 
     const rows = attempts.map((a) => [
       a.id,
@@ -82,7 +117,7 @@ export async function GET(req: Request) {
       a.score.toFixed(3),
       a.errorType ?? "",
       a.responseMs,
-      a.audio ? 1 : 0,
+      hasAudio.has(a.id) ? 1 : 0,
       a.review ? (a.review.agrees ? "agree" : "disagree") : "",
       a.isRetry ? 1 : 0,
       a.session?.phase ?? "",

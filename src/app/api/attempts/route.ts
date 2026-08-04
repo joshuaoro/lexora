@@ -6,6 +6,17 @@ import { scoreReading, activeScoreThreshold } from "@/lib/scoring";
 import { transcribeAudio } from "@/lib/asr";
 import { updateAdaptiveLevel, recordMiss, recordPracticeResult } from "@/lib/adaptive";
 
+/**
+ * Scoring a reading is the slowest thing a learner waits on: upload, then
+ * Whisper, and one retry when Groq rate-limits or stumbles. Measured against
+ * the deployment a real recording scores in about 2.5s, but the retry path can
+ * reach ~17s, and the platform default would kill the function before it
+ * finished — turning a recoverable rate-limit into a lost reading, precisely
+ * when several children are practising at once. Stated explicitly so it does
+ * not depend on which plan the project happens to be on.
+ */
+export const maxDuration = 30;
+
 const MAX_AUDIO_BYTES = 600_000; // ~600 KB base64 cap per recording
 
 const schema = z.object({
