@@ -131,9 +131,16 @@ export default async function HomePage() {
             about the Marungko sequence would. The rings are the app listening;
             they settle to nothing under prefers-reduced-motion, which the
             global stylesheet enforces. */}
-        <div className="relative mx-auto w-full max-w-md" aria-hidden>
-          <div className="rounded-[2rem] border border-line bg-card px-8 py-10 text-center shadow-xl">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-muted">
+        <div className="group relative mx-auto w-full max-w-md" aria-hidden>
+          <div className="rounded-[2rem] border border-line bg-card px-8 pb-10 pt-14 text-center shadow-xl transition-transform duration-500 ease-out group-hover:-translate-y-1">
+            {/* The prompt is kept inside its own column and allowed to wrap.
+                Filipino says the same thing in nearly twice the characters —
+                "BASAHIN NANG MALAKAS ANG SALITANG ITO" against "READ THIS WORD
+                ALOUD" — and the badge floating at the top right used to swallow
+                the last two words of it. Reserving the width means any
+                translation wraps rather than collides, on every device and
+                without anyone having to hover to read it. */}
+            <p className="mx-auto max-w-60 text-xs font-bold uppercase leading-relaxed tracking-[0.12em] text-ink-muted">
               {t.mockPrompt}
             </p>
 
@@ -153,11 +160,17 @@ export default async function HomePage() {
           </div>
 
           {/* What the app heard, and what it said back — the two halves of the
-              interaction the page is claiming. */}
-          <div className="absolute -bottom-7 -left-3 flex rotate-[-4deg] items-center gap-2 rounded-2xl bg-green-soft px-5 py-3 font-extrabold text-green shadow-lg sm:-left-8">
+              interaction the page is claiming.
+
+              They drift apart when the cluster is hovered, which makes the
+              stack feel like something you could pick up. Decoration only: the
+              card underneath is already fully legible without it, because a
+              tablet has no hover and text that needs one is text nobody can
+              read. */}
+          <div className="absolute -bottom-7 -left-3 flex rotate-[-4deg] items-center gap-2 rounded-2xl bg-green-soft px-5 py-3 font-extrabold text-green shadow-lg transition-transform duration-500 ease-out group-hover:-translate-x-2 group-hover:translate-y-1.5 group-hover:-rotate-[7deg] sm:-left-8">
             <Check size={20} strokeWidth={2.6} /> {t.mockGood}
           </div>
-          <div className="absolute -right-3 -top-6 rotate-[5deg] rounded-2xl border border-line bg-card px-5 py-3 shadow-lg sm:-right-6">
+          <div className="absolute -right-3 -top-6 rotate-[5deg] rounded-2xl border border-line bg-card px-5 py-3 shadow-lg transition-transform duration-500 ease-out group-hover:-translate-y-2 group-hover:translate-x-2 group-hover:rotate-[8deg] sm:-right-6">
             <p className="text-2xl font-extrabold text-ink">87%</p>
             <p className="text-xs font-bold text-ink-muted">{t.mockAcc}</p>
           </div>
