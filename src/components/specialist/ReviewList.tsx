@@ -13,7 +13,6 @@ export type ReviewableAttempt = {
   activityType: string;
   createdAt: string;
   hasAudio: boolean;
-  audio: string | null;
   engine: string | null; // "server" (Whisper) | "browser" (Web Speech)
   altTranscript: string | null;
   score: number; // similarity to the target, 0–1
@@ -67,8 +66,9 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
     setNoteOpen(null);
   }
 
-  function playAudio(audio: string) {
-    new Audio(audio).play().catch(() => {});
+  /** Fetched on demand — the page no longer carries the recordings. */
+  function playAudio(attemptId: string) {
+    new Audio(`/api/attempt-audio/${attemptId}`).play().catch(() => {});
   }
 
   if (attempts.length === 0) {
@@ -133,9 +133,9 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
               </div>
             </div>
 
-            {a.hasAudio && a.audio && (
+            {a.hasAudio && (
               <button
-                onClick={() => playAudio(a.audio!)}
+                onClick={() => playAudio(a.id)}
                 aria-label={`Play recording of ${a.target}`}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-peach text-peach-deep transition hover:opacity-90"
               >

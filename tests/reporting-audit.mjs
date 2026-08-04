@@ -564,6 +564,49 @@ async function main() {
     );
   }
 
+  /* ── 10. recordings are streamed, not carried by the page ───────────── */
+
+  section("[10] the learner page does not carry the recordings");
+
+  // A recording is ~60KB of base64 and the page lists up to sixty-five of them.
+  // Embedding those put megabytes in front of a specialist opening a learner —
+  // eight and a half seconds on a throttled connection — for clips that are
+  // mostly never played. Regressing to `include` would silently bring it back,
+  // because `include` keeps every scalar column.
+  const withClip = cuid("att");
+  await query(
+    `INSERT INTO "Attempt"
+       (id, "learnerId", "activityType", target, transcript, score, correct,
+        "responseMs", engine, audio, "createdAt")
+     VALUES ($1, $2, 'READ_ALOUD', 'zzstreamed', 'zzstreamed', 0.5, false, 3000,
+             'server', 'data:audio/webm;base64,' || repeat('A', 40000), NOW())`,
+    [withClip, id]
+  );
+
+  if (login.ok) {
+    const specCookie = login.headers
+      .getSetCookie()
+      .map((c) => c.split(";")[0])
+      .join("; ");
+
+    const page = await (await api(`/specialist/learner/${id}`, { cookie: specCookie })).text();
+    const embedded = (page.match(/data:audio\/[^"\\]+/g) ?? []).reduce((n, s) => n + s.length, 0);
+    check(
+      "no recording is embedded in the page",
+      embedded === 0,
+      `${Math.round(embedded / 1024)}KB embedded, page is ${Math.round(page.length / 1024)}KB`
+    );
+
+    const clip = await api(`/api/attempt-audio/${withClip}`, { cookie: specCookie });
+    check("but it is reachable on demand", clip.status === 200, `HTTP ${clip.status}`);
+
+    const anon = await api(`/api/attempt-audio/${withClip}`);
+    check("and only by a specialist", anon.status === 403, `HTTP ${anon.status}`);
+
+    const missing = await api(`/api/attempt-audio/${cuid("att")}`, { cookie: specCookie });
+    check("a missing recording is a 404", missing.status === 404, `HTTP ${missing.status}`);
+  }
+
   await deleteTestLearner(rl.email);
   await deleteTestLearner(learner.email);
   report("Reporting audit");

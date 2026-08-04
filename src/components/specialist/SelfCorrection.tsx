@@ -8,11 +8,12 @@ export type CorrectionPair = {
   date: string;
   /** What the system heard on the first, unaided reading. */
   firstHeard: string | null;
-  firstAudio: string | null;
+  /** Attempt ids, not the recordings: the clips are fetched when played. */
+  firstAudioId: string | null;
   /** The re-read, taken after the correct pronunciation was played. */
   retryCorrect: boolean;
   retryHeard: string | null;
-  retryAudio: string | null;
+  retryAudioId: string | null;
 };
 
 /**
@@ -32,8 +33,8 @@ export type CorrectionPair = {
 export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
   const succeeded = pairs.filter((p) => p.retryCorrect).length;
 
-  function play(audio: string | null) {
-    if (audio) new Audio(audio).play().catch(() => {});
+  function play(attemptId: string | null) {
+    if (attemptId) new Audio(`/api/attempt-audio/${attemptId}`).play().catch(() => {});
   }
 
   return (
@@ -83,9 +84,9 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
                   <span className="font-bold text-ink">
                     {p.firstHeard ? `“${p.firstHeard}”` : "nothing heard"}
                   </span>
-                  {p.firstAudio && (
+                  {p.firstAudioId && (
                     <button
-                      onClick={() => play(p.firstAudio)}
+                      onClick={() => play(p.firstAudioId)}
                       aria-label={`Play the first reading of ${p.word}`}
                       className="rounded-lg p-1 text-primary transition hover:bg-primary-soft"
                     >
@@ -103,9 +104,9 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
                   <span className="font-bold text-ink">
                     {p.retryHeard ? `“${p.retryHeard}”` : "nothing heard"}
                   </span>
-                  {p.retryAudio && (
+                  {p.retryAudioId && (
                     <button
-                      onClick={() => play(p.retryAudio)}
+                      onClick={() => play(p.retryAudioId)}
                       aria-label={`Play the re-read of ${p.word}`}
                       className="rounded-lg p-1 text-primary transition hover:bg-primary-soft"
                     >

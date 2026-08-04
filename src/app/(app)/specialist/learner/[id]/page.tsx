@@ -33,6 +33,7 @@ export default async function LearnerDetailPage({
 
   const [
     attempts,
+    withRecording,
     reviewStats,
     words,
     practiceItems,
@@ -53,7 +54,24 @@ export default async function LearnerDetailPage({
       },
       orderBy: { createdAt: "desc" },
       take: 30,
-      include: { review: { select: { agrees: true, note: true } } },
+      select: {
+        id: true,
+        target: true,
+        transcript: true,
+        correct: true,
+        errorType: true,
+        activityType: true,
+        createdAt: true,
+        engine: true,
+        altTranscript: true,
+        score: true,
+        review: { select: { agrees: true, note: true } },
+      },
+    }),
+    // Which of them have a recording, without carrying the recordings.
+    prisma.attempt.findMany({
+      where: { learnerId: id, audio: { not: null } },
+      select: { id: true },
     }),
     prisma.attemptReview.groupBy({
       by: ["agrees"],
@@ -80,7 +98,19 @@ export default async function LearnerDetailPage({
       },
       orderBy: { score: "desc" },
       take: 15,
-      include: { review: { select: { agrees: true, note: true } } },
+      select: {
+        id: true,
+        target: true,
+        transcript: true,
+        correct: true,
+        errorType: true,
+        activityType: true,
+        createdAt: true,
+        engine: true,
+        altTranscript: true,
+        score: true,
+        review: { select: { agrees: true, note: true } },
+      },
     }),
     // Re-reads, newest first. Each is paired below with the miss it followed.
     prisma.attempt.findMany({
@@ -92,9 +122,9 @@ export default async function LearnerDetailPage({
         target: true,
         correct: true,
         transcript: true,
-        audio: true,
         createdAt: true,
         sessionId: true,
+        // No audio column: the clip is streamed by /api/attempt-audio on play.
       },
     }),
     // Completed sessions only — an abandoned one is not a data point to tag.
@@ -119,7 +149,7 @@ export default async function LearnerDetailPage({
           target: { in: [...new Set(retryRows.map((r) => r.target))] },
         },
         orderBy: { createdAt: "desc" },
-        select: { target: true, transcript: true, audio: true, createdAt: true, sessionId: true },
+        select: { id: true, target: true, transcript: true, createdAt: true, sessionId: true },
       })
     : [];
 
@@ -137,10 +167,10 @@ export default async function LearnerDetailPage({
         minute: "2-digit",
       }),
       firstHeard: first?.transcript ?? null,
-      firstAudio: first?.audio ?? null,
+      firstAudioId: first?.id ?? null,
       retryCorrect: r.correct,
       retryHeard: r.transcript,
-      retryAudio: r.audio,
+      retryAudioId: r.id,
     };
   });
 
@@ -158,6 +188,8 @@ export default async function LearnerDetailPage({
     phase: s.phase,
   }));
 
+  const recorded = new Set(withRecording.map((a) => a.id));
+
   const reviewed = reviewStats.reduce((n, g) => n + g._count, 0);
   const agreed = reviewStats.find((g) => g.agrees)?._count ?? 0;
   const agreementPct = reviewed ? Math.round((agreed / reviewed) * 100) : null;
@@ -170,8 +202,7 @@ export default async function LearnerDetailPage({
     errorType: a.errorType,
     activityType: a.activityType,
     createdAt: a.createdAt.toISOString(),
-    hasAudio: Boolean(a.audio),
-    audio: a.audio,
+    hasAudio: recorded.has(a.id),
     engine: a.engine,
     altTranscript: a.altTranscript,
     score: a.score,
@@ -186,8 +217,7 @@ export default async function LearnerDetailPage({
     errorType: a.errorType,
     activityType: a.activityType,
     createdAt: a.createdAt.toISOString(),
-    hasAudio: Boolean(a.audio),
-    audio: a.audio,
+    hasAudio: recorded.has(a.id),
     engine: a.engine,
     altTranscript: a.altTranscript,
     score: a.score,

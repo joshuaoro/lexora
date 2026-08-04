@@ -90,6 +90,33 @@ for (const slug of ["read-aloud", "listen-choose", "syllables", "rhyme"]) {
 }
 check("/practice/session is linked", learner.has("/practice/session"), learner.has("/practice/session") ? "" : "not reachable (empty practice list is fine)");
 
+section("[5] every navigable page has a loading boundary");
+
+// Next.js only shows loading UI for a segment that is newly entered. The one at
+// the (app) level never fired for navigation *within* the app, so a specialist
+// opening a learner sat on the previous screen — fully interactive — for
+// several seconds with no sign anything was happening, which invites a second
+// click and a second page load behind the first. A page added without a
+// loading.tsx quietly reintroduces that.
+const { existsSync } = await import("node:fs");
+const { join } = await import("node:path");
+
+for (const segment of [
+  "specialist",
+  "specialist/cohort",
+  "specialist/words",
+  "specialist/learner/[id]",
+  "reports",
+  "reader",
+  "practice",
+  "practice/session",
+  "exercises",
+  "exercises/[type]",
+]) {
+  const file = join("src", "app", "(app)", segment, "loading.tsx");
+  check(`${segment} has a loading boundary`, existsSync(file), file);
+}
+
 await browser.close();
 await closeDb();
 report("Link audit");

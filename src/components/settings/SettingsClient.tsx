@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Volume2, Check, Stethoscope } from "lucide-react";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
-import { speakOnce } from "@/lib/tts";
+import { speakUi } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
 import { tryFetch } from "@/lib/net";
 
@@ -153,7 +153,18 @@ export default function SettingsClient({
             </label>
             {slider(t.voiceSpeed, "ttsRate", 0.5, 1.2, 0.05, (v) => `${v.toFixed(2)}×`)}
             <button
-              onClick={() => speakOnce("Kumusta! Ako si LEXORA. Sabay tayong magbasa.", s.ttsRate)}
+              // The same pipeline the child hears, so the preview is a
+              // preview. This used to call the browser's own engine, which
+              // demonstrated a voice the app no longer uses anywhere.
+              onClick={() =>
+                speakUi(
+                  lang === "fil"
+                    ? "Kumusta! Ako si LEXORA. Sabay tayong magbasa."
+                    : "Hello! I am LEXORA. Let us read together.",
+                  lang,
+                  s.ttsRate
+                )
+              }
               className="flex items-center gap-2 rounded-xl bg-peach px-4 py-2 text-sm font-bold text-peach-deep transition hover:opacity-90"
             >
               <Volume2 size={16} /> {t.testVoice}

@@ -38,6 +38,11 @@ export function speakUi(text: string, lang: "en" | "fil", rate = 0.95): Promise<
 
   return new Promise((resolve) => {
     const audio = new Audio(url);
+    // Honour the learner's speed setting, as word playback does. The clip is
+    // synthesized once at a fixed pace, so the slider has to act here — without
+    // this the setting silently governs the words and not the sentences.
+    // Clamped: below ~0.6 the browser's time-stretch is unintelligible.
+    audio.playbackRate = Math.min(1.5, Math.max(0.6, rate));
     currentAudio = audio;
     let settled = false;
     const done = () => {
