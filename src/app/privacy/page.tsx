@@ -113,7 +113,8 @@ const SECTIONS: { heading: string; body: React.ReactNode }[] = [
     heading: "What LEXORA is not",
     body: (
       <>
-        LEXORA is a reading <strong>support</strong> tool for word-level practice. It does
+        LEXORA is a reading <strong>support</strong>{" "}
+        tool for word-level practice. It does
         not diagnose dyslexia, does not provide clinical assessment, and is not a substitute
         for the professional services of licensed educators, reading specialists,
         speech-language pathologists, or health-care professionals.

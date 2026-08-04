@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Check, X, AlertTriangle, Mic, Loader2 } from "lucide-react";
+import { Check, X, AlertTriangle, Mic, Loader2, Volume2 } from "lucide-react";
 import { tryFetch } from "@/lib/net";
 
 type Verdict = "pass" | "warn" | "fail" | "pending";
@@ -65,7 +65,9 @@ function subscribeEnv(onChange: () => void) {
  */
 export default function DiagnosticsClient() {
   const [recording, setRecording] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [roundTrip, setRoundTrip] = useState<Row | null>(null);
+  const [spoken, setSpoken] = useState<Row | null>(null);
 
   const raw = useSyncExternalStore(subscribeEnv, envSnapshot, () => "");
   const env = raw ? JSON.parse(raw) : null;
@@ -92,23 +94,31 @@ export default function DiagnosticsClient() {
           detail: env.types.join(", ") || "none advertised — the browser will pick its own",
         },
         {
-          label: "Speech synthesis",
-          verdict: env.tts ? "pass" : "warn",
-          detail: env.tts ? "available" : "instructions cannot be read aloud on this browser",
+          // Also fallback-only since instructions became recordings. Saying
+          // "instructions cannot be read aloud" here would now be false.
+          label: "Device speech engine (offline fallback only)",
+          verdict: "pass",
+          detail: env.tts
+            ? "available"
+            : "not present — no effect, since the app plays its own recordings",
         },
         {
-          // How a child who cannot read gets the instruction. A device without
-          // a Filipino voice still speaks, but with English phonics.
-          label: "Filipino voice",
-          verdict: !env.tts ? "fail" : env.voices.some((v: { lang: string }) => /^(fil|tl)/i.test(v.lang)) ? "pass" : "warn",
-          detail: !env.tts
-            ? "no speech synthesis on this browser"
-            : env.voices.filter((v: { lang: string }) => /^(fil|tl)/i.test(v.lang)).length
-              ? env.voices
-                  .filter((v: { lang: string }) => /^(fil|tl)/i.test(v.lang))
-                  .map((v: { name: string; lang: string }) => `${v.name} (${v.lang})`)
-                  .join(", ")
-              : `none installed — ${env.voices.length} other voices. Word audio still plays from the database; spoken instructions will use English phonics.`,
+          // Not load-bearing any more. Words and instructions are both served
+          // as neural clips from the database, so a device with no Filipino
+          // voice is entirely normal and nothing is degraded by it. The device
+          // voice is only reached if the server cannot be, which is why this is
+          // reported rather than warned about.
+          label: "Device's own Filipino voice (offline fallback only)",
+          verdict: "pass",
+          detail: (() => {
+            if (!env.tts) {
+              return "This browser has no speech engine. That is fine — words and instructions are played as recordings from the app.";
+            }
+            const fil = env.voices.filter((v: { lang: string }) => /^(fil|tl)/i.test(v.lang));
+            return fil.length
+              ? `${fil.map((v: { name: string; lang: string }) => `${v.name} (${v.lang})`).join(", ")} — available if the app cannot reach the server.`
+              : `None, out of ${env.voices.length} voices — normal, and not a problem. Words and instructions both play as recordings from the app. Only if the connection drops would the app fall back to this device's voice, which would read Filipino poorly.`;
+          })(),
         },
         {
           label: "Browser speech recognition (fallback only)",
@@ -118,6 +128,55 @@ export default function DiagnosticsClient() {
             : "not available — scoring depends entirely on the server",
         },
       ];
+
+  /**
+   * The path a child actually hears an instruction through: fetch the neural
+   * clip from the app and play it. This is what the old "Filipino voice" row
+   * used to be a proxy for, badly — a device can have no Filipino voice of its
+   * own and still speak perfectly, because the speaking is not done here.
+   */
+  async function testInstruction() {
+    setSpeaking(true);
+    setSpoken({ label: "Spoken instruction", verdict: "pending", detail: "fetching the clip…" });
+
+    const line = "Pindutin ang mikropono, tapos sabihin nang malinaw ang salita.";
+    const started = Date.now();
+    const res = await tryFetch(`/api/speech?lang=fil&text=${encodeURIComponent(line)}`);
+    const ms = Date.now() - started;
+
+    if (!res?.ok) {
+      setSpeaking(false);
+      setSpoken({
+        label: "Spoken instruction",
+        verdict: "fail",
+        detail: !res
+          ? "no connection to the server — instructions would fall back to this device's voice"
+          : `the app could not provide the clip (HTTP ${res.status})`,
+      });
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => URL.revokeObjectURL(url);
+
+    try {
+      await audio.play();
+      setSpoken({
+        label: "Spoken instruction",
+        verdict: "pass",
+        detail: `${Math.round(blob.size / 1024)}KB in ${ms}ms — you should be hearing Filipino now. If you hear nothing, check the volume and the silent switch.`,
+      });
+    } catch {
+      setSpoken({
+        label: "Spoken instruction",
+        verdict: "warn",
+        detail: "the clip downloaded but the browser refused to play it without a tap — press the button again",
+      });
+    }
+    setSpeaking(false);
+  }
 
   /** The whole chain: permission, capture, upload, Whisper, score. */
   async function testRoundTrip() {
@@ -206,16 +265,17 @@ export default function DiagnosticsClient() {
     });
   }
 
-  const all = roundTrip ? [...rows, roundTrip] : rows;
+  const all = [...rows, spoken, roundTrip].filter(Boolean) as Row[];
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-3xl font-extrabold text-ink">Device check</h1>
       <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
-        Run this on each tablet before the first session. It checks the things that differ between
-        one device and another — microphone permission, recording format, whether a Filipino voice
-        is installed — and then records three seconds and scores it, which is the only way to know
-        the whole chain works here.
+        Run this on each tablet before the first session. It checks what differs from one device to
+        another — microphone permission and recording format — then plays a spoken instruction and
+        records three seconds and scores it, which is the only way to know the whole chain works
+        here. Rows marked <em>offline fallback only</em> describe what the app would resort to if it
+        could not reach the server; they are not problems.
       </p>
 
       <ul className="mt-6 space-y-2.5">
@@ -233,16 +293,28 @@ export default function DiagnosticsClient() {
         ))}
       </ul>
 
-      <button
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button
+          onClick={testInstruction}
+          disabled={speaking}
+          className="inline-flex items-center gap-2 rounded-2xl bg-peach px-6 py-3.5 text-lg font-extrabold text-peach-deep shadow-sm transition hover:opacity-90 disabled:opacity-60"
+        >
+          <Volume2 size={20} />
+          {speaking ? "Playing…" : "Play a spoken instruction"}
+        </button>
+
+        <button
         onClick={testRoundTrip}
         disabled={recording}
         className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-lg font-extrabold text-white shadow-sm transition hover:bg-primary-dark disabled:opacity-60"
       >
         <Mic size={20} />
-        {recording ? "Recording…" : "Record 3 seconds and score it"}
-      </button>
+          {recording ? "Recording…" : "Record 3 seconds and score it"}
+        </button>
+      </div>
       <p className="mt-2 text-xs font-semibold text-ink-muted">
-        Say <strong>bahay</strong> when it starts. This writes one practice attempt to the signed-in
+        Say <strong>bahay</strong>{" "}
+        when it starts. This writes one practice attempt to the signed-in
         learner&apos;s record — use a test account rather than a participant.
       </p>
     </div>

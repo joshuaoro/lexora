@@ -61,7 +61,8 @@ export default function ThresholdCalibration({
             <ReviewList attempts={attempts} />
             <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-xs font-semibold text-ink-soft">
               If most of these turn out to be correct readings, lower{" "}
-              <code className="font-mono">SCORE_THRESHOLD</code> in the deployment settings and
+              <code className="font-mono">SCORE_THRESHOLD</code>{" "}
+              in the deployment settings and
               note the change in your validation records. If most are genuine misreadings, the
               threshold is doing its job.
             </p>
