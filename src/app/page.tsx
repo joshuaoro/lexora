@@ -17,14 +17,22 @@ import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import Logo from "@/components/Logo";
 import LangToggle from "@/components/LangToggle";
+import SyllableWord from "@/components/SyllableWord";
 
+/**
+ * Colour carries meaning here rather than cycling for variety: the three
+ * strands of the app — what the learner sees, what they hear and say, and what
+ * the specialist reads — each keep one hue across the page. `rule` is a stripe
+ * along the top of the card, which groups the six at a glance without adding
+ * headings that would only be more to read.
+ */
 const FEATURE_ICONS = [
-  { icon: Eye, tone: "bg-primary-soft text-primary" },
-  { icon: Volume2, tone: "bg-peach-soft text-peach-deep" },
-  { icon: Mic, tone: "bg-green-soft text-green" },
-  { icon: Puzzle, tone: "bg-orange-soft text-orange" },
-  { icon: ListChecks, tone: "bg-primary-soft text-primary" },
-  { icon: LineChart, tone: "bg-peach-soft text-peach-deep" },
+  { icon: Eye, tone: "bg-primary-soft text-primary", rule: "bg-primary" }, // seeing
+  { icon: Volume2, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // hearing
+  { icon: Mic, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // speaking
+  { icon: Puzzle, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // sounds
+  { icon: ListChecks, tone: "bg-green-soft text-green", rule: "bg-green" }, // progress
+  { icon: LineChart, tone: "bg-green-soft text-green", rule: "bg-green" }, // progress
 ];
 
 export default async function HomePage() {
@@ -117,27 +125,39 @@ export default async function HomePage() {
           </ul>
         </div>
 
-        {/* Illustrative cards */}
+        {/* The product, not a description of it.
+            The word is the hero at display scale — the syllable split is the
+            teaching method, so showing it large says more than a paragraph
+            about the Marungko sequence would. The rings are the app listening;
+            they settle to nothing under prefers-reduced-motion, which the
+            global stylesheet enforces. */}
         <div className="relative mx-auto w-full max-w-md" aria-hidden>
-          <div className="rounded-3xl border border-line bg-card p-8 text-center shadow-md">
-            <p className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+          <div className="rounded-[2rem] border border-line bg-card px-8 py-10 text-center shadow-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-muted">
               {t.mockPrompt}
             </p>
-            <p
-              className="mt-4 text-5xl font-bold text-ink sm:text-6xl"
-              style={{ fontFamily: "var(--font-lexend)", letterSpacing: "0.08em" }}
-            >
-              ba·hay
-            </p>
-            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-lg">
-              <Mic size={28} />
+
+            <SyllableWord
+              syllables="ba-hay"
+              className="mt-6 block text-6xl font-bold text-ink sm:text-7xl"
+            />
+
+            <div className="relative mx-auto mt-9 h-20 w-20">
+              <span className="absolute inset-0 animate-ping rounded-full bg-primary/20 [animation-duration:2.4s]" />
+              <span className="absolute inset-2 animate-ping rounded-full bg-primary/25 [animation-duration:2.4s] [animation-delay:0.4s]" />
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-primary text-white shadow-lg">
+                <Mic size={30} strokeWidth={2.3} />
+              </span>
             </div>
-            <p className="mt-3 text-sm font-bold text-ink-muted">{t.mockListening}</p>
+            <p className="mt-5 text-sm font-bold text-ink-muted">{t.mockListening}</p>
           </div>
-          <div className="absolute -left-2 -bottom-6 flex rotate-[-4deg] items-center gap-2 rounded-2xl bg-green-soft px-4 py-3 font-extrabold text-green shadow-md sm:-left-6 sm:px-5">
-            <Check size={20} /> {t.mockGood}
+
+          {/* What the app heard, and what it said back — the two halves of the
+              interaction the page is claiming. */}
+          <div className="absolute -bottom-7 -left-3 flex rotate-[-4deg] items-center gap-2 rounded-2xl bg-green-soft px-5 py-3 font-extrabold text-green shadow-lg sm:-left-8">
+            <Check size={20} strokeWidth={2.6} /> {t.mockGood}
           </div>
-          <div className="absolute -right-2 -top-5 rotate-[5deg] rounded-2xl border border-line bg-card px-4 py-3 shadow-md sm:-right-4 sm:px-5">
+          <div className="absolute -right-3 -top-6 rotate-[5deg] rounded-2xl border border-line bg-card px-5 py-3 shadow-lg sm:-right-6">
             <p className="text-2xl font-extrabold text-ink">87%</p>
             <p className="text-xs font-bold text-ink-muted">{t.mockAcc}</p>
           </div>
@@ -148,20 +168,33 @@ export default async function HomePage() {
       {/* Features */}
       <section className="border-y border-line bg-card py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-3xl font-extrabold text-ink">{t.featuresTitle}</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-center font-semibold text-ink-muted">
+          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-peach-deep">
+            <span aria-hidden>·</span> {t.eyebrowFeatures} <span aria-hidden>·</span>
+          </p>
+          <h2 className="mt-3 text-center text-3xl font-extrabold text-ink sm:text-4xl">
+            {t.featuresTitle}
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center font-semibold text-ink-muted">
             {t.featuresSub}
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {t.features.map((f, i) => {
-              const { icon: Icon, tone } = FEATURE_ICONS[i];
+              const { icon: Icon, tone, rule } = FEATURE_ICONS[i];
               return (
-                <div key={f.title} className="rounded-3xl border border-line bg-cream/70 p-6 transition hover:-translate-y-0.5 hover:shadow-md">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
-                    <Icon size={23} strokeWidth={2.2} />
+                <div
+                  key={f.title}
+                  className="group overflow-hidden rounded-3xl border border-line bg-cream/70 transition hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className={`h-1.5 w-full ${rule}`} />
+                  <div className="p-6">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl transition group-hover:scale-105 ${tone}`}
+                    >
+                      <Icon size={23} strokeWidth={2.2} />
+                    </div>
+                    <h3 className="mt-4 text-lg font-extrabold text-ink">{f.title}</h3>
+                    <p className="mt-1.5 text-sm font-semibold text-ink-soft">{f.desc}</p>
                   </div>
-                  <h3 className="mt-4 text-lg font-extrabold text-ink">{f.title}</h3>
-                  <p className="mt-1 text-sm font-semibold text-ink-soft">{f.desc}</p>
                 </div>
               );
             })}
@@ -176,7 +209,12 @@ export default async function HomePage() {
           steps — numbered, joined by a line, on the warmer background. */}
       <section className="bg-cream-dark/40 py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-3xl font-extrabold text-ink">{t.howTitle}</h2>
+          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-peach-deep">
+            <span aria-hidden>·</span> {t.eyebrowHow} <span aria-hidden>·</span>
+          </p>
+          <h2 className="mt-3 text-center text-3xl font-extrabold text-ink sm:text-4xl">
+            {t.howTitle}
+          </h2>
 
           <ol className="relative mt-12 grid gap-10 md:grid-cols-3 md:gap-6">
             {/* The connector sits behind the numbers and only where the steps
@@ -227,13 +265,15 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 md:grid-cols-[auto_1fr] md:gap-16">
           <div>
             <Logo />
-            <nav className="mt-4 flex flex-col gap-2 text-sm font-bold">
+            <nav className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm font-bold">
               <Link href="/privacy" className="text-primary hover:underline">
                 {t.privacyLink}
               </Link>
+              <span aria-hidden className="text-peach-deep/60">·</span>
               <Link href="/login" className="text-ink-soft hover:text-primary">
                 {t.signIn}
               </Link>
+              <span aria-hidden className="text-peach-deep/60">·</span>
               <Link href="/register" className="text-ink-soft hover:text-primary">
                 {t.getStarted}
               </Link>

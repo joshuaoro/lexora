@@ -301,6 +301,8 @@ const en = {
     mockListening: "Listening… say the word!",
     mockGood: "Magaling! Great job!",
     mockAcc: "accuracy this week",
+    eyebrowFeatures: "What it does",
+    eyebrowHow: "Three steps",
     featuresTitle: "Everything a young reader needs",
     featuresSub: "Built around two foundational skills: phonological awareness and single-word decoding.",
     features: [
@@ -616,6 +618,8 @@ const fil: Dict = {
     mockListening: "Nakikinig… sabihin ang salita!",
     mockGood: "Magaling! Ang galing mo!",
     mockAcc: "accuracy ngayong linggo",
+    eyebrowFeatures: "Ano ang ginagawa nito",
+    eyebrowHow: "Tatlong hakbang",
     featuresTitle: "Lahat ng kailangan ng batang mambabasa",
     featuresSub: "Nakatuon sa dalawang pundasyong kasanayan: phonological awareness at pagbasa ng salita.",
     features: [

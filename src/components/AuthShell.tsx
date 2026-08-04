@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 import LangToggle from "@/components/LangToggle";
 import { getDict, type Lang } from "@/lib/i18n";
+import SyllableWord from "@/components/SyllableWord";
 
 /**
  * The frame around signing in and registering.
@@ -70,16 +71,17 @@ export default function AuthShell({
 
           {/* The same word the app opens with, so the panel shows the product
               rather than only describing it. */}
-          <div className="mt-10 inline-flex flex-col items-center rounded-3xl bg-primary-dark px-8 py-5">
-            <span className="text-xs font-bold uppercase tracking-wider text-cream">
+          <div className="mt-10 inline-flex flex-col items-center rounded-3xl bg-primary-dark px-9 py-6">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-cream">
               {t.session.readWordAloud}
             </span>
-            <span
-              className="mt-1 text-4xl font-bold text-cream"
-              style={{ fontFamily: "var(--font-lexend)", letterSpacing: "0.08em" }}
-            >
-              ba·hay
-            </span>
+            <SyllableWord
+              syllables="ba-hay"
+              className="mt-2 block text-5xl font-bold text-cream"
+              // On the dark panel the separator needs to lift off the navy
+              // rather than recede into it, so it takes the accent instead.
+              dotClassName="text-peach"
+            />
           </div>
         </div>
 
