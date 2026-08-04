@@ -6,6 +6,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import LangToggle, { useLang } from "@/components/LangToggle";
 import { getDict } from "@/lib/i18n";
+import { tryFetch } from "@/lib/net";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,11 +31,16 @@ export default function RegisterPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/auth/register", {
+    const res = await tryFetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    if (!res) {
+      setError("No internet connection. Check it and try again.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error ?? "Something went wrong. Please try again.");

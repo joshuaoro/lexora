@@ -6,6 +6,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import LangToggle, { useLang } from "@/components/LangToggle";
 import { getDict } from "@/lib/i18n";
+import { tryFetch } from "@/lib/net";
 
 /**
  * Shown when a guard sent the visitor here because their session pointed at a
@@ -42,11 +43,18 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/auth/login", {
+    const res = await tryFetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+    // Without this the button stays on "Signing in…" for good when the wifi
+    // drops, and nothing on screen says why.
+    if (!res) {
+      setError("No internet connection. Check it and try again.");
+      setBusy(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error ?? "Something went wrong. Please try again.");

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarRange } from "lucide-react";
+import { tryFetch } from "@/lib/net";
 
 export type PhaseSession = {
   id: string;
@@ -45,12 +46,12 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
     const previous = rows;
     // Optimistic: tagging a dozen sessions in a row shouldn't feel like waiting.
     setRows((r) => r.map((s) => (s.id === id ? { ...s, phase } : s)));
-    const res = await fetch(`/api/sessions/${id}/phase`, {
+    const res = await tryFetch(`/api/sessions/${id}/phase`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phase }),
     });
-    if (!res.ok) setRows(previous);
+    if (!res?.ok) setRows(previous);
     setBusy(null);
   }
 

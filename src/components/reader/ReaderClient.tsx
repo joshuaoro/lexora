@@ -14,6 +14,7 @@ import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings
 import { sayWord, stopSpeaking, ttsSupported } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
 import type { ReaderSet, ReaderWord } from "@/lib/reader-sets";
+import { tryFetch } from "@/lib/net";
 
 /** Save the reading session this long after the last word is played. */
 const IDLE_FLUSH_MS = 6000;
@@ -75,7 +76,7 @@ export default function ReaderClient({
     wordsPlayedRef.current = 0;
     // keepalive lets the request outlive the page; sendBeacon can't be used
     // here because it only ever sends POST.
-    fetch(`/api/sessions/${id}`, {
+    tryFetch(`/api/sessions/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body,
@@ -94,14 +95,14 @@ export default function ReaderClient({
 
     if (sessionIdRef.current) return;
     startedAtRef.current = Date.now();
-    fetch("/api/sessions", {
+    tryFetch("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "READER" }),
     })
-      .then((r) => r.json())
+      .then((r) => r?.json())
       .then((d) => {
-        sessionIdRef.current = d.id ?? null;
+        sessionIdRef.current = d?.id ?? null;
       })
       .catch(() => {});
   }, [finishSession]);

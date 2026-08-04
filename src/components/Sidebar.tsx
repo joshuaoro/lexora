@@ -20,6 +20,7 @@ import {
 import Logo from "./Logo";
 import LangToggle from "./LangToggle";
 import { getDict, type Lang } from "@/lib/i18n";
+import { tryFetch } from "@/lib/net";
 
 type NavItem = { href: string; key: "dashboard" | "reader" | "exercises" | "practice" | "reports" | "settings" | "learners" | "cohort" | "wordBank"; icon: LucideIcon };
 
@@ -53,7 +54,7 @@ export default function Sidebar({ role, lang }: { role: "LEARNER" | "SPECIALIST"
   }
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await tryFetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }

@@ -256,6 +256,65 @@ async function main() {
   await qctx.close();
   await deleteTestLearner(quitter.email);
 
+  /* ── 5. a dropped connection mid-word ────────────────────────────────── */
+
+  section("[5] the wifi drops in the middle of a word");
+
+  // The study runs on school wifi and tablets, so this is an expected
+  // condition. It used to leave the child staring at "Checking…" with every
+  // control disabled, no message, and no recovery when the link came back —
+  // the rejected fetch skipped the rest of the handler, so the busy flag was
+  // never cleared. Only a page reload escaped, which a seven-year-old will not
+  // think to do and which loses the session.
+  const dropped = await createTestLearner("offline");
+  const { ctx: octx, page: opage } = await pageFor(dropped.cookie);
+
+  await opage.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+  await opage.getByRole("button", { name: /Start!/i }).click();
+  const oskip = opage.getByRole("button", { name: /Skip this word/i });
+  await oskip.waitFor({ timeout: 30000 });
+
+  const pageErrors = [];
+  opage.on("pageerror", (e) => pageErrors.push(String(e)));
+
+  await octx.setOffline(true);
+  await oskip.click();
+  await opage
+    .getByText(/lost the internet connection|Nawala ang internet/i)
+    .first()
+    .waitFor({ timeout: 30000 })
+    .catch(() => {});
+
+  const offlineText = await opage.locator("main").innerText();
+  check(
+    "the child is told the connection dropped",
+    /lost the internet connection|Nawala ang internet/i.test(offlineText),
+    offlineText.replace(/\s+/g, " ").slice(0, 80)
+  );
+  check(
+    "the screen is not stuck on 'Checking…'",
+    !/Checking…|Sinusuri/i.test(offlineText),
+    "busy state cleared"
+  );
+  check(
+    "the controls are usable again",
+    await oskip.isEnabled(),
+    "the learner can answer once the link is back"
+  );
+  check("no unhandled error is thrown", pageErrors.length === 0, pageErrors.slice(0, 1).join(" "));
+
+  await octx.setOffline(false);
+  await oskip.click();
+  const recovered = await opage
+    .getByRole("button", { name: /Next word|Finish/i })
+    .waitFor({ timeout: 45000 })
+    .then(() => true)
+    .catch(() => false);
+  check("the exercise carries on once the wifi returns", recovered, "no reload needed");
+
+  await octx.close();
+  await deleteTestLearner(dropped.email);
+
   report("Session-integrity audit");
 }
 

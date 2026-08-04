@@ -5,6 +5,7 @@ import { Volume2, Check } from "lucide-react";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
 import { speakOnce } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
+import { tryFetch } from "@/lib/net";
 
 const FONT_LABELS: Record<ReaderSettings["font"], string> = {
   lexend: "Lexend",
@@ -27,6 +28,7 @@ export default function SettingsClient({
   const [s, setS] = useState<ReaderSettings>(initial);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   function set<K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) {
     setS((prev) => ({ ...prev, [key]: value }));
@@ -35,12 +37,20 @@ export default function SettingsClient({
 
   async function save() {
     setSaving(true);
-    await fetch("/api/settings", {
+    setFailed(false);
+    const res = await tryFetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(s),
     });
     setSaving(false);
+    // These settings are the accessibility accommodation, so claiming they were
+    // saved when they were not is worse than saying nothing: the learner walks
+    // away believing the display is set the way they need it.
+    if (!res?.ok) {
+      setFailed(true);
+      return;
+    }
     setSaved(true);
   }
 
@@ -178,6 +188,14 @@ export default function SettingsClient({
           >
             {saving ? t.saving : saved ? t.saved : t.save}
           </button>
+          {failed && (
+            <p
+              role="alert"
+              className="mt-3 rounded-xl bg-orange-soft px-4 py-3 text-sm font-bold text-orange"
+            >
+              {t.saveFailed}
+            </p>
+          )}
         </div>
       </div>
     </div>

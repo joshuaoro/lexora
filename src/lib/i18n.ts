@@ -129,6 +129,7 @@ const en = {
     micAria: "Press and read the word aloud",
     tapWhenDone: "Tap the mic again when you're done",
     scoringUnavailable: "We couldn't hear that clearly. Please check your internet and try again.",
+    offline: "We lost the internet connection. Nothing was lost — check the connection, then try the word again.",
     skip: "Skip this word",
     tapHeard: "Tap the word you hear",
     hearAgainAria: "Hear the word again",
@@ -227,6 +228,7 @@ const en = {
     save: "Save settings",
     saving: "Saving…",
     saved: "Saved ✓",
+    saveFailed: "Could not save. Check the internet connection and try again — your choices are still on screen.",
   },
   auth: {
     signinTitle: "Welcome back!",
@@ -417,6 +419,7 @@ const fil: Dict = {
     micAria: "Pindutin at basahin ang salita nang malakas",
     tapWhenDone: "Pindutin ulit ang mic kapag tapos ka na",
     scoringUnavailable: "Hindi namin narinig nang malinaw. Pakicheck ang internet at subukan ulit.",
+    offline: "Nawala ang internet. Walang nawala sa iyong ginawa — pakicheck ang koneksyon, tapos subukan ulit ang salita.",
     skip: "Laktawan ang salitang ito",
     tapHeard: "Pindutin ang salitang narinig mo",
     hearAgainAria: "Pakinggan ulit ang salita",
@@ -515,6 +518,7 @@ const fil: Dict = {
     save: "I-save ang mga setting",
     saving: "Sine-save…",
     saved: "Na-save ✓",
+    saveFailed: "Hindi na-save. Pakicheck ang internet at subukan ulit — nandiyan pa ang mga pinili mo.",
   },
   auth: {
     signinTitle: "Maligayang pagbabalik!",

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ThumbsUp, ThumbsDown, Play, StickyNote } from "lucide-react";
+import { tryFetch } from "@/lib/net";
 
 export type ReviewableAttempt = {
   id: string;
@@ -45,12 +46,12 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
 
   async function review(attemptId: string, agrees: boolean, note?: string) {
     setBusy(attemptId);
-    const res = await fetch("/api/reviews", {
+    const res = await tryFetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attemptId, agrees, note: note ?? notes[attemptId] ?? undefined }),
     });
-    if (res.ok) setReviews((r) => ({ ...r, [attemptId]: agrees }));
+    if (res?.ok) setReviews((r) => ({ ...r, [attemptId]: agrees }));
     setBusy(null);
   }
 

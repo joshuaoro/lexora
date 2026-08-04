@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldAlert, Trash2, MicOff } from "lucide-react";
+import { tryFetch } from "@/lib/net";
 
 /**
  * Data-protection actions for one learner (RA 10173): clear stored voice
@@ -33,25 +34,31 @@ export default function LearnerDataControls({
     }
     setBusy(true);
     setMessage(null);
-    const res = await fetch(`/api/learners/${learnerId}/recordings`, { method: "DELETE" });
-    const data = await res.json().catch(() => ({}));
+    const res = await tryFetch(`/api/learners/${learnerId}/recordings`, { method: "DELETE" });
+    const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusy(false);
-    setMessage(res.ok ? `Deleted ${data.cleared} recording(s). Scores kept.` : (data.error ?? "Could not clear recordings."));
-    if (res.ok) router.refresh();
+    setMessage(
+      res?.ok
+        ? `Deleted ${data.cleared} recording(s). Scores kept.`
+        : res
+          ? (data.error ?? "Could not clear recordings.")
+          : "No internet connection. Check it and try again."
+    );
+    if (res?.ok) router.refresh();
   }
 
   async function eraseLearner() {
     setBusy(true);
     setMessage(null);
-    const res = await fetch(`/api/learners/${learnerId}`, {
+    const res = await tryFetch(`/api/learners/${learnerId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmName: typedName }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusy(false);
-    if (!res.ok) {
-      setMessage(data.error ?? "Could not delete this learner.");
+    if (!res?.ok) {
+      setMessage(res ? (data.error ?? "Could not delete this learner.") : "No internet connection. Check it and try again.");
       return;
     }
     router.push("/specialist");

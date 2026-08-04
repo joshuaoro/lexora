@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { tryFetch } from "@/lib/net";
 
 type WordOption = { id: string; text: string };
 
@@ -25,7 +26,7 @@ export default function LearnerControls({
   async function saveLevel(next: number) {
     setLevel(next);
     setBusy(true);
-    await fetch(`/api/learners/${learnerId}`, {
+    await tryFetch(`/api/learners/${learnerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ level: next }),
@@ -42,14 +43,14 @@ export default function LearnerControls({
       return;
     }
     setBusy(true);
-    const res = await fetch(`/api/learners/${learnerId}/practice`, {
+    const res = await tryFetch(`/api/learners/${learnerId}/practice`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wordId: match.id }),
     });
     setBusy(false);
-    setMessage(res.ok ? `“${match.text}” added to the practice list.` : "Could not add the word.");
-    if (res.ok) {
+    setMessage(res?.ok ? `“${match.text}” added to the practice list.` : res ? "Could not add the word." : "No internet connection. Check it and try again.");
+    if (res?.ok) {
       setWordQuery("");
       router.refresh();
     }

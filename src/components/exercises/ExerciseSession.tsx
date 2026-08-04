@@ -19,6 +19,7 @@ import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
 import { sayWord, playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
+import { tryFetch } from "@/lib/net";
 import { useOralReading } from "./useOralReading";
 
 type Phase = "intro" | "item" | "feedback" | "done";
@@ -194,11 +195,17 @@ export default function ExerciseSession({
   );
 
   async function startSession() {
-    const res = await fetch("/api/sessions", {
+    setScoreError(null);
+    const res = await tryFetch("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type }),
     });
+    // No connection: stay on the intro so the Start button is still there.
+    if (!res) {
+      setScoreError(t.offline);
+      return;
+    }
     if (res.status === 401) {
       router.push("/login?expired=1");
       return;
@@ -225,7 +232,7 @@ export default function ExerciseSession({
   }) {
     setPosting(true);
     setScoreError(null);
-    const res = await fetch("/api/attempts", {
+    const res = await tryFetch("/api/attempts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -241,6 +248,15 @@ export default function ExerciseSession({
         isRetry: payload.isRetry ?? false,
       }),
     });
+    // The connection dropped. Nothing was recorded, so clear the busy state and
+    // say so — the child can read the word again once the wifi is back. Leaving
+    // this unhandled is what froze the screen on "Checking…".
+    if (!res) {
+      setPosting(false);
+      setScoreError(t.offline);
+      return;
+    }
+
     const data = await res.json().catch(() => ({}));
     setPosting(false);
 
@@ -397,6 +413,14 @@ export default function ExerciseSession({
             {dict.common.noMic}
           </p>
         )}
+        {scoreError && (
+          <p
+            role="alert"
+            className="mt-4 rounded-xl bg-orange-soft px-4 py-3 text-sm font-bold text-orange"
+          >
+            {scoreError}
+          </p>
+        )}
         <button
           onClick={startSession}
           disabled={isOral && !micOk}
@@ -473,6 +497,18 @@ export default function ExerciseSession({
           {Math.min(index + 1, items.length)}/{items.length}
         </span>
       </div>
+
+      {/* A dropped connection can happen in any activity, not just the spoken
+          ones, so the notice sits above the card rather than inside the oral
+          branch. Nothing was recorded when this shows — answering again is safe. */}
+      {scoreError && !isOral && (
+        <p
+          role="alert"
+          className="mb-4 rounded-xl bg-orange-soft px-4 py-3 text-center text-sm font-bold text-orange"
+        >
+          {scoreError}
+        </p>
+      )}
 
       <div
         className="rounded-3xl border border-line p-5 text-center shadow-sm sm:p-10"

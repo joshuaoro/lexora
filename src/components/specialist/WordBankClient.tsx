@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Volume2, Mic, Square, Trash2, Sparkles, Play, Check, X } from "lucide-react";
 import { STAGE_LETTERS } from "@/lib/marungko";
 import { playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
+import { tryFetch } from "@/lib/net";
 
 type WordRow = {
   id: string;
@@ -67,7 +68,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     e.preventDefault();
     setBusy(true);
     setMessage(null);
-    const res = await fetch("/api/words", {
+    const res = await tryFetch("/api/words", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -77,19 +78,19 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         meaningEn: form.meaningEn || undefined,
       }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
+    const data = (await res?.json().catch(() => ({}))) ?? {};
+    if (!res?.ok) {
       setBusy(false);
-      setMessage(data.error ?? "Could not add the word.");
+      setMessage(res ? (data.error ?? "Could not add the word.") : "No internet connection. Check it and try again.");
       return;
     }
     // Give the new word a pronunciation immediately — otherwise learners would
     // hear it read with English phonics.
     setMessage(`“${data.text}” added — generating pronunciation…`);
-    const gen = await fetch(`/api/words/${data.id}/audio/generate`, { method: "POST" });
+    const gen = await tryFetch(`/api/words/${data.id}/audio/generate`, { method: "POST" });
     setBusy(false);
     setMessage(
-      gen.ok
+      gen?.ok
         ? `“${data.text}” added with Filipino audio.`
         : `“${data.text}” added, but audio generation failed — use the ✨ button to retry.`
     );
@@ -101,11 +102,17 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
   async function generateAudio(word: WordRow) {
     setBusyId(word.id);
     setMessage(null);
-    const res = await fetch(`/api/words/${word.id}/audio/generate`, { method: "POST" });
-    const data = await res.json().catch(() => ({}));
+    const res = await tryFetch(`/api/words/${word.id}/audio/generate`, { method: "POST" });
+    const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusyId(null);
-    setMessage(res.ok ? `Generated audio for “${word.text}”.` : (data.error ?? "Could not generate."));
-    if (res.ok) router.refresh();
+    setMessage(
+      res?.ok
+        ? `Generated audio for “${word.text}”.`
+        : res
+          ? (data.error ?? "Could not generate.")
+          : "No internet connection. Check it and try again."
+    );
+    if (res?.ok) router.refresh();
   }
 
   /** Start/stop recording the specialist's own voice. Result goes to a preview. */
@@ -163,15 +170,15 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
   async function saveDraft(word: WordRow) {
     if (!draft) return;
     setBusyId(word.id);
-    const res = await fetch(`/api/words/${word.id}/audio`, {
+    const res = await tryFetch(`/api/words/${word.id}/audio`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind: draft.kind, audio: draft.audio }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusyId(null);
-    if (!res.ok) {
-      setMessage(data.error ?? "Could not save the recording.");
+    if (!res?.ok) {
+      setMessage(res ? (data.error ?? "Could not save the recording.") : "No internet connection. Check it and try again.");
       return;
     }
     URL.revokeObjectURL(draft.url);
@@ -187,7 +194,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
   async function removeRecording(word: WordRow) {
     setBusyId(word.id);
-    await fetch(`/api/words/${word.id}/audio`, { method: "DELETE" });
+    await tryFetch(`/api/words/${word.id}/audio`, { method: "DELETE" });
     setBusyId(null);
     setMessage(`Removed your recording of “${word.text}” — the generated voice is back.`);
     router.refresh();
@@ -195,15 +202,15 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
   async function saveVariants(word: WordRow) {
     setBusyId(word.id);
-    const res = await fetch(`/api/words/${word.id}`, {
+    const res = await tryFetch(`/api/words/${word.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ variants: variantDraft }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusyId(null);
-    if (!res.ok) {
-      setMessage(data.error ?? "Could not save.");
+    if (!res?.ok) {
+      setMessage(res ? (data.error ?? "Could not save.") : "No internet connection. Check it and try again.");
       return;
     }
     setEditingVariants(null);
