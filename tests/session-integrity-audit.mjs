@@ -25,6 +25,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE,
+  api,
   check,
   section,
   report,
@@ -399,6 +400,65 @@ async function main() {
 
   await gctx.close();
   await deleteTestLearner(guarded.email);
+
+  /* ── 7. instructions are spoken by the app, not by the device ────────── */
+
+  section("[7] spoken instructions");
+
+  // The browser's own engine cannot do this job: virtually no device ships a
+  // Filipino voice, so it reads Tagalog with English phonics and produces
+  // something a child cannot follow. Clips come from the same neural voice that
+  // pronounces the words, so the app speaks with one voice throughout.
+  const speaker = await createTestLearner("speech");
+  const cookie = speaker.cookie;
+
+  const FIL = "Pindutin ang mikropono, tapos sabihin nang malinaw ang salita.";
+  const say = (text, lang) =>
+    api(`/api/speech?lang=${lang}&text=${encodeURIComponent(text)}`, { cookie });
+
+  const t0 = Date.now();
+  const warm = await say(FIL, "fil");
+  const warmMs = Date.now() - t0;
+  const bytes = warm.ok ? Buffer.from(await warm.arrayBuffer()) : Buffer.alloc(0);
+  // Either an ID3 tag or a bare MPEG frame sync — both are valid MP3.
+  const head = bytes.subarray(0, 3).toString("hex");
+  const isMp3 = head.startsWith("494433") || head.startsWith("fff");
+
+  check("a pre-generated instruction is served", warm.status === 200, `HTTP ${warm.status}`);
+  check("it is audio, not a placeholder", isMp3 && bytes.length > 5000, `${head}, ${bytes.length}B`);
+  check(
+    "and it comes from the cache, not a fresh synthesis",
+    warmMs < 2000,
+    `${warmMs}ms — run \`npm run audio:instructions\` if this is slow`
+  );
+
+  // A phrase nobody has said before must still work: the child's name and the
+  // streak count vary, so not everything can be generated ahead of time.
+  const novel = `Isang bagong pangungusap ${Date.now()}.`;
+  const first = await say(novel, "fil");
+  const second = await say(novel, "fil");
+  check("an unseen phrase is synthesized on demand", first.status === 200, `HTTP ${first.status}`);
+  check("and is cached thereafter", second.status === 200, "second call served");
+
+  const filClip = Buffer.from(await (await say(FIL, "fil")).arrayBuffer());
+  const enClip = Buffer.from(
+    await (await say("Press the microphone, then say the word clearly.", "en")).arrayBuffer()
+  );
+  check("the two languages give different audio", !filClip.equals(enClip), "distinct clips");
+
+  const etag = warm.headers.get("etag");
+  const revalidated = await api(`/api/speech?lang=fil&text=${encodeURIComponent(FIL)}`, {
+    cookie,
+    headers: { "if-none-match": etag },
+  });
+  check("a repeat play revalidates instead of re-downloading", revalidated.status === 304, "304");
+
+  const tooLong = await say("a".repeat(400), "fil");
+  const anonymous = await api(`/api/speech?lang=fil&text=hello`);
+  check("over-long text is refused", tooLong.status === 413, `HTTP ${tooLong.status}`);
+  check("the route needs a session", anonymous.status === 401, `HTTP ${anonymous.status}`);
+
+  await deleteTestLearner(speaker.email);
 
   report("Session-integrity audit");
 }

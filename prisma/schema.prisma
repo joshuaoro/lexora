@@ -64,6 +64,30 @@ model Word {
   practiceItems PracticeItem[]
 }
 
+/**
+ * Spoken interface text, synthesized once and kept.
+ *
+ * The word bank has neural Filipino clips because almost no device ships a
+ * Filipino voice — a browser asked to read Tagalog reaches for an English voice
+ * and produces something a child cannot follow. Instructions have exactly the
+ * same problem, and instructions are what tells a child who cannot read what to
+ * do. They are synthesized by the same voice as the words, so the app speaks
+ * with one voice rather than two.
+ *
+ * Keyed by a hash of voice, rate and text, so changing any of them yields a new
+ * clip rather than serving a stale one.
+ */
+model SpeechClip {
+  id        String   @id @default(cuid())
+  hash      String   @unique
+  lang      String // en | fil — the language the text is written in
+  voice     String
+  rate      String
+  text      String
+  audio     String // base64 data URL (mp3)
+  createdAt DateTime @default(now())
+}
+
 // Curated phonological-awareness items (e.g. rhyme sets)
 model PhonItem {
   id      String @id @default(cuid())

@@ -16,22 +16,55 @@ export function getFilipinoVoice(): SpeechSynthesisVoice | null {
 }
 
 /**
- * Speak an interface instruction in the language it is written in.
+ * Speak a line of interface text.
  *
- * Distinct from speakOnce, which always asks for a Filipino voice because the
- * reading content is always Filipino. An English instruction read by a Filipino
- * voice — or the reverse — is exactly the kind of thing a child cannot decode
- * and cannot report.
+ * Served from the same neural voice that pronounces the words, because the
+ * browser's own engine could not do this job: virtually no device ships a
+ * Filipino voice, so asking it to read Tagalog produced an English voice
+ * sounding out Filipino spelling — unintelligible, and unintelligible to
+ * exactly the children who need the instruction spoken.
  *
- * A device with no Filipino voice falls back to whatever it has, which reads
- * Tagalog with English phonics. That is poor but better than silence, and it is
- * the same limitation the word bank works around with pre-recorded clips.
+ * The clip is cached on the server and by the browser, so a phrase is
+ * synthesized once for everyone. If the server cannot be reached the browser's
+ * voice still tries; it is poor for Filipino, but a child who has lost their
+ * connection is better served by something than by nothing.
  */
 export function speakUi(text: string, lang: "en" | "fil", rate = 0.95): Promise<void> {
+  const trimmed = text.trim();
+  if (!trimmed) return Promise.resolve();
+
+  stopSpeaking();
+  const url = `/api/speech?lang=${lang}&text=${encodeURIComponent(trimmed.slice(0, 300))}`;
+
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      if (currentAudio === audio) currentAudio = null;
+      resolve();
+    };
+    audio.onended = done;
+    audio.onerror = () => {
+      if (settled) return;
+      settled = true;
+      if (currentAudio === audio) currentAudio = null;
+      browserSpeak(trimmed, lang, rate).then(resolve);
+    };
+    audio.play().catch(() => {
+      if (settled) return;
+      settled = true;
+      browserSpeak(trimmed, lang, rate).then(resolve);
+    });
+  });
+}
+
+/** Last resort when the neural clip cannot be fetched or played. */
+function browserSpeak(text: string, lang: "en" | "fil", rate: number): Promise<void> {
   return new Promise((resolve) => {
     if (!ttsSupported()) return resolve();
-    stopSpeaking();
-
     const voices = window.speechSynthesis.getVoices();
     const wanted = lang === "fil" ? ["fil", "tl"] : ["en"];
     const voice = voices.find((v) => wanted.some((p) => v.lang.toLowerCase().startsWith(p))) ?? null;

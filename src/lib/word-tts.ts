@@ -24,6 +24,22 @@ async function synthesize(tts: MsEdgeTTS, text: string, rate: string): Promise<s
   return `data:audio/mpeg;base64,${buffer.toString("base64")}`;
 }
 
+/**
+ * Synthesize arbitrary text with a named voice.
+ *
+ * Used for interface instructions, which need the same neural voice as the
+ * words but are not words and have no row in the word bank.
+ */
+export async function synthesizeSpeech(
+  text: string,
+  voice: string,
+  rate: string
+): Promise<string> {
+  const tts = new MsEdgeTTS();
+  await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+  return synthesize(tts, text, rate);
+}
+
 export type WordClips = { audioWord: string; audioSyll: string };
 
 /**

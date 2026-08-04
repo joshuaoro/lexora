@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Volume2 } from "lucide-react";
-import { speakUi, stopSpeaking, ttsSupported } from "@/lib/tts";
+import { speakUi, stopSpeaking } from "@/lib/tts";
 import type { Lang } from "@/lib/i18n";
 
 /**
@@ -38,8 +38,9 @@ export default function SpeakButton({
 }) {
   const [speaking, setSpeaking] = useState(false);
 
-  // Rendering nothing is better than a dead control the child keeps pressing.
-  if (typeof window !== "undefined" && !ttsSupported()) return null;
+  // No capability check: the clip is neural audio served by the app, so this
+  // works on devices with no speech engine of their own — which is most of
+  // them, and the reason the audio is served rather than synthesized locally.
 
   async function speak() {
     if (speaking) {

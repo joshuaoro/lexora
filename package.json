@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "audio:generate": "tsx scripts/generate-word-audio.ts",
+    "audio:instructions": "tsx scripts/generate-instruction-audio.ts",
     "audit": "node tests/run-all.mjs",
     "audit:api": "node tests/api-audit.mjs",
     "audit:logic": "node tests/logic-audit.mjs",

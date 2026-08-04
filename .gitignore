@@ -62,3 +62,6 @@ skills-lock.json
 
 # database backups (may contain learner data — never commit)
 /backups/
+
+# Voice samples for choosing an instruction voice by ear
+/voice-samples/
