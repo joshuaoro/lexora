@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "./db";
 import { synthesizeSpeech } from "./word-tts";
+import { checkLimit, recordFailure } from "./rate-limit";
 
 /**
  * Neural speech for interface text, synthesized once and reused.
@@ -22,6 +23,20 @@ export const SPEECH_RATE = process.env.SPEECH_RATE ?? "-10%";
 /** Long enough for any instruction, short enough that the route cannot be abused. */
 export const MAX_SPEECH_CHARS = 300;
 
+/**
+ * How many *new* phrases one account may have synthesized in a window.
+ *
+ * Anyone can register as a learner without a code, and this route writes to the
+ * database on a cache miss — so without a ceiling a script could mint unique
+ * strings until the 500MB the study lives in was full. Cache hits are not
+ * counted, because they cost nothing and are the normal case: the fixed
+ * instruction set is pre-generated, so a real session should rarely reach the
+ * synthesizer at all. Twenty is far above what a child could trigger and far
+ * below what would matter.
+ */
+export const NEW_CLIPS_PER_HOUR = 20;
+export const CLIP_WINDOW_MS = 60 * 60 * 1000;
+
 export function speechHash(text: string, lang: string): string {
   return createHash("sha256")
     .update(`${SPEECH_VOICE}|${SPEECH_RATE}|${lang}|${text}`)
@@ -35,8 +50,10 @@ export function speechHash(text: string, lang: string): string {
  */
 export async function getOrCreateSpeech(
   text: string,
-  lang: string
-): Promise<{ audio: string; generated: boolean } | null> {
+  lang: string,
+  /** Who is asking, for the synthesis budget. Omitted by the warm-up script. */
+  quotaKey?: string
+): Promise<{ audio: string; generated: boolean } | "quota" | null> {
   const trimmed = text.trim().slice(0, MAX_SPEECH_CHARS);
   if (!trimmed) return null;
 
@@ -47,6 +64,14 @@ export async function getOrCreateSpeech(
     select: { audio: true },
   });
   if (existing) return { audio: existing.audio, generated: false };
+
+  // A miss is about to write to the database, so this is where the budget
+  // applies — not on the reads, which are the overwhelming majority.
+  if (quotaKey) {
+    const key = `speech:${quotaKey}`;
+    if (!checkLimit(key, NEW_CLIPS_PER_HOUR).allowed) return "quota";
+    recordFailure(key, CLIP_WINDOW_MS);
+  }
 
   let audio: string;
   try {

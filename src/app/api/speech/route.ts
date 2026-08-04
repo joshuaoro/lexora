@@ -31,7 +31,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Text too long" }, { status: 413 });
   }
 
-  const clip = await getOrCreateSpeech(text, lang);
+  // Budget keyed to the account, so one signed-in visitor cannot mint clips
+  // until the database the study lives in is full.
+  const clip = await getOrCreateSpeech(text, lang, session.id);
+  if (clip === "quota") {
+    return NextResponse.json(
+      { error: "Too many new phrases; try again later" },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
+  }
   // Not an error the caller should retry: the client falls back to the
   // browser's own voice, which is worse but better than silence.
   if (!clip) return NextResponse.json({ error: "Synthesis unavailable" }, { status: 503 });

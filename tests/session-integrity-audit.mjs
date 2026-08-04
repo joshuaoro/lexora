@@ -458,6 +458,40 @@ async function main() {
   check("over-long text is refused", tooLong.status === 413, `HTTP ${tooLong.status}`);
   check("the route needs a session", anonymous.status === 401, `HTTP ${anonymous.status}`);
 
+  // Anyone can register as a learner without a code, and a cache miss writes to
+  // the database — so without a ceiling a script could mint unique strings
+  // until the 500MB the study lives in was full. Replays must stay free, or the
+  // ceiling would punish the ordinary case it exists to protect.
+  const budgeted = await createTestLearner("quota");
+  const askAs = (text) =>
+    api(`/api/speech?lang=fil&text=${encodeURIComponent(text)}`, { cookie: budgeted.cookie });
+
+  let replays = 0;
+  for (let i = 0; i < 25; i++) if ((await askAs(FIL)).ok) replays++;
+  check("replaying a cached line is never rationed", replays === 25, `${replays}/25 served`);
+
+  const stamp = Date.now();
+  let minted = 0;
+  let refused = 0;
+  for (let i = 0; i < 26; i++) {
+    const res = await askAs(`Pagsubok bilang ${stamp}-${i}.`);
+    if (res.status === 200) minted++;
+    else if (res.status === 429) refused++;
+  }
+  check(
+    "minting new phrases is capped",
+    refused > 0 && minted <= 20,
+    `${minted} synthesized, ${refused} refused`
+  );
+  check(
+    "and a cached line still plays after the cap is hit",
+    (await askAs(FIL)).ok,
+    "the ordinary path is unaffected"
+  );
+
+  await query(`DELETE FROM "SpeechClip" WHERE text LIKE $1`, [`Pagsubok bilang ${stamp}%`]);
+  await deleteTestLearner(budgeted.email);
+
   await deleteTestLearner(speaker.email);
 
   report("Session-integrity audit");

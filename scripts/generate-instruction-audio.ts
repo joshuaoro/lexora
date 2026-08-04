@@ -62,10 +62,16 @@ async function main() {
       if (force) {
         await prisma.speechClip.deleteMany({ where: { hash: speechHash(text, lang) } });
       }
+      // No quota key: this is the operator warming the cache, not a visitor
+      // spending their budget, so the per-account ceiling does not apply.
       const clip = await getOrCreateSpeech(text, lang);
       const label = text.length > 58 ? text.slice(0, 55) + "…" : text;
 
-      if (!clip) {
+      if (clip === "quota") {
+        // Unreachable without a quota key, but the type says otherwise.
+        failed++;
+        console.log(`  QUOTA   ${label}`);
+      } else if (!clip) {
         failed++;
         console.log(`  FAILED  ${label}`);
       } else if (clip.generated) {
