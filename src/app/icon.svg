@@ -3,9 +3,9 @@
     Browser-tab icon. Literal colours, not CSS variables: this is fetched as a
     standalone file and has no stylesheet to read them from.
   -->
-  <rect width="64" height="64" rx="16" fill="#3d5a80"/>
-  <circle cx="24" cy="23" r="4" fill="#faf6ef"/>
-  <circle cx="40" cy="23" r="4" fill="#faf6ef"/>
+  <rect width="64" height="64" rx="16" fill="#4b698d"/>
+  <circle cx="24" cy="23" r="4" fill="#faf5ec"/>
+  <circle cx="40" cy="23" r="4" fill="#faf5ec"/>
   <path d="M13 34c6.5-3 12.5-3 19 2 6.5-5 12.5-5 19-2v12c-6.5-3-12.5-3-19 2-6.5-5-12.5-5-19-2V34Z" fill="#f3d2b8"/>
-  <path d="M32 36v12" stroke="#3d5a80" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M32 36v12" stroke="#4b698d" stroke-width="2.2" stroke-linecap="round"/>
 </svg>

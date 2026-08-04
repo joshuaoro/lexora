@@ -254,6 +254,14 @@ const en = {
     saveFailed: "Could not save. Check the internet connection and try again — your choices are still on screen.",
   },
   auth: {
+    // Shown on the panel beside the form at desktop width.
+    panelTitle: "Reading practice that listens.",
+    panelSub: "Word-level Filipino reading for learners with dyslexia — built with a reading centre, not for a marketplace.",
+    panelPoints: [
+      "Words follow the Marungko sequence",
+      "A friendly voice reads every word aloud",
+      "Progress a reading specialist can act on",
+    ],
     signinTitle: "Welcome back!",
     signinSub: "Sign in to continue your reading journey.",
     email: "Email",
@@ -562,6 +570,13 @@ const fil: Dict = {
     saveFailed: "Hindi na-save. Pakicheck ang internet at subukan ulit — nandiyan pa ang mga pinili mo.",
   },
   auth: {
+    panelTitle: "Pagbasang marunong makinig.",
+    panelSub: "Pagbasa ng salitang Filipino para sa mga may dyslexia — ginawa kasama ang isang reading centre.",
+    panelPoints: [
+      "Sumusunod sa Marungko sequence ang mga salita",
+      "May magiliw na boses na bumabasa ng bawat salita",
+      "Progresong kayang gamitin ng reading specialist",
+    ],
     signinTitle: "Maligayang pagbabalik!",
     signinSub: "Mag-sign in para ituloy ang iyong pagbasa.",
     email: "Email",

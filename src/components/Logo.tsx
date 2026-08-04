@@ -22,16 +22,16 @@ export function LogoMark({ size = 36, className = "" }: { size?: number; classNa
       role="img"
       aria-label="LEXORA"
     >
-      <rect width="64" height="64" rx="16" fill="var(--color-primary, #3d5a80)" />
-      <circle cx="24" cy="23" r="4" fill="var(--color-cream, #faf6ef)" />
-      <circle cx="40" cy="23" r="4" fill="var(--color-cream, #faf6ef)" />
+      <rect width="64" height="64" rx="16" fill="var(--color-primary, #4b698d)" />
+      <circle cx="24" cy="23" r="4" fill="var(--color-cream, #faf5ec)" />
+      <circle cx="40" cy="23" r="4" fill="var(--color-cream, #faf5ec)" />
       <path
         d="M13 34c6.5-3 12.5-3 19 2 6.5-5 12.5-5 19-2v12c-6.5-3-12.5-3-19 2-6.5-5-12.5-5-19-2V34Z"
         fill="var(--color-peach, #f3d2b8)"
       />
       <path
         d="M32 36v12"
-        stroke="var(--color-primary, #3d5a80)"
+        stroke="var(--color-primary, #4b698d)"
         strokeWidth="2.2"
         strokeLinecap="round"
       />

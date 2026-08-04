@@ -70,8 +70,18 @@ export default async function HomePage() {
         </nav>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-8 sm:px-6 sm:pt-10 lg:grid-cols-[1.1fr_1fr]">
+      {/* Hero. The soft shapes behind it stop the page opening on a flat field
+          of cream, and cost nothing to download. */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -top-56 h-120 w-120 rounded-full bg-peach-soft/50 blur-2xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-32 top-40 h-80 w-80 rounded-full bg-primary-soft/40 blur-2xl"
+        />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-peach-soft px-4 py-1.5 text-sm font-bold text-peach-deep">
             <Sparkles size={15} /> {t.badge}
@@ -132,10 +142,11 @@ export default async function HomePage() {
             <p className="text-xs font-bold text-ink-muted">{t.mockAcc}</p>
           </div>
         </div>
+      </div>
       </section>
 
       {/* Features */}
-      <section className="border-y border-line bg-card/60 py-16">
+      <section className="border-y border-line bg-card py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 className="text-center text-3xl font-extrabold text-ink">{t.featuresTitle}</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center font-semibold text-ink-muted">
@@ -145,7 +156,7 @@ export default async function HomePage() {
             {t.features.map((f, i) => {
               const { icon: Icon, tone } = FEATURE_ICONS[i];
               return (
-                <div key={f.title} className="rounded-3xl border border-line bg-card p-6 shadow-sm">
+                <div key={f.title} className="rounded-3xl border border-line bg-cream/70 p-6 transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
                     <Icon size={23} strokeWidth={2.2} />
                   </div>
@@ -158,34 +169,50 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-center text-3xl font-extrabold text-ink">{t.howTitle}</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {t.steps.map((step, i) => (
-            <div key={step.title} className="rounded-3xl border border-line bg-card p-6 shadow-sm">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg font-extrabold text-white">
-                {i + 1}
-              </span>
-              <h3 className="mt-4 text-lg font-extrabold text-ink">{step.title}</h3>
-              <p className="mt-1 text-sm font-semibold text-ink-soft">{step.desc}</p>
-            </div>
-          ))}
+      {/* How it works.
+          A sequence rather than a third grid of identical cards: the page had
+          three sections running with the same treatment, which reads as one
+          long undifferentiated scroll. These are steps, so they are drawn as
+          steps — numbered, joined by a line, on the warmer background. */}
+      <section className="bg-cream-dark/40 py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="text-center text-3xl font-extrabold text-ink">{t.howTitle}</h2>
+
+          <ol className="relative mt-12 grid gap-10 md:grid-cols-3 md:gap-6">
+            {/* The connector sits behind the numbers and only where the steps
+                are side by side; stacked on a phone it would point nowhere. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/6 right-1/6 top-7 hidden h-0.5 bg-line md:block"
+            />
+            {t.steps.map((step, i) => (
+              <li key={step.title} className="relative text-center">
+                <span className="relative z-10 mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-extrabold text-white shadow-md ring-8 ring-cream-dark/40">
+                  {i + 1}
+                </span>
+                <h3 className="mt-5 text-lg font-extrabold text-ink">{step.title}</h3>
+                <p className="mx-auto mt-1.5 max-w-xs text-sm font-semibold text-ink-soft">
+                  {step.desc}
+                </p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* For specialists */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-line bg-primary-soft/60 p-6 sm:p-10">
+      {/* For specialists. Reversed out on the primary so the one section
+          addressed to adults rather than children reads as a change of voice. */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-primary p-8 text-cream shadow-sm sm:p-12">
           <div className="max-w-xl">
-            <h2 className="flex items-center gap-2.5 text-2xl font-extrabold text-ink">
-              <Users size={26} className="text-primary" /> {t.specTitle}
+            <h2 className="flex items-center gap-2.5 text-2xl font-extrabold text-cream sm:text-3xl">
+              <Users size={28} className="text-peach" /> {t.specTitle}
             </h2>
-            <p className="mt-2 font-semibold text-ink-soft">{t.specDesc}</p>
+            <p className="mt-3 font-semibold text-cream">{t.specDesc}</p>
           </div>
           <Link
             href={session?.role === "SPECIALIST" ? "/specialist" : "/register"}
-            className="flex items-center gap-2 rounded-2xl bg-primary px-6 py-3.5 font-extrabold text-white shadow-sm transition hover:bg-primary-dark sm:px-7"
+            className="flex items-center gap-2 rounded-2xl bg-cream px-6 py-3.5 font-extrabold text-primary shadow-sm transition hover:bg-white sm:px-7"
           >
             {session?.role === "SPECIALIST" ? t.specCtaOpen : t.specCta}
             <ArrowRight size={18} />
@@ -193,19 +220,31 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-line bg-cream-dark/60 py-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
+      {/* Footer. Given a little structure rather than a logo and a paragraph
+          pushed to opposite edges: the delimitation notice is something a
+          reader of the study should be able to find, not skim past. */}
+      <footer className="border-t border-line bg-cream-dark/60 py-12">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 md:grid-cols-[auto_1fr] md:gap-16">
           <div>
             <Logo />
-            <Link
-              href="/privacy"
-              className="mt-2 inline-block text-xs font-bold text-primary hover:underline"
-            >
-              {t.privacyLink}
-            </Link>
+            <nav className="mt-4 flex flex-col gap-2 text-sm font-bold">
+              <Link href="/privacy" className="text-primary hover:underline">
+                {t.privacyLink}
+              </Link>
+              <Link href="/login" className="text-ink-soft hover:text-primary">
+                {t.signIn}
+              </Link>
+              <Link href="/register" className="text-ink-soft hover:text-primary">
+                {t.getStarted}
+              </Link>
+            </nav>
           </div>
-          <p className="max-w-xl text-xs font-semibold text-ink-muted">{t.footerNote}</p>
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold text-ink-soft">{t.footerNote}</p>
+            <p className="mt-4 text-xs font-semibold text-ink-muted">
+              © {new Date().getFullYear()} LEXORA
+            </p>
+          </div>
         </div>
       </footer>
     </main>

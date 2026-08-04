@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Logo from "@/components/Logo";
-import LangToggle, { useLang } from "@/components/LangToggle";
+import { useLang } from "@/components/LangToggle";
+import AuthShell from "@/components/AuthShell";
 import { getDict } from "@/lib/i18n";
 import { tryFetch } from "@/lib/net";
 
@@ -55,15 +55,8 @@ export default function RegisterPage() {
     "w-full rounded-xl border border-line bg-cream/60 px-4 py-2.5 text-ink outline-none transition focus:border-primary focus:bg-white";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cream p-4 sm:p-6">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-between">
-          <Link href="/" aria-label="LEXORA home">
-            <Logo size="lg" />
-          </Link>
-          <LangToggle lang={lang} />
-        </div>
-        <div className="rounded-3xl border border-line bg-card p-6 shadow-sm sm:p-8">
+    <AuthShell lang={lang}>
+      <div className="rounded-3xl border border-line bg-card p-6 shadow-sm sm:p-8">
           <h1 className="text-xl font-extrabold text-ink">{t.registerTitle}</h1>
           <p className="mt-1 text-sm text-ink-muted">{t.registerSub}</p>
 
@@ -165,12 +158,11 @@ export default function RegisterPage() {
 
           <p className="mt-5 text-center text-sm text-ink-muted">
             {t.haveAccount}{" "}
-            <Link href="/login" className="font-bold text-primary hover:underline">
-              {t.signIn}
-            </Link>
-          </p>
-        </div>
+          <Link href="/login" className="font-bold text-primary hover:underline">
+            {t.signIn}
+          </Link>
+        </p>
       </div>
-    </main>
+    </AuthShell>
   );
 }
