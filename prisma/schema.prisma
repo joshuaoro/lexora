@@ -85,7 +85,15 @@ model SpeechClip {
   rate      String
   text      String
   audio     String // base64 data URL (mp3)
+  // Who caused this clip to be synthesized, so the per-account ceiling can be
+  // counted from the rows themselves. An in-memory counter cannot do that job
+  // on a serverless host: each instance keeps its own tally, so a limit that
+  // works locally never triggers in production. Null for clips made by the
+  // warm-up script, which has no account and no ceiling.
+  createdBy String?
   createdAt DateTime @default(now())
+
+  @@index([createdBy, createdAt])
 }
 
 // Curated phonological-awareness items (e.g. rhyme sets)

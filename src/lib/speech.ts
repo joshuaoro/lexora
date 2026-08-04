@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { prisma } from "./db";
 import { synthesizeSpeech } from "./word-tts";
-import { checkLimit, recordFailure } from "./rate-limit";
 
 /**
  * Neural speech for interface text, synthesized once and reused.
@@ -67,10 +66,17 @@ export async function getOrCreateSpeech(
 
   // A miss is about to write to the database, so this is where the budget
   // applies — not on the reads, which are the overwhelming majority.
+  //
+  // Counted from the rows rather than from memory. An in-memory tally is per
+  // instance, and a serverless host runs many: the ceiling held locally and
+  // never once triggered in production, which the audit caught by running
+  // against the deployment rather than against localhost.
   if (quotaKey) {
-    const key = `speech:${quotaKey}`;
-    if (!checkLimit(key, NEW_CLIPS_PER_HOUR).allowed) return "quota";
-    recordFailure(key, CLIP_WINDOW_MS);
+    const since = new Date(Date.now() - CLIP_WINDOW_MS);
+    const recent = await prisma.speechClip.count({
+      where: { createdBy: quotaKey, createdAt: { gte: since } },
+    });
+    if (recent >= NEW_CLIPS_PER_HOUR) return "quota";
   }
 
   let audio: string;
@@ -83,7 +89,15 @@ export async function getOrCreateSpeech(
 
   await prisma.speechClip.upsert({
     where: { hash },
-    create: { hash, lang, voice: SPEECH_VOICE, rate: SPEECH_RATE, text: trimmed, audio },
+    create: {
+      hash,
+      lang,
+      voice: SPEECH_VOICE,
+      rate: SPEECH_RATE,
+      text: trimmed,
+      audio,
+      createdBy: quotaKey ?? null,
+    },
     // A concurrent request may have written it first; keep theirs.
     update: {},
   });
