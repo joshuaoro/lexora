@@ -56,6 +56,39 @@ export async function dailyAccuracy(learnerId: string, days = 14): Promise<Daily
   return series;
 }
 
+/**
+ * Consecutive days the learner has practised, counting back from today.
+ *
+ * A percentage is not something a seven-year-old can act on; "four days in a
+ * row" is. Yesterday still counts as the anchor so that opening the app in the
+ * morning does not show a streak already broken — the day is not over yet.
+ */
+export async function practiceStreak(learnerId: string, lookback = 60): Promise<number> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - lookback);
+
+  const attempts = await prisma.attempt.findMany({
+    where: { learnerId, createdAt: { gte: start } },
+    select: { createdAt: true },
+  });
+  if (attempts.length === 0) return 0;
+
+  const days = new Set(attempts.map((a) => dayKey(a.createdAt)));
+
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  // Today may simply not have happened yet; start from yesterday if so.
+  if (!days.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+
+  let streak = 0;
+  while (days.has(dayKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 export async function learnerSummary(learnerId: string) {
   const since14 = new Date();
   since14.setHours(0, 0, 0, 0);
