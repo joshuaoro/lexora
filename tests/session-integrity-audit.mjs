@@ -462,34 +462,61 @@ async function main() {
   // the database — so without a ceiling a script could mint unique strings
   // until the 500MB the study lives in was full. Replays must stay free, or the
   // ceiling would punish the ordinary case it exists to protect.
+  //
+  // Hammering one endpoint is also what a bot looks like, and the host says so:
+  // Vercel answers 403 with x-vercel-mitigated=challenge partway through a run
+  // like this. Those responses say nothing about the app, and reading them as
+  // failures sent me chasing a bug that was not there — so they are detected
+  // and reported as a skip rather than counted.
   const budgeted = await createTestLearner("quota");
+  const challenged = (res) => res.headers.get("x-vercel-mitigated") === "challenge";
   const askAs = (text) =>
     api(`/api/speech?lang=fil&text=${encodeURIComponent(text)}`, { cookie: budgeted.cookie });
 
   let replays = 0;
-  for (let i = 0; i < 25; i++) if ((await askAs(FIL)).ok) replays++;
-  check("replaying a cached line is never rationed", replays === 25, `${replays}/25 served`);
-
-  const stamp = Date.now();
-  let minted = 0;
-  let refused = 0;
-  for (let i = 0; i < 26; i++) {
-    const res = await askAs(`Pagsubok bilang ${stamp}-${i}.`);
-    if (res.status === 200) minted++;
-    else if (res.status === 429) refused++;
+  let blocked = false;
+  for (let i = 0; i < 25 && !blocked; i++) {
+    const res = await askAs(FIL);
+    if (challenged(res)) blocked = true;
+    else if (res.ok) replays++;
   }
-  check(
-    "minting new phrases is capped",
-    refused > 0 && minted <= 20,
-    `${minted} synthesized, ${refused} refused`
-  );
-  check(
-    "and a cached line still plays after the cap is hit",
-    (await askAs(FIL)).ok,
-    "the ordinary path is unaffected"
-  );
 
-  await query(`DELETE FROM "SpeechClip" WHERE text LIKE $1`, [`Pagsubok bilang ${stamp}%`]);
+  if (blocked) {
+    check(
+      "speech budget skipped — the host challenged the traffic",
+      true,
+      "run `npm run audit:integrity` against localhost to exercise it"
+    );
+  } else {
+    check("replaying a cached line is never rationed", replays === 25, `${replays}/25 served`);
+
+    const stamp = Date.now();
+    let minted = 0;
+    let refused = 0;
+    for (let i = 0; i < 26 && !blocked; i++) {
+      const res = await askAs(`Pagsubok bilang ${stamp}-${i}.`);
+      if (challenged(res)) blocked = true;
+      else if (res.status === 200) minted++;
+      else if (res.status === 429) refused++;
+    }
+
+    if (blocked) {
+      check("speech budget partially skipped — challenged mid-run", true, `${minted} minted first`);
+    } else {
+      check(
+        "minting new phrases is capped",
+        refused > 0 && minted <= 20,
+        `${minted} synthesized, ${refused} refused`
+      );
+      check(
+        "and a cached line still plays after the cap is hit",
+        (await askAs(FIL)).ok,
+        "the ordinary path is unaffected"
+      );
+    }
+    await query(`DELETE FROM "SpeechClip" WHERE text LIKE $1`, [`Pagsubok bilang ${stamp}%`]);
+  }
+
   await deleteTestLearner(budgeted.email);
 
   await deleteTestLearner(speaker.email);
