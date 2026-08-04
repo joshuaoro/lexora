@@ -39,10 +39,6 @@ const retryDelay = () => RETRY_MIN_MS + Math.random() * (RETRY_MAX_MS - RETRY_MI
 const FILIPINO_PROMPT =
   "Ito ay pagsasanay sa pagbasa sa wikang Filipino. Isang salita lamang ang binibigkas.";
 
-export function asrConfigured(): boolean {
-  return Boolean(process.env.GROQ_API_KEY ?? process.env.ASR_API_KEY);
-}
-
 const MIME_EXT: Record<string, string> = {
   "audio/webm": "webm",
   "audio/ogg": "ogg",

@@ -23,8 +23,3 @@ export async function tryFetch(
     return null;
   }
 }
-
-/** True when the browser knows it is offline. Absence of proof, not proof of a link. */
-export function looksOffline(): boolean {
-  return typeof navigator !== "undefined" && navigator.onLine === false;
-}

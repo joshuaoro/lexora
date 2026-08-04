@@ -1,4 +1,12 @@
-/** Client-side text-to-speech helpers built on the Web Speech API. */
+/**
+ * Speech playback.
+ *
+ * Both words and interface instructions are neural clips synthesized on the
+ * server and served from the database, because almost no device ships a
+ * Filipino voice and one asked to read Tagalog produces English phonics. The
+ * Web Speech API remains here only as a fallback when the server cannot be
+ * reached, and for free text typed into the Reader, which has no stored clip.
+ */
 
 export function ttsSupported() {
   return typeof window !== "undefined" && "speechSynthesis" in window;

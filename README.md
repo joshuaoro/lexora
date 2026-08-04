@@ -24,6 +24,8 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 - **Listen & choose** — blending / word recognition with look-alike distractors.
 - **Count the syllables** — segmentation (pantig), with syllable-by-syllable audio.
 - **Rhyme time** — rhyming awareness from a curated item bank.
+- **First sound** — sound isolation: which word begins with the same sound.
+- **Practice list** — the child's own misread words, revisited until two correct readings in a row master them.
 
 ### Speech recognition (oral reading assessment)
 Readings are scored by **`whisper-large-v3-turbo`**, a pre-trained ASR model accessed through Groq's OpenAI-compatible API with the language fixed to Tagalog (`tl`). No model is trained or fine-tuned, and learner audio is never used for training — consistent with the study delimitation.
@@ -57,6 +59,31 @@ npm run audio:generate -- --force   # regenerate all (keeps specialist recording
 ```
 
 Playback order is **specialist recording → generated clip → browser TTS**. Custom text typed into the Reader still uses browser TTS.
+
+### Spoken instructions
+The same problem applies to the sentences around the words, and more sharply: instructions
+exist for the children who *cannot* read the written ones, so a device reading them with
+English phonics defeats the point. Instructions are therefore synthesized by the same
+voice and served from the database, so the app speaks to a child in one voice rather than
+two. A speaker button sits beside every prompt, and the one after **Start** plays itself —
+a press satisfies the browser's autoplay rules.
+
+```bash
+npm run audio:instructions           # warm the fixed instruction lines, both languages
+npm run audio:instructions -- --force
+```
+
+Lines are read out of `src/lib/i18n.ts` rather than a copy, so rewording an instruction is
+picked up on the next run instead of quietly serving audio of the old wording. Text that
+cannot be known ahead of time — a child's name, a streak count — is synthesized on first
+use and cached by hash (`SpeechClip`), keyed on voice and rate so changing either yields
+new clips rather than stale ones. Measured: a warm line serves in ~200 ms, a cold one takes
+about two seconds once. `SPEECH_VOICE` overrides the voice; the browser's own engine
+remains only as a fallback for a lost connection.
+
+**Choosing a voice by ear:** `npx tsx scripts/voice-samples.ts` writes the real instruction
+lines as mp3s to `voice-samples/` in each candidate voice. "Gentle" is not something a
+voice list tells you.
 
 From **Word bank**, a specialist can:
 - **🔊 / ba·hay** — hear exactly what learners hear (whole word, or syllable by syllable).
@@ -102,8 +129,27 @@ Fully responsive: desktop/laptop (persistent sidebar), tablet and phone (top bar
 
 Because scoring happens on the server from a recording, read-aloud works anywhere `MediaRecorder` does — **Chrome, Edge, and Safari (iOS 14.3+), so iPads are supported**. Recording stops automatically after the child finishes speaking (~1.2 s of silence, 7 s max), or when the mic is tapped again.
 
+**Check each tablet before the first session** at `/diagnostics` (Settings → *Check this
+device*). Microphone permission, recording format, whether a spoken instruction can be
+fetched and played, and then a real three-second recording scored end to end — the only
+honest way to know the chain works on that device. Rows marked *offline fallback only*
+describe what the app would resort to without a server; a tablet with no Filipino voice of
+its own is normal and not a problem, since the app plays its own recordings.
+
+A dropped connection mid-word is treated as an expected condition, not an error: the child
+is told plainly, the controls stay live, and the exercise resumes when the link returns.
+Leaving an activity partway asks for confirmation — and says truthfully that the words
+already read are saved, because they are.
+
+Every page a person navigates into has its own loading boundary. Next.js only shows loading
+UI for a *newly entered* segment, so a single boundary at the layout level never fires for
+navigation within the app; the link audit asserts they all stay in place. Recordings are
+streamed by `/api/attempt-audio` when a specialist presses play rather than embedded in the
+page, which is what took the learner view from 8.4 s to 2.7 s on a throttled connection.
+
 ### Word data set
-115 Filipino words seeded in `prisma/seed.ts`, each tagged with:
+254 Filipino words in `prisma/word-bank.ts`, plus 46 rhyme and 30 sound-isolation items in
+`prisma/phon-items.ts`. Each word is tagged with:
 - **Syllabification** (`ba-hay`), **pattern** (CV, CVC, CVCV, CCVC …)
 - **Marungko stage 1–7** (m-s-a → +i,o → +b,e,u → +t,k,l → +y,n,g → +p,r,d,h,w → +ng/borrowed)
 - **Difficulty level 1–5** (open CV-CV syllables → clusters → 4+ syllables)
@@ -118,10 +164,10 @@ Specialists can extend the bank in **Word bank → Add word**.
 |---|---|
 | Front-end | Next.js 16 (App Router) + React 19, Tailwind CSS 4, lucide-react, Recharts |
 | Back-end | Next.js route handlers (Node), Zod validation |
-| Database | SQLite via Prisma 7 (better-sqlite3 driver adapter) |
+| Database | Supabase Postgres via Prisma 7 (`@prisma/adapter-pg`); transaction pooler at runtime, session pooler for migrations |
 | Auth | bcryptjs password hashing + JWT session cookie (jose) |
 | Speech recognition | **`whisper-large-v3-turbo`** (pre-trained, via Groq's OpenAI-compatible API, language `tl`), with the Web Speech API as automatic fallback. No custom model is trained — consistent with the study delimitation |
-| Text-to-speech | Pre-generated `fil-PH-BlessicaNeural` clips per word (whole word + syllables), with Web Speech `speechSynthesis` as fallback; word-by-word playback with synchronized highlighting and adjustable rate |
+| Text-to-speech | `fil-PH-BlessicaNeural` clips for both words (whole word + syllables) and interface instructions, synthesized server-side and cached in the database; Web Speech `speechSynthesis` only as an offline fallback. Word-by-word playback with synchronized highlighting and adjustable rate |
 | Fonts | Nunito (UI); reader options: Lexend, Atkinson Hyperlegible, Comic Neue |
 
 ## Getting started
