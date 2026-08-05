@@ -37,7 +37,7 @@ for (const [path, opts] of [
 
 /* ── 2. learners cannot use specialist capabilities ────────────────────── */
 section("[2] specialist-only endpoints reject learners");
-const wordId = (await one(`SELECT id FROM "Word" ORDER BY text LIMIT 1`)).id;
+const wordId = (await one(`SELECT id FROM "Word" WHERE NOT "isPseudo" ORDER BY text LIMIT 1`)).id;
 for (const [label, path, method, body] of [
   ["create word", "/api/words", "POST", { text: "hax", syllables: "hax", pattern: "CVC", stage: 1, level: 1 }],
   ["review attempt", "/api/reviews", "POST", { attemptId: "x", agrees: true }],

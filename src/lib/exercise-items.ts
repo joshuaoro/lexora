@@ -6,7 +6,8 @@ export type ExerciseType =
   | "SYLLABLES"
   | "RHYME"
   | "FIRST_SOUND"
-  | "PRACTICE";
+  | "PRACTICE"
+  | "PSEUDO_PROBE";
 
 export type ExerciseItem = {
   wordId: string | null;
@@ -80,7 +81,10 @@ const RECENT_WINDOW = 40;
 async function wordPool(learnerId: string, level: number, stage: number): Promise<WordRow[]> {
   const [pool, recent] = await Promise.all([
     prisma.word.findMany({
-      where: { level: { lte: level }, stage: { lte: stage } },
+      // Probe non-words share this table and must never surface in ordinary
+      // practice: meeting one during a session would teach it, and a taught
+      // non-word stops measuring decoding the moment it becomes familiar.
+      where: { level: { lte: level }, stage: { lte: stage }, isPseudo: false },
       select: WORD_FIELDS,
     }),
     prisma.attempt.findMany({
@@ -163,6 +167,38 @@ export async function buildItems(
         ...flags(wordId),
       };
     });
+  }
+
+  /**
+   * The decoding probe: non-words only.
+   *
+   * Drawn at or below the learner's own stage so every letter has been taught —
+   * the probe tests whether they can blend letters they know into a word they
+   * have never met, not whether they can guess at letters they have never seen.
+   *
+   * Ordered at random rather than by the rotation the practice pool uses: there
+   * is nothing to space out here, because a child should never see the same
+   * probe item often enough for spacing to matter.
+   */
+  if (type === "PSEUDO_PROBE") {
+    const items = await prisma.word.findMany({
+      where: { isPseudo: true, stage: { lte: stage } },
+      select: WORD_FIELDS,
+    });
+    return shuffle(items)
+      .slice(0, count)
+      .map((w) => ({
+        wordId: w.id,
+        target: w.text,
+        syllables: w.syllables,
+        options: null,
+        answer: null,
+        // Never any audio, and the flags say so regardless of what the database
+        // holds — a probe item the child can listen to hands them the answer.
+        hasAudio: false,
+        hasSyllAudio: false,
+        audioVersion: 1,
+      }));
   }
 
   if (type === "PRACTICE") {

@@ -50,6 +50,29 @@ model Word {
   // Comma-separated spellings the ASR may legitimately return for a correct
   // reading (loanwords and digraphs: "krus" often transcribes as "cross").
   variants    String  @default("")
+  /**
+   * A pronounceable non-word, used only in the decoding probe.
+   *
+   * Reading a real word can be done from memory; reading a word that has never
+   * existed cannot. Without these, a gain from pre-test to post-test on a fixed
+   * 254-word bank cannot be told apart from having learned those 254 items, and
+   * the study claims to measure decoding rather than recall.
+   *
+   * Kept out of every ordinary exercise, out of accuracy, and out of the
+   * adaptive level — a child must never meet one during practice, or the probe
+   * stops being a probe.
+   */
+  isPseudo    Boolean @default(false)
+  /**
+   * Set when the word's meaning depends on stress that the spelling does not
+   * mark — búkas "tomorrow" against bukás "open".
+   *
+   * The ASR returns letters, so both readings transcribe identically and the
+   * app scores them the same. Filipino stress errors are a documented marker of
+   * dyslexia, which makes this exactly the wrong thing to be blind to; flagging
+   * the word at least puts the caveat in front of the specialist reviewing it.
+   */
+  stressNote  String?
   // Generated (neural TTS) pronunciation — `npm run audio:generate`
   audioWord      String? // base64 data URL: whole word
   audioSyll      String? // base64 data URL: syllable by syllable
@@ -62,6 +85,8 @@ model Word {
 
   attempts      Attempt[]
   practiceItems PracticeItem[]
+
+  @@index([isPseudo, level, stage])
 }
 
 /**

@@ -5,7 +5,16 @@ import { getLearnerContext, sessionExpired } from "@/lib/guards";
 import { purgeExpiredRecordings } from "@/lib/retention";
 
 const schema = z.object({
-  type: z.enum(["READ_ALOUD", "LISTEN_CHOOSE", "SYLLABLES", "RHYME", "FIRST_SOUND", "PRACTICE", "READER"]),
+  type: z.enum([
+    "READ_ALOUD",
+    "LISTEN_CHOOSE",
+    "SYLLABLES",
+    "RHYME",
+    "FIRST_SOUND",
+    "PRACTICE",
+    "READER",
+    "PSEUDO_PROBE",
+  ]),
 });
 
 export async function POST(req: Request) {

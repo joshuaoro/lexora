@@ -8,7 +8,8 @@
  * too few words at a level — which makes every session serve the same items and
  * lets a child memorise them instead of decoding.
  */
-import { WORDS, ASR_VARIANTS } from "../prisma/word-bank";
+import { WORDS, ASR_VARIANTS, STRESS_NOTES } from "../prisma/word-bank";
+import { PSEUDOWORDS } from "../prisma/pseudoword-bank";
 import { stageForWord, syllableCount } from "../prisma/marungko-stage";
 
 const MIN_PER_LEVEL = 20; // an 8-item session needs real choice to draw from
@@ -102,6 +103,52 @@ for (const [text, syllables, pattern, level, meaning] of WORDS) {
 
 for (const key of Object.keys(ASR_VARIANTS)) {
   if (!seen.has(key)) fail(`ASR variants listed for "${key}", which is not in the word bank`);
+}
+
+for (const key of Object.keys(STRESS_NOTES)) {
+  if (!seen.has(key)) fail(`a stress caveat is listed for "${key}", which is not in the word bank`);
+}
+
+/* ── the decoding probe ────────────────────────────────────────────────── */
+/**
+ * The probe's non-words get the same structural checks as real words, plus the
+ * one that only applies to them: a "non-word" that is actually a word.
+ *
+ * That failure is silent and total. A child reads it from memory like any other
+ * word, the probe reports a decoding success that never happened, and the
+ * measure quietly becomes the thing it was built to rule out.
+ */
+console.log(`\nChecking ${PSEUDOWORDS.length} probe non-words…\n`);
+
+const probeSeen = new Set<string>();
+const probeByStage = new Map<number, number>();
+
+for (const [text, syllables, pattern, level, meaning] of PSEUDOWORDS) {
+  if (probeSeen.has(text)) fail(`probe word "${text}" appears more than once`);
+  probeSeen.add(text);
+
+  if (seen.has(text)) fail(`probe word "${text}" is a real word in the bank — it cannot test decoding`);
+  if (meaning) fail(`probe word "${text}" has a gloss ("${meaning}"); a non-word has no meaning`);
+
+  const joined = syllables.split("-").join("");
+  if (joined !== text) fail(`probe word "${text}" syllabified as "${syllables}" spells "${joined}"`);
+  if (!/^[a-zñ]+$/.test(text)) fail(`probe word "${text}" contains characters the bank does not allow`);
+  if (!pattern) fail(`probe word "${text}" has no syllable pattern`);
+  if (level < 1 || level > 5) fail(`probe word "${text}" has level ${level}, outside 1–5`);
+
+  probeByStage.set(stageForWord(text), (probeByStage.get(stageForWord(text)) ?? 0) + 1);
+}
+
+// A probe run asks for eight items at or below the learner's own stage. A
+// learner early in the sequence is the one whose decoding most needs measuring,
+// so the earliest stages must be able to fill a full run on their own.
+console.log("  learner stage   probe items available   (a run draws 8)");
+for (let s = 1; s <= 7; s++) {
+  const reachable = Math.min(7, s + 2);
+  const pool = PSEUDOWORDS.filter(([t]) => stageForWord(t) <= reachable).length;
+  const flag = pool < 8 ? "  ← short of a full run" : "";
+  console.log(`        S${s}              ${String(pool).padStart(3)}${flag}`);
+  if (pool < 8) warn(`a learner at stage ${s} can only be shown ${pool} probe items`);
 }
 
 /* ── distribution ──────────────────────────────────────────────────────── */

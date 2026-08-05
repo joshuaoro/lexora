@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, Play, StickyNote } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines } from "lucide-react";
 import { tryFetch } from "@/lib/net";
 
 export type ReviewableAttempt = {
@@ -17,6 +17,8 @@ export type ReviewableAttempt = {
   altTranscript: string | null;
   score: number; // similarity to the target, 0–1
   review: { agrees: boolean; note: string | null } | null;
+  /** Set when the word's meaning depends on stress the spelling does not mark. */
+  stressNote?: string | null;
 };
 
 const ENGINE_LABELS: Record<string, string> = {
@@ -28,8 +30,32 @@ const ENGINE_LABELS: Record<string, string> = {
  * Reliability check (Validation section): the specialist replays recorded oral
  * readings and confirms or disputes the system's verdict. The agreement rate
  * between specialist and system is computed from these reviews.
+ *
+ * Two modes, one stored column
+ * ----------------------------
+ * In `agreement` mode the specialist answers "was the system right?" directly.
+ *
+ * In `probe` mode they answer a different question — "did the child read this
+ * non-word correctly?" — because on a made-up word the system's verdict is not
+ * worth agreeing or disagreeing with: Whisper writes down the nearest real
+ * word, so a perfectly decoded "sulek" comes back as "sulat" and scores wrong.
+ *
+ * Both still store `agrees`, and it keeps its single meaning: whether the human
+ * and the machine reached the same conclusion. The probe verdict is folded into
+ * it here rather than stored separately, and reads back out as
+ * `agrees ? attempt.correct : !attempt.correct`. One column, one definition,
+ * and the agreement rate stays comparable across both kinds of item — which is
+ * the interesting comparison, since machine–human agreement is known to be
+ * worse for readers with disabilities and worse again on unfamiliar words.
  */
-export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[] }) {
+export default function ReviewList({
+  attempts,
+  mode = "agreement",
+}: {
+  attempts: ReviewableAttempt[];
+  mode?: "agreement" | "probe";
+}) {
+  const isProbe = mode === "probe";
   const [reviews, setReviews] = useState<Record<string, boolean>>(
     Object.fromEntries(
       attempts.filter((a) => a.review).map((a) => [a.id, a.review!.agrees])
@@ -74,8 +100,9 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
   if (attempts.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        No oral readings recorded yet. Readings appear here after the learner does Read-aloud or
-        Practice exercises.
+        {isProbe
+          ? "No probe readings yet. They appear here after the learner runs the Silly words activity."
+          : "No oral readings recorded yet. Readings appear here after the learner does Read-aloud or Practice exercises."}
       </p>
     );
   }
@@ -84,6 +111,9 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
     <ul className="divide-y divide-line">
       {attempts.map((a) => {
         const reviewed = reviews[a.id];
+        // The specialist's own verdict, recovered from the stored agreement:
+        // they agreed with a "correct" verdict, or disagreed with a wrong one.
+        const readCorrectly = reviewed === undefined ? undefined : reviewed === a.correct;
         return (
           <li key={a.id} className="flex flex-wrap items-center gap-3 py-3">
             <div className="min-w-32">
@@ -93,7 +123,7 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
                   month: "short",
                   day: "numeric",
                 })}{" "}
-                · {a.activityType === "PRACTICE" ? "practice" : "read aloud"}
+                · {isProbe ? "non-word" : a.activityType === "PRACTICE" ? "practice" : "read aloud"}
               </p>
             </div>
 
@@ -110,13 +140,39 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
                 </p>
               )}
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                {/* On a probe the machine verdict is shown greyed and labelled
+                    unreliable rather than hidden. It is real data — the whole
+                    point of pairing it with a human verdict — but presenting it
+                    in the usual green/red would invite the specialist to just
+                    ratify it, and on a non-word it is usually wrong. */}
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
-                    a.correct ? "bg-green-soft text-green" : "bg-red-soft text-red"
+                    isProbe
+                      ? "bg-cream text-ink-muted"
+                      : a.correct
+                        ? "bg-green-soft text-green"
+                        : "bg-red-soft text-red"
                   }`}
+                  title={
+                    isProbe
+                      ? "The recogniser writes the nearest real word, so this verdict is not reliable on a non-word. Judge by ear."
+                      : undefined
+                  }
                 >
                   system: {a.correct ? "correct" : (a.errorType ?? "incorrect")}
+                  {isProbe && " (unreliable)"}
                 </span>
+                {/* The app scores letters; this word's meaning is carried by
+                    stress, which the transcript does not record. Both readings
+                    look identical to the scorer, so this one has to be heard. */}
+                {a.stressNote && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-orange-soft px-2 py-0.5 text-xs font-bold text-orange"
+                    title="Stress is not written in Filipino and not captured by the transcript — check this reading by ear."
+                  >
+                    <AudioLines size={12} /> {a.stressNote}
+                  </span>
+                )}
                 {a.engine && (
                   <span className="inline-block rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary">
                     {ENGINE_LABELS[a.engine] ?? a.engine}
@@ -143,32 +199,50 @@ export default function ReviewList({ attempts }: { attempts: ReviewableAttempt[]
               </button>
             )}
 
-            <div className="flex items-center gap-1.5" role="group" aria-label="Do you agree with the system's scoring?">
+            <div
+              className="flex items-center gap-1.5"
+              role="group"
+              aria-label={
+                isProbe
+                  ? "Did the learner read this non-word correctly?"
+                  : "Do you agree with the system's scoring?"
+              }
+            >
+              {/*
+                In probe mode the buttons ask about the child, not the machine,
+                so the verdict is converted to an agreement before it is stored:
+                saying "read it correctly" agrees with the system only when the
+                system also said correct. `readCorrectly` reverses the same
+                mapping for display, so the button that lights up is the one the
+                specialist actually pressed.
+              */}
               <button
-                onClick={() => review(a.id, true)}
+                onClick={() => review(a.id, isProbe ? a.correct === true : true)}
                 disabled={busy === a.id}
-                aria-pressed={reviewed === true}
-                title="I agree with the system's scoring"
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
-                  reviewed === true
+                aria-pressed={isProbe ? readCorrectly === true : reviewed === true}
+                title={isProbe ? "The learner read this non-word correctly" : "I agree with the system's scoring"}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
+                  (isProbe ? readCorrectly === true : reviewed === true)
                     ? "border-green bg-green-soft text-green"
                     : "border-line bg-white text-ink-muted hover:border-green hover:text-green"
-                }`}
+                } ${isProbe ? "" : "w-9 px-0"}`}
               >
                 <ThumbsUp size={16} />
+                {isProbe && <span className="text-xs font-bold">Read it</span>}
               </button>
               <button
-                onClick={() => review(a.id, false)}
+                onClick={() => review(a.id, isProbe ? a.correct === false : false)}
                 disabled={busy === a.id}
-                aria-pressed={reviewed === false}
-                title="I disagree with the system's scoring"
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
-                  reviewed === false
+                aria-pressed={isProbe ? readCorrectly === false : reviewed === false}
+                title={isProbe ? "The learner did not read this non-word correctly" : "I disagree with the system's scoring"}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
+                  (isProbe ? readCorrectly === false : reviewed === false)
                     ? "border-red bg-red-soft text-red"
                     : "border-line bg-white text-ink-muted hover:border-red hover:text-red"
-                }`}
+                } ${isProbe ? "" : "w-9 px-0"}`}
               >
                 <ThumbsDown size={16} />
+                {isProbe && <span className="text-xs font-bold">Misread</span>}
               </button>
               <button
                 onClick={() => setNoteOpen(noteOpen === a.id ? null : a.id)}

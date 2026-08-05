@@ -20,6 +20,8 @@ export default async function WordBankPage() {
         meaningEn: true,
         variants: true,
         audioVersion: true,
+        isPseudo: true,
+        stressNote: true,
       },
     }),
     prisma.word.findMany({ where: { audioWord: { not: null } }, select: { id: true } }),

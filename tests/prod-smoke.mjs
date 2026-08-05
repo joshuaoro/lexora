@@ -101,7 +101,7 @@ for (const what of ["summary", "attempts", "sessions"]) {
 
 /* ── 5. concurrency ────────────────────────────────────────────────────── */
 section("[5] concurrent use (a class reading at the same time)");
-const words = await query(`SELECT id, text FROM "Word" WHERE level = 1 LIMIT 5`);
+const words = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" LIMIT 5`);
 const t0 = Date.now();
 const burst = await Promise.all(
   words.map((w) =>
@@ -125,10 +125,17 @@ check("five concurrent page loads succeed", pages.every((s) => s === 200), pages
 section("[6] study data integrity");
 // Depth thresholds, not exact counts: an 8-item session needs enough items
 // that it does not repeat, and the banks are expected to keep growing.
+// Probe non-words are excluded throughout: they are deliberately kept without
+// audio, so counting them here would report a shortfall that must never be
+// filled — generating a clip for one would let a child hear the answer.
 const stats = await one(`
   SELECT
-    (SELECT COUNT(*) FROM "Word")::int AS words,
-    (SELECT COUNT(*) FROM "Word" WHERE "audioWord" IS NULL AND "audioWordHuman" IS NULL)::int AS no_audio,
+    (SELECT COUNT(*) FROM "Word" WHERE NOT "isPseudo")::int AS words,
+    (SELECT COUNT(*) FROM "Word"
+       WHERE NOT "isPseudo" AND "audioWord" IS NULL AND "audioWordHuman" IS NULL)::int AS no_audio,
+    (SELECT COUNT(*) FROM "Word" WHERE "isPseudo")::int AS pseudo,
+    (SELECT COUNT(*) FROM "Word"
+       WHERE "isPseudo" AND ("audioWord" IS NOT NULL OR "audioWordHuman" IS NOT NULL))::int AS pseudo_with_audio,
     (SELECT COUNT(*) FROM "PhonItem" WHERE type = 'RHYME')::int AS rhymes,
     (SELECT COUNT(*) FROM "PhonItem" WHERE type = 'FIRST_SOUND')::int AS first_sounds,
     (SELECT COUNT(*) FROM "PhonItem" pi
@@ -138,6 +145,12 @@ const stats = await one(`
 `);
 check("word bank has depth", stats.words >= 200, `${stats.words} words`);
 check("every word has pronunciation audio", stats.no_audio === 0, `${stats.no_audio} missing`);
+check("decoding probe has items", stats.pseudo >= 20, `${stats.pseudo} non-words`);
+check(
+  "no probe non-word has audio",
+  stats.pseudo_with_audio === 0,
+  stats.pseudo_with_audio ? `${stats.pseudo_with_audio} would hand the child the answer` : "silent, as they must be"
+);
 check("rhyme bank has depth", stats.rhymes >= 24, `${stats.rhymes} items`);
 check("sound-isolation bank has depth", stats.first_sounds >= 24, `${stats.first_sounds} items`);
 check(

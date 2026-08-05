@@ -30,6 +30,10 @@ async function main() {
   const force = process.argv.includes("--force");
 
   const words = await prisma.word.findMany({
+    // Probe non-words are deliberately left without audio. The probe measures
+    // whether a child can decode letters they have never seen combined before;
+    // a clip they could play first would hand them the answer.
+    where: { isPseudo: false },
     orderBy: [{ stage: "asc" }, { text: "asc" }],
     select: { id: true, text: true, syllables: true, audioWord: true, audioSyll: true },
   });

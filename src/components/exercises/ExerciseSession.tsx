@@ -123,7 +123,21 @@ export default function ExerciseSession({
   } = useOralReading();
 
   const item = items[index];
-  const isOral = type === "READ_ALOUD" || type === "PRACTICE";
+  /**
+   * The decoding probe is spoken like a read-aloud, and scored like nothing
+   * else in the app.
+   *
+   * Its words are non-words, so there is no verdict to show the child: the
+   * recogniser cannot spell a word that does not exist, and a reading
+   * specialist marks the recording afterwards. Which also means no correction —
+   * modelling the "right" pronunciation of a probe item would teach it, and a
+   * probe item the child has been taught has stopped being one.
+   *
+   * The child is simply told they read it, and moved on. For a seven-year-old
+   * being assessed, that is also kinder than eight rounds of ambiguous feedback.
+   */
+  const isProbe = type === "PSEUDO_PROBE";
+  const isOral = type === "READ_ALOUD" || type === "PRACTICE" || isProbe;
   const intro = t.intro[type];
 
   /**
@@ -291,6 +305,22 @@ export default function ExerciseSession({
       return;
     }
 
+    // The probe records the reading and acknowledges it. No verdict is shown
+    // because none has been reached — the specialist reaches it later, from the
+    // recording. `results` still gets an entry so the progress bar and the
+    // item count stay honest about how many words were read.
+    if (isProbe) {
+      answeredRef.current = {
+        total: answeredRef.current.total + 1,
+        correct: answeredRef.current.correct,
+      };
+      setResults((r) => [...r, true]);
+      setFeedback({ correct: true, heard: null, chosen: null });
+      setPhase("feedback");
+      playChime(true);
+      return;
+    }
+
     if (data.levelChanged === "up") setLeveledUp(true);
     answeredRef.current = {
       total: answeredRef.current.total + 1,
@@ -448,6 +478,37 @@ export default function ExerciseSession({
         >
           {t.start(items.length)}
         </button>
+      </div>
+    );
+  }
+
+  if (phase === "done" && isProbe) {
+    // No stars and no score. Nothing has been marked yet, and inventing a
+    // number the specialist may contradict tomorrow would be dishonest to the
+    // child and useless to the study.
+    return (
+      <div className="mx-auto max-w-2xl rounded-3xl border border-line bg-card p-6 text-center shadow-sm sm:p-10">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <Check size={44} />
+        </div>
+        <h1 className="mt-4 text-3xl font-extrabold text-ink">{t.probeDoneTitle}</h1>
+        <p className="mt-2 text-lg font-semibold text-ink-soft">
+          {t.probeDoneBody(results.length)}
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/exercises"
+            className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-bold text-white transition hover:bg-primary-dark"
+          >
+            {t.moreExercises}
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 rounded-xl border border-line bg-card px-6 py-3 font-bold text-ink transition hover:bg-cream-dark"
+          >
+            <Home size={18} /> {t.goDashboard}
+          </Link>
+        </div>
       </div>
     );
   }
@@ -729,7 +790,23 @@ export default function ExerciseSession({
         )}
 
         {/* ——— Feedback ——— */}
-        {phase === "feedback" && feedback && (
+        {phase === "feedback" && feedback && isProbe && (
+          <div className="mt-8" aria-live="polite">
+            <div className="mx-auto max-w-md rounded-2xl bg-primary-soft px-6 py-5">
+              <p className="flex items-center justify-center gap-2 text-2xl font-extrabold text-primary">
+                <Check size={28} /> {t.probeRecorded}
+              </p>
+            </div>
+            <button
+              onClick={next}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 text-lg font-extrabold text-white shadow-sm transition hover:bg-primary-dark"
+            >
+              {index + 1 < items.length ? t.next : t.finish} <ArrowRight size={20} />
+            </button>
+          </div>
+        )}
+
+        {phase === "feedback" && feedback && !isProbe && (
           <div className="mt-8" aria-live="assertive">
             {feedback.correct ? (
               <div className="mx-auto max-w-md rounded-2xl bg-green-soft px-6 py-5">

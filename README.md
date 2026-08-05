@@ -15,8 +15,8 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 | 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus |
 | 2 | Pre-trained ASR scoring of word-level oral reading + specialist agreement check | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, agreement % is computed) |
 | 3 | AI-assisted reading assessment: immediate pronunciation feedback + personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read so the last time a child says a missed word they say it right; **Practice list** (auto-populated on misreads) |
-| 4 | Adaptive word-level exercises driven by recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`); specialists can override per learner |
-| 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable), **Specialist** learner views, **Cohort overview** (all learners side by side, accuracy per syllable pattern). Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there. An activity left partway still counts its minutes but is not an activity *completed* |
+| 4 | Adaptive word-level exercises driven by recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`); promotion also requires that decoding is not slowing, since accuracy alone is the weaker marker in a transparent orthography; specialists can override per learner |
+| 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable, leading with accuracy *and* typical time per word), **Specialist** learner views, **Cohort overview** (all learners side by side, accuracy per syllable pattern). Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there. An activity left partway still counts its minutes but is not an activity *completed* |
 | 6 | ISO/IEC 25010 + user-acceptance evaluation | The app is the artifact under evaluation; reports are printable for instrument administration |
 
 ### Exercise modules
@@ -26,6 +26,7 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 - **Rhyme time** — rhyming awareness from a curated item bank.
 - **First sound** — sound isolation: which word begins with the same sound.
 - **Practice list** — the child's own misread words, revisited until two correct readings in a row master them.
+- **Silly words** — the decoding probe. Stage-matched non-words that cannot be read from memory, so they separate decoding from sight-word recall. Assessment only: no audio, no verdict shown to the child, no effect on level or practice, scored afterwards by a specialist listening to the recording. Rests for 7 days after a run.
 
 ### Speech recognition (oral reading assessment)
 Readings are scored by **`whisper-large-v3-turbo`**, a pre-trained ASR model accessed through Groq's OpenAI-compatible API with the language fixed to Tagalog (`tl`). No model is trained or fine-tuned, and learner audio is never used for training — consistent with the study delimitation.
@@ -156,6 +157,44 @@ page, which is what took the learner view from 8.4 s to 2.7 s on a throttled con
 
 Specialists can extend the bank in **Word bank → Add word**.
 
+`npm run words:check` validates both banks before they reach a learner;
+`npm run words:sync` applies word-bank changes to a database that already has study data
+in it, which `prisma db seed` cannot do because seeding wipes every table first.
+
+### Decoding probe (non-words)
+26 pronounceable Filipino non-words in `prisma/pseudoword-bank.ts`, flagged `isPseudo`.
+
+A real word can be read from memory. After weeks of practice on a fixed 254-word bank, a
+pre/post gain on those same words cannot be told apart from having learned those items — and
+the study claims to measure decoding. A word that has never existed can only be decoded, so
+it separates letter–sound knowledge from sight-word recall.
+
+- Stage-matched, so a child only ever meets letters they have been taught. Every stage can
+  fill a full 8-item run.
+- Checked against **Cebuano as well as Tagalog** — the partner site is in Davao City, and a
+  "non-word" that is ordinary Bisaya is a real word to these readers.
+- **Never given audio, never entered into practice, never fed to the adaptive level, never
+  counted in accuracy.** A probe item a child can listen to, or has been taught, has stopped
+  being one. A 7-day cooldown keeps the activity from being ground down by repetition.
+- **Scored by a specialist, by ear.** Whisper is a language model before it is a
+  transcriber: asked to write a word that does not exist it returns the nearest one that
+  does, so a correctly decoded `sulek` comes back as `sulat`. The ASR transcript is stored
+  beside the human verdict rather than instead of it, which also yields human-vs-machine
+  agreement on exactly the items where agreement is expected to be worst.
+
+### Stress-contrastive words
+Six bank words carry a `stressNote`: `bukas`, `tubo`, `pito`, `puto`, `buhay`, `hapon`.
+
+Filipino does not write stress, but it changes meaning — *búkas* "tomorrow" against *bukás*
+"open". Scoring compares the recogniser's transcript against the target text, and a
+transcript is letters, so both readings come back identical and are marked the same. No
+threshold or variant list can fix this; the app cannot hear the difference.
+
+This matters because misplaced stress is a documented signature of dyslexia in Filipino. The
+words stay in the bank — they are ordinary and useful — but the specialist reviewing one sees
+a caveat telling them to judge that reading by ear, and `stress_pair` marks the rows in the
+attempts export.
+
 ---
 
 ## Tech stack
@@ -263,19 +302,26 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 8 suites against http://localhost:3000 (205 checks)
+npm run audit             # all 9 suites against http://localhost:3000 (291 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
-npm run audit:links       # every route reachable from the navigation  (34)
+npm run audit:links       # every route reachable from the navigation  (46)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
-npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (38)
-npm run audit:integrity   # language switch mid-exercise, partial progress  (13)
+npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
+npm run audit:decoding    # non-word probe, latency guard, stress caveats  (44)
+npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (14)
 npm run audit:perf        # budgets on a throttled low-end device
 npm run audit:prod        # smoke test after a deployment
 ```
+
+The UI suite's wait for the specialist learner view timed out once, on the first full run
+against a freshly started server, and passed on every run since — including repeated full
+runs. The page itself serves in under 2 s cold, so the 20 s wait was not the page being
+slow; the cause is not established. If you see it, re-run `npm run audit:ui` before
+treating it as a regression.
 
 The suites need the target running and seeded, and `DIRECT_URL` set so they can assert
 against the database. They create and delete their own `@lexora.test` accounts, and sweep
@@ -308,10 +354,13 @@ disabled until it is set.
 2. The **server** scores every oral reading (`src/lib/scoring.ts`): text is normalized (lowercased, diacritics and punctuation stripped), Levenshtein similarity is computed against the target, and the reading is accepted at **similarity ≥ 0.95** (exact match required for words of ≤ 3 letters). The strict threshold is deliberate — at 0.80 a single substituted vowel passes ("buhay" for "bahay" scores exactly 0.80), and those substitutions are precisely the misreadings the system exists to detect. Tune with `SCORE_THRESHOLD` after comparing system scoring against specialist judgments.
 3. Misreadings are classified as **substitution / omission / insertion / no-response** and logged with response time, level, and timestamp.
 4. Misread words are added to the learner's **practice list**; two consecutive correct practice reads master a word.
-5. **Adaptive difficulty** (`src/lib/adaptive.ts`): looking at the last 12 oral readings at the current level — accuracy ≥ 85 % over ≥ 8 attempts levels up (max 5); ≤ 50 % levels down. The Marungko stage widens with the level.
+5. **Adaptive difficulty** (`src/lib/adaptive.ts`): looking at the last 12 oral readings at the current level — accuracy ≥ 85 % over ≥ 8 attempts levels up (max 5); ≤ 50 % levels down. The Marungko stage widens with the level. A promotion **also** requires that decoding is not getting slower: across the last 24 timed correct readings at that level, the later half's median must be within 1.25× the earlier half's. Filipino is a transparent orthography, and in transparent orthographies a dyslexic reader is typically accurate but slow — a rule reading accuracy alone will walk such a child from level 1 to level 5 with the actual difficulty untouched. The guard can only ever delay a promotion; it never demotes, and it stands aside when there are fewer than 8 timed readings so it cannot strand anyone.
 6. **Reliability check**: in the specialist view, each system verdict can be confirmed or disputed after replaying the recording; the specialist–system **agreement percentage** is computed automatically (Objective 2).
 7. **Threshold calibration**: readings scoring within 0.15 *below* the acceptance line are listed separately with their audio. If a specialist listens and judges several of them correct, the threshold is too strict and is penalising children who read the word properly — which would depress accuracy and distort the agreement metric. This turns the choice of 0.95 from an assumption into something the Validation chapter can evidence.
-8. **What is excluded, and why.** Corrective re-reads (`is_retry`) are recorded but kept out of accuracy, decoding time, error patterns, adaptive level, practice mastery, the borderline panel **and the agreement sample**. A reading taken seconds after the word was modelled measures repetition, not decoding; including retries in the agreement sample in particular would bias it toward clear, correct takes and overstate how well the scorer performs on the readings actually being measured. They appear on their own in the **Self-correction** panel and as `retries` / `retry_success_pct` in the summary export. State this in the methodology — it is a defensible choice, but it is a choice.
+8. **Decoding speed is a co-primary outcome, not a footnote.** `median_decode_ms` (over `timed_readings` first, correct, plausible readings) sits beside accuracy in the summary export and in the report headline. In a transparent orthography the speed difference is the more sensitive marker; two learners at 85 % can be doing completely different things, and only the latency distinguishes them. Nothing is timed in front of the child — the measurement is passive, taken from readings they already gave.
+9. **The non-word probe answers a question accuracy cannot.** Real-word gains on a fixed bank confound decoding with recall. Probe items (`is_pseudoword = 1`) are scored by a specialist by ear, reported as `pseudo_accuracy_pct` over `pseudo_scored` — unreviewed items are counted as neither correct nor incorrect. Because the machine's verdict is recorded alongside the human's on both real words and non-words, `specialist_correct` supports a direct comparison of ASR–human agreement between familiar and unfamiliar items. Worth reporting: agreement between automatic and human scoring is known to be **lower for readers with disabilities**, which is the entire participant group here, so published accuracy figures from typical readers should not be assumed to transfer.
+10. **A limitation the app cannot engineer away.** Filipino stress is unwritten and meaning-bearing, and the transcript does not encode it, so readings that differ only in stress are scored identically (see *Stress-contrastive words*). Since stress errors are a documented marker of dyslexia in Filipino, this belongs in the delimitations rather than being left implicit.
+11. **What is excluded, and why.** Corrective re-reads (`is_retry`) are recorded but kept out of accuracy, decoding time, error patterns, adaptive level, practice mastery, the borderline panel **and the agreement sample**. A reading taken seconds after the word was modelled measures repetition, not decoding; including retries in the agreement sample in particular would bias it toward clear, correct takes and overstate how well the scorer performs on the readings actually being measured. They appear on their own in the **Self-correction** panel and as `retries` / `retry_success_pct` in the summary export. State this in the methodology — it is a defensible choice, but it is a choice.
 
 ## Browser & privacy notes
 

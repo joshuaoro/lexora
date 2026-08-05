@@ -20,10 +20,12 @@
     "audit:stale": "node tests/stale-session-audit.mjs",
     "audit:reporting": "node tests/reporting-audit.mjs",
     "audit:integrity": "node tests/session-integrity-audit.mjs",
+    "audit:decoding": "node tests/decoding-audit.mjs",
     "audit:prod": "node tests/prod-smoke.mjs",
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
     "words:check": "tsx scripts/check-words.ts",
+    "words:sync": "tsx scripts/sync-word-bank.ts",
     "words:rotation": "tsx scripts/check-rotation.ts"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShieldCheck, Download } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Download, Sparkles } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import LearnerReport from "@/components/LearnerReport";
@@ -41,6 +41,7 @@ export default async function LearnerDetailPage({
     borderline,
     retryRows,
     sessionRows,
+    probeRows,
   ] = await Promise.all([
     // First readings only. A retry is taken seconds after the child heard the
     // word pronounced, so it skews clear and correct; including retries would
@@ -66,6 +67,7 @@ export default async function LearnerDetailPage({
         altTranscript: true,
         score: true,
         review: { select: { agrees: true, note: true } },
+        word: { select: { stressNote: true } },
       },
     }),
     // Which of them have a recording, without carrying the recordings.
@@ -110,6 +112,7 @@ export default async function LearnerDetailPage({
         altTranscript: true,
         score: true,
         review: { select: { agrees: true, note: true } },
+        word: { select: { stressNote: true } },
       },
     }),
     // Re-reads, newest first. Each is paired below with the miss it followed.
@@ -133,6 +136,28 @@ export default async function LearnerDetailPage({
       orderBy: { createdAt: "desc" },
       take: 40,
       select: { id: true, createdAt: true, type: true, total: true, correct: true, phase: true },
+    }),
+    // Probe readings, awaiting or carrying a specialist verdict. Ordered oldest
+    // first within the page so a baseline sitting is reviewed in the order the
+    // child read it.
+    prisma.attempt.findMany({
+      where: { learnerId: id, activityType: "PSEUDO_PROBE", isRetry: false },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: {
+        id: true,
+        target: true,
+        transcript: true,
+        correct: true,
+        errorType: true,
+        activityType: true,
+        createdAt: true,
+        engine: true,
+        altTranscript: true,
+        score: true,
+        review: { select: { agrees: true, note: true } },
+        session: { select: { phase: true } },
+      },
     }),
   ]);
 
@@ -207,6 +232,7 @@ export default async function LearnerDetailPage({
     altTranscript: a.altTranscript,
     score: a.score,
     review: a.review,
+    stressNote: a.word?.stressNote ?? null,
   }));
 
   const borderlineAttempts: ReviewableAttempt[] = borderline.map((a) => ({
@@ -222,7 +248,33 @@ export default async function LearnerDetailPage({
     altTranscript: a.altTranscript,
     score: a.score,
     review: a.review,
+    stressNote: a.word?.stressNote ?? null,
   }));
+
+  const probeAttempts: ReviewableAttempt[] = probeRows.map((a) => ({
+    id: a.id,
+    target: a.target,
+    transcript: a.transcript,
+    correct: a.correct,
+    errorType: a.errorType,
+    activityType: a.activityType,
+    createdAt: a.createdAt.toISOString(),
+    hasAudio: recorded.has(a.id),
+    engine: a.engine,
+    altTranscript: a.altTranscript,
+    score: a.score,
+    review: a.review,
+  }));
+
+  // The probe result is the specialist's count, not the system's — and it is
+  // only meaningful once they have listened. Unreviewed items are reported as
+  // outstanding rather than folded in as either correct or incorrect.
+  const probeReviewed = probeRows.filter((a) => a.review !== null);
+  const probeCorrect = probeReviewed.filter((a) => a.review!.agrees === a.correct).length;
+  const probeAccuracy = probeReviewed.length
+    ? Math.round((probeCorrect / probeReviewed.length) * 100)
+    : null;
+  const probePending = probeRows.length - probeReviewed.length;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -302,6 +354,35 @@ export default async function LearnerDetailPage({
         </div>
         <div className="mt-4">
           <ReviewList attempts={reviewable} />
+        </div>
+      </section>
+
+      {/* Decoding probe — non-word reading, scored by ear */}
+      <section className="no-print mt-5 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="max-w-2xl">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
+              <Sparkles size={20} className="text-peach-deep" /> Decoding probe (non-words)
+            </h2>
+            <p className="text-sm font-semibold text-ink-muted">
+              Made-up words cannot be read from memory, so these separate decoding from
+              sight-word recall — the difference between a learner who has learned to decode
+              and one who has learned this word bank. Score them by ear: the recogniser
+              writes the nearest real word and its verdict is not trustworthy here.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-peach-soft px-5 py-3 text-center">
+            <p className="text-2xl font-extrabold text-peach-deep">
+              {probeAccuracy === null ? "—" : `${probeAccuracy}%`}
+            </p>
+            <p className="text-xs font-bold text-ink-soft">
+              read correctly ({probeReviewed.length} scored
+              {probePending > 0 ? `, ${probePending} to review` : ""})
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <ReviewList attempts={probeAttempts} mode="probe" />
         </div>
       </section>
 

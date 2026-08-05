@@ -22,7 +22,15 @@ const MAX_AUDIO_BYTES = 600_000; // ~600 KB base64 cap per recording
 const schema = z.object({
   sessionId: z.string().optional(),
   wordId: z.string().nullable().optional(),
-  activityType: z.enum(["READ_ALOUD", "LISTEN_CHOOSE", "SYLLABLES", "RHYME", "FIRST_SOUND", "PRACTICE"]),
+  activityType: z.enum([
+    "READ_ALOUD",
+    "LISTEN_CHOOSE",
+    "SYLLABLES",
+    "RHYME",
+    "FIRST_SOUND",
+    "PRACTICE",
+    "PSEUDO_PROBE",
+  ]),
   target: z.string().min(1),
   transcript: z.string().nullable().optional(), // choice made (choice types) / legacy oral transcript
   browserTranscript: z.string().nullable().optional(), // Web Speech fallback for oral types
@@ -35,7 +43,35 @@ const schema = z.object({
   isRetry: z.boolean().optional(),
 });
 
-const ASR_TYPES = ["READ_ALOUD", "PRACTICE"];
+/** Activities whose answer is spoken, and therefore has to be transcribed. */
+const ASR_TYPES = ["READ_ALOUD", "PRACTICE", "PSEUDO_PROBE"];
+
+/**
+ * Activities whose result is allowed to move the learner's level or practice
+ * list — which is every spoken one except the probe.
+ *
+ * The probe is a measurement, not a lesson. Letting it feed the adaptive level
+ * would move a child down for failing items nobody has taught them, and letting
+ * it feed the practice list would schedule non-words for teaching, which is the
+ * one thing these must never be used for.
+ */
+const ADAPTIVE_TYPES = ["READ_ALOUD", "PRACTICE"];
+
+/**
+ * The probe's automatic verdict is recorded but never shown or trusted.
+ *
+ * Whisper is a language model before it is a transcriber: asked to write down a
+ * word that does not exist, it returns the nearest word that does, so "sulek"
+ * comes back as "sulat" and a perfectly decoded non-word scores as an error.
+ * Nothing in a threshold fixes that — it is the model doing its job.
+ *
+ * So the probe is scored by a reading specialist listening to the recording,
+ * and the transcript is kept beside their verdict rather than instead of it.
+ * That pairing is worth having on its own: agreement between machine and human
+ * scoring is known to fall for readers with disabilities, and these are the
+ * items where it should fall hardest.
+ */
+const PROBE_TYPE = "PSEUDO_PROBE";
 
 export async function POST(req: Request) {
   const ctx = await getLearnerContext();
@@ -132,17 +168,24 @@ export async function POST(req: Request) {
   if (data.wordId && !isRetry) {
     if (data.activityType === "PRACTICE") {
       await recordPracticeResult(learnerId, data.wordId, correct);
-    } else if (!correct && ASR_TYPES.includes(data.activityType)) {
+    } else if (!correct && ADAPTIVE_TYPES.includes(data.activityType)) {
       await recordMiss(learnerId, data.wordId);
     }
   }
 
   let level = profile.level;
   let levelChanged: "up" | "down" | null = null;
-  if (ASR_TYPES.includes(data.activityType) && !isRetry) {
+  if (ADAPTIVE_TYPES.includes(data.activityType) && !isRetry) {
     const res = await updateAdaptiveLevel(learnerId);
     level = res.level;
     levelChanged = res.changed;
+  }
+
+  // On a probe the verdict is withheld rather than merely unshown: the client
+  // has no correct/incorrect to render, so it cannot accidentally tell a child
+  // they misread a word when it was the recogniser that could not spell it.
+  if (data.activityType === PROBE_TYPE) {
+    return NextResponse.json({ id: attempt.id, pending: true, level, levelChanged: null });
   }
 
   return NextResponse.json({

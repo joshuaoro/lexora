@@ -46,11 +46,26 @@ export default async function LearnerReport({
 
   return (
     <div className="space-y-5">
+      {/*
+        Accuracy and decoding time lead together, deliberately.
+
+        Filipino is a transparent orthography, and in transparent orthographies
+        a dyslexic reader is typically accurate but slow — the deficit lives in
+        the time, not the percentage. Leading on accuracy alone can show a child
+        improving while the thing that actually makes reading hard for them goes
+        unreported. Activities completed moved out of this row to make space: it
+        is engagement rather than outcome, and it is already in the table below.
+      */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {chip(dict.dashboard.overallAccuracy, `${summary.overallAccuracy}%`)}
+        {chip(
+          dict.dashboard.typicalWordTime,
+          summary.medianDecodeMs === null
+            ? dict.dashboard.typicalWordTimeEmpty
+            : `${(summary.medianDecodeMs / 1000).toFixed(1)}s`
+        )}
         {chip(dict.dashboard.wordsRead, `${summary.wordsRead14}`)}
         {chip(dict.dashboard.minutesPracticed, `${summary.minutesPracticed}`)}
-        {chip(dict.dashboard.activitiesCompleted, `${summary.activitiesCompleted}`)}
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">

@@ -38,6 +38,7 @@ const en = {
     FIRST_SOUND: "First sound",
     PRACTICE: "Practice list",
     READER: "Reader",
+    PSEUDO_PROBE: "Silly words",
   } as Record<string, string>,
   dashboard: {
     startReading: "Start reading",
@@ -60,6 +61,8 @@ const en = {
     wordsRead: "Words read (14d)",
     minutesPracticed: "Minutes practiced",
     activitiesCompleted: "Activities completed",
+    typicalWordTime: "Typical time per word",
+    typicalWordTimeEmpty: "—",
     chartTitle: "Accuracy over the last 14 days",
     chartSub: "How reliably you read words correctly.",
     tricky: "Trickiest words",
@@ -101,6 +104,12 @@ const en = {
       desc: "Find the word that begins with the same sound.",
       skill: "Sound isolation",
     },
+    probe: {
+      title: "Silly words",
+      desc: "Made-up words to sound out. Nobody knows these ones!",
+      skill: "Decoding check",
+    },
+    probeResting: "Come back to this one in a few days.",
   },
   session: {
     intro: {
@@ -134,7 +143,20 @@ const en = {
         blurb: "These are your tricky words. Read each one out loud — you've got this!",
         how: "Read a word correctly two times in a row to master it. ⭐",
       },
+      // Framed as a game with made-up words rather than as a test. It is a
+      // test, and the child will be told so by the adult sitting with them —
+      // but nothing is gained by having the app say it in a way that makes a
+      // struggling reader tense before they start.
+      PSEUDO_PROBE: {
+        title: "Silly words",
+        blurb: "These words are made up! Nobody knows them. Just sound out the letters.",
+        how: "Press the microphone and say the silly word. There is no wrong answer here.",
+      },
     } as Record<string, { title: string; blurb: string; how: string }>,
+    probeRecorded: "Got it!",
+    probeDoneTitle: "All done — nice sounding out!",
+    probeDoneBody: (n: number) =>
+      `You read ${n} silly words. Your teacher will listen to them later.`,
     start: (n: number) => `Start! (${n} words)`,
     listen: "Listen to this",
     leaveTitle: "Leave this activity?",
@@ -361,6 +383,7 @@ const fil: Dict = {
     FIRST_SOUND: "Unang tunog",
     PRACTICE: "Listahan ng praktis",
     READER: "Pagbasa",
+    PSEUDO_PROBE: "Mga salitang imbento",
   },
   dashboard: {
     startReading: "Simulan ang pagbasa",
@@ -381,6 +404,8 @@ const fil: Dict = {
     wordsRead: "Salitang nabasa (14 araw)",
     minutesPracticed: "Minutong nag-praktis",
     activitiesCompleted: "Natapos na aktibidad",
+    typicalWordTime: "Karaniwang oras kada salita",
+    typicalWordTimeEmpty: "—",
     chartTitle: "Accuracy sa nakaraang 14 na araw",
     chartSub: "Gaano katama ang pagbasa mo ng mga salita.",
     tricky: "Pinakamahirap na salita",
@@ -422,6 +447,12 @@ const fil: Dict = {
       desc: "Hanapin ang salitang pareho ang unang tunog.",
       skill: "Pagkilala sa tunog",
     },
+    probe: {
+      title: "Mga salitang imbento",
+      desc: "Mga imbentong salita na tutunugin. Walang nakakaalam nito!",
+      skill: "Pagsusuri sa pagbasa",
+    },
+    probeResting: "Balikan mo ito sa loob ng ilang araw.",
   },
   session: {
     intro: {
@@ -455,7 +486,16 @@ const fil: Dict = {
         blurb: "Ito ang mga mahirap mong salita. Basahin ang bawat isa nang malakas — kaya mo 'yan!",
         how: "Basahin nang tama ang salita nang dalawang sunod para ma-master ito. ⭐",
       },
+      PSEUDO_PROBE: {
+        title: "Mga salitang imbento",
+        blurb: "Imbento lang ang mga salitang ito! Walang nakakaalam nito. Tunugin mo lang ang mga letra.",
+        how: "Pindutin ang mikropono at sabihin ang salitang imbento. Walang maling sagot dito.",
+      },
     },
+    probeRecorded: "Nakuha na!",
+    probeDoneTitle: "Tapos na — magaling ang pagtunog mo!",
+    probeDoneBody: (n) =>
+      `Nakabasa ka ng ${n} salitang imbento. Pakikinggan ito ng guro mo mamaya.`,
     start: (n) => `Simulan! (${n} salita)`,
     listen: "Pakinggan ito",
     leaveTitle: "Aalis ka na ba?",

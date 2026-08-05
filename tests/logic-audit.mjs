@@ -65,13 +65,13 @@ const adaptiveRead = (wordId, target, heard) =>
 
 check("starts at level 1", (await adaptiveProfile()).level === 1);
 
-const easy = await query(`SELECT id, text FROM "Word" WHERE level = 1 ORDER BY text LIMIT 10`);
+const easy = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
 for (const w of easy) await adaptiveRead(w.id, w.text, w.text);
 const up = await adaptiveProfile();
 check("levels up after sustained accuracy", up.level === 2, `L${up.level} S${up.stage}`);
 check("Marungko stage widens with the level", up.stage >= 3, `S${up.stage}`);
 
-const any = await query(`SELECT id, text FROM "Word" WHERE level <= 2 ORDER BY text LIMIT 10`);
+const any = await query(`SELECT id, text FROM "Word" WHERE level <= 2 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
 for (const w of any) await adaptiveRead(w.id, w.text, "zzzz");
 const down = await adaptiveProfile();
 check("levels down after poor accuracy", down.level === 1, `L${down.level}`);
@@ -83,7 +83,7 @@ check("stage never shrinks back", down.stage >= up.stage, `S${down.stage}`);
 // Two misreads followed by ten correct keeps the 12-attempt window at 83%,
 // just under the 85% rule.
 const borderline = await createTestLearner("borderline");
-const bWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 ORDER BY text LIMIT 12`);
+const bWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 12`);
 for (let i = 0; i < 12; i++) {
   const w = bWords[i % bWords.length];
   await json("/api/attempts", {
@@ -106,7 +106,7 @@ await deleteTestLearner(adaptive.email);
 /* ── 3. practice list ──────────────────────────────────────────────────── */
 section("[3] practice list and mastery");
 // Misread three real words (with ids, so they can be tracked) to populate it.
-const missWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 ORDER BY text LIMIT 3`);
+const missWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 3`);
 for (const w of missWords) await read(w.id, w.text, "zzzz");
 
 const practice = await query(

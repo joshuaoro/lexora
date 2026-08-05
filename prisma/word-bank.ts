@@ -293,6 +293,33 @@ export const WORDS: WordEntry[] = [
 ];
 
 /**
+ * Words whose meaning turns on stress that Filipino spelling does not write.
+ *
+ * búkas is "tomorrow" and bukás is "open"; the letters are identical. LEXORA
+ * scores a reading by comparing the recogniser's transcript against the target
+ * text, and a transcript is letters — so both readings come back as "bukas" and
+ * are marked the same. The app cannot hear the difference, and no threshold or
+ * variant list will make it able to.
+ *
+ * That matters more here than it would elsewhere. Misplaced stress is a
+ * documented signature of dyslexia in Filipino, reported as a more sensitive
+ * marker than reading speed in the one published Filipino case study — so it is
+ * precisely the error the study should not be blind to.
+ *
+ * These stay in the bank: they are ordinary, useful words and a child should
+ * meet them. The flag exists so the specialist reviewing the recording knows to
+ * judge this one by ear rather than trust the verdict.
+ */
+export const STRESS_NOTES: Record<string, string> = {
+  bukas: "búkas (tomorrow) / bukás (open)",
+  tubo: "túbo (pipe) / tubó (sugarcane; profit)",
+  pito: "píto (whistle) / pitó (seven)",
+  puto: "púto (rice cake) / putó (cut off)",
+  buhay: "búhay (life) / buháy (alive)",
+  hapon: "hápon (afternoon) / Hapón (Japanese)",
+};
+
+/**
  * Spellings the speech recogniser legitimately returns for a *correct* reading.
  * Loanwords and digraphs are the usual offenders: Whisper writes "krus" as
  * "cross" and "dyip" as "deep". Without these, a child who reads the word

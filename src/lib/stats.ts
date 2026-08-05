@@ -15,6 +15,27 @@ const READ_TYPES = ["READ_ALOUD", "PRACTICE"];
  */
 const MEASURED = { activityType: { in: READ_TYPES }, isRetry: false };
 
+/**
+ * Latencies outside this range are not readings.
+ *
+ * Shared with the adaptive level so that "how long a word took" means the same
+ * thing when it is reported to a specialist and when it decides whether a child
+ * moves up.
+ */
+export const MIN_PLAUSIBLE_MS = 300; // faster than this is a mis-click, not a reading
+export const MAX_PLAUSIBLE_MS = 60_000; // slower than this, the child walked away
+export const PLAUSIBLE = { gte: MIN_PLAUSIBLE_MS, lte: MAX_PLAUSIBLE_MS };
+
+/** Below this many timed readings, a median is noise rather than a measure. */
+export const MIN_LATENCY_SAMPLE = 5;
+
+export function median(values: number[]): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -89,12 +110,28 @@ export async function practiceStreak(learnerId: string, lookback = 60): Promise<
   return streak;
 }
 
+/**
+ * The figures a specialist sees first.
+ *
+ * Accuracy is not the whole outcome here, and in Filipino it may not even be
+ * the sensitive half of it. Filipino is a transparent orthography — letters map
+ * to sounds with few surprises — and in transparent orthographies dyslexia
+ * shows up as slow reading far more reliably than as inaccurate reading; the
+ * finding replicates across Spanish, Italian and German. A child can sit at 90%
+ * and still be sounding out every word, and an accuracy percentage cannot show
+ * the difference.
+ *
+ * So decoding latency is returned alongside accuracy rather than kept in a
+ * panel further down the page. It is measured passively from readings the child
+ * already gave; nothing in the exercise is timed in front of them, which would
+ * only add pressure to the readers least able to absorb it.
+ */
 export async function learnerSummary(learnerId: string) {
   const since14 = new Date();
   since14.setHours(0, 0, 0, 0);
   since14.setDate(since14.getDate() - 13);
 
-  const [allReads, reads14, sessionAgg, sessionCount] = await Promise.all([
+  const [allReads, reads14, sessionAgg, sessionCount, latencies] = await Promise.all([
     prisma.attempt.groupBy({
       by: ["correct"],
       where: { learnerId, ...MEASURED },
@@ -111,6 +148,12 @@ export async function learnerSummary(learnerId: string) {
     // they left partway is still counted in minutes practiced above — they did
     // the reading — but it is not an activity completed.
     prisma.activitySession.count({ where: { learnerId, completedAt: { not: null } } }),
+    // Correct readings only: how long a word takes when the child gets there.
+    // A wrong answer's latency measures giving up, not decoding.
+    prisma.attempt.findMany({
+      where: { learnerId, ...MEASURED, correct: true, responseMs: PLAUSIBLE },
+      select: { responseMs: true },
+    }),
   ]);
 
   const total = allReads.reduce((n, g) => n + g._count, 0);
@@ -121,6 +164,9 @@ export async function learnerSummary(learnerId: string) {
     wordsRead14: reads14,
     minutesPracticed: Math.round((sessionAgg._sum.durationMs ?? 0) / 60000),
     activitiesCompleted: sessionCount,
+    // Null until there is enough to be worth reporting — a median over three
+    // readings would move wildly and invite reading meaning into noise.
+    medianDecodeMs: latencies.length >= MIN_LATENCY_SAMPLE ? median(latencies.map((a) => a.responseMs)) : null,
   };
 }
 
@@ -137,16 +183,7 @@ export async function learnerSummary(learnerId: string) {
  * The median is used rather than the mean because a single distraction
  * mid-session would drag an average badly.
  */
-const MIN_PLAUSIBLE_MS = 300; // faster than this is a mis-click, not a reading
-const MAX_PLAUSIBLE_MS = 60_000; // slower than this, the child walked away
 const SLOW_MULTIPLE = 1.6; // how much slower than their own norm counts as effortful
-
-function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
-}
 
 export async function decodingTime(learnerId: string) {
   const attempts = await prisma.attempt.findMany({
@@ -154,13 +191,13 @@ export async function decodingTime(learnerId: string) {
       learnerId,
       ...MEASURED,
       correct: true,
-      responseMs: { gte: MIN_PLAUSIBLE_MS, lte: MAX_PLAUSIBLE_MS },
+      responseMs: PLAUSIBLE,
     },
     orderBy: { createdAt: "asc" },
     select: { responseMs: true, target: true, createdAt: true },
   });
 
-  if (attempts.length < 5) {
+  if (attempts.length < MIN_LATENCY_SAMPLE) {
     return { medianMs: null, earlierMs: null, laterMs: null, slowWords: [], sampleSize: attempts.length };
   }
 

@@ -15,7 +15,8 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { WORDS, ASR_VARIANTS } from "./word-bank";
+import { WORDS, ASR_VARIANTS, STRESS_NOTES } from "./word-bank";
+import { PSEUDOWORDS } from "./pseudoword-bank";
 import { RHYMES, FIRST_SOUNDS } from "./phon-items";
 import { stageForWord } from "./marungko-stage";
 
@@ -59,18 +60,36 @@ async function main() {
   await prisma.learnerProfile.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log(`Seeding ${WORDS.length} words…`);
+  console.log(`Seeding ${WORDS.length} words and ${PSEUDOWORDS.length} probe non-words…`);
   await prisma.word.createMany({
-    data: WORDS.map(([text, syllables, pattern, level, meaningEn]) => ({
-      text,
-      syllables,
-      pattern,
-      level,
-      meaningEn,
-      // derived, never hand-typed, so no word can appear before its letters
-      stage: stageForWord(text),
-      variants: ASR_VARIANTS[text] ?? "",
-    })),
+    data: [
+      ...WORDS.map(([text, syllables, pattern, level, meaningEn]) => ({
+        text,
+        syllables,
+        pattern,
+        level,
+        meaningEn,
+        // derived, never hand-typed, so no word can appear before its letters
+        stage: stageForWord(text),
+        variants: ASR_VARIANTS[text] ?? "",
+        stressNote: STRESS_NOTES[text] ?? null,
+      })),
+      // Probe non-words share the table so they inherit staging, levelling and
+      // the specialist word-bank view, and are held apart everywhere it counts
+      // by isPseudo. They carry no gloss (there is nothing to mean) and no ASR
+      // variants (nothing legitimate to vary), and `npm run audio:generate`
+      // skips them — a probe item a child can listen to is not a probe.
+      ...PSEUDOWORDS.map(([text, syllables, pattern, level]) => ({
+        text,
+        syllables,
+        pattern,
+        level,
+        meaningEn: null,
+        stage: stageForWord(text),
+        variants: "",
+        isPseudo: true,
+      })),
+    ],
   });
 
   console.log(`Seeding ${RHYMES.length} rhyme and ${FIRST_SOUNDS.length} sound-isolation items…`);
@@ -117,7 +136,9 @@ async function main() {
 
   // ── Demo reading history for Juan: 14 days, accuracy trending upward ──
   console.log("Generating demo reading history…");
-  const words = await prisma.word.findMany({ where: { level: { lte: 2 }, stage: { lte: 5 } } });
+  const words = await prisma.word.findMany({
+    where: { level: { lte: 2 }, stage: { lte: 5 }, isPseudo: false },
+  });
   const learnerId = juan.learnerProfile!.id;
   const now = new Date();
   const missTally = new Map<string, number>();

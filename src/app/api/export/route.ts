@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { patternFamily as patternFamilyFor } from "@/lib/stats";
+import { patternFamily as patternFamilyFor, PLAUSIBLE, median } from "@/lib/stats";
 
 /**
  * CSV export of learner data for statistical treatment.
@@ -86,7 +86,16 @@ export async function GET(req: Request) {
           levelAtTime: true,
           isRetry: true,
           learner: { select: { user: { select: { name: true } } } },
-          word: { select: { stage: true, level: true, pattern: true, syllables: true } },
+          word: {
+            select: {
+              stage: true,
+              level: true,
+              pattern: true,
+              syllables: true,
+              isPseudo: true,
+              stressNote: true,
+            },
+          },
           review: { select: { agrees: true } },
           session: { select: { phase: true } },
         },
@@ -121,6 +130,12 @@ export async function GET(req: Request) {
       a.review ? (a.review.agrees ? "agree" : "disagree") : "",
       a.isRetry ? 1 : 0,
       a.session?.phase ?? "",
+      a.word?.isPseudo ? 1 : 0,
+      // The specialist's own verdict, recovered from their agreement with the
+      // system. On probe items this is the only verdict worth analysing; the
+      // machine's is recorded beside it in `correct` for the comparison.
+      a.review ? (a.review.agrees === a.correct ? 1 : 0) : "",
+      a.word?.stressNote ?? "",
     ]);
 
     return csvResponse(
@@ -135,6 +150,17 @@ export async function GET(req: Request) {
           // repetition, not decoding. study_phase tags the session as
           // BASELINE / REGULAR / ENDLINE for pre-post comparison.
           "is_retry", "study_phase",
+          // is_pseudoword = 1 marks a made-up word from the decoding probe.
+          // These carry no automatic verdict worth using — the recogniser
+          // returns the nearest real word — so analyse them on
+          // specialist_correct, which is blank until someone has listened.
+          // Real-word rows carry it too, which is what makes human/machine
+          // agreement comparable between the two kinds of item.
+          "is_pseudoword", "specialist_correct",
+          // Non-empty where the word's meaning depends on stress that Filipino
+          // does not write. The transcript cannot distinguish the two readings,
+          // so `correct` on these rows is not evidence about stress.
+          "stress_pair",
         ],
         rows
       ),
@@ -223,6 +249,24 @@ export async function GET(req: Request) {
         }),
       ]);
 
+      // Reported alongside accuracy rather than below it: Filipino is a
+      // transparent orthography, and in transparent orthographies decoding
+      // speed separates dyslexic from typical readers more reliably than
+      // accuracy does. A summary that omits it omits half the outcome.
+      const timed = await prisma.attempt.findMany({
+        where: { learnerId: l.id, ...measured, correct: true, responseMs: PLAUSIBLE },
+        select: { responseMs: true },
+      });
+
+      // Probe items, scored by the specialist. `agrees === correct` recovers
+      // their verdict from the agreement that was stored.
+      const probes = await prisma.attempt.findMany({
+        where: { learnerId: l.id, activityType: "PSEUDO_PROBE", isRetry: false },
+        select: { correct: true, review: { select: { agrees: true } } },
+      });
+      const probesScored = probes.filter((p) => p.review !== null);
+      const probesCorrect = probesScored.filter((p) => p.review!.agrees === p.correct).length;
+
       const total = attempts.reduce((n, g) => n + g._count, 0);
       const correct = attempts.find((g) => g.correct)?._count ?? 0;
       const err = (type: string) => errorGroups.find((g) => g.errorType === type)?._count ?? 0;
@@ -254,6 +298,12 @@ export async function GET(req: Request) {
         retriesTotal,
         retriesCorrect,
         retriesTotal ? ((retriesCorrect / retriesTotal) * 100).toFixed(1) : "",
+        median(timed.map((a) => a.responseMs)) ?? "",
+        timed.length,
+        probes.length,
+        probesScored.length,
+        probesCorrect,
+        probesScored.length ? ((probesCorrect / probesScored.length) * 100).toFixed(1) : "",
       ]);
     }
 
@@ -269,6 +319,15 @@ export async function GET(req: Request) {
           // Self-correction: how often a second reading, taken after the word
           // was modelled, came out right. Reported apart from accuracy.
           "retries", "retries_correct", "retry_success_pct",
+          // Decoding latency: the median milliseconds a correct single-word
+          // reading takes, over `timed_readings` first attempts. Treat as a
+          // co-primary outcome with accuracy, not a secondary one — see the
+          // note above the query.
+          "median_decode_ms", "timed_readings",
+          // Non-word decoding probe, scored by ear by a reading specialist.
+          // pseudo_scored is the denominator: unreviewed items are neither
+          // correct nor incorrect and must not be counted as either.
+          "pseudo_items", "pseudo_scored", "pseudo_correct", "pseudo_accuracy_pct",
         ],
         rows
       ),

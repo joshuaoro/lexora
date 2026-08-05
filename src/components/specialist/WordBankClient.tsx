@@ -19,6 +19,10 @@ type WordRow = {
   audioVersion: number;
   hasTts: boolean;
   hasHuman: boolean;
+  /** A probe non-word: never shown in practice, never given audio. */
+  isPseudo: boolean;
+  /** Set when the word's meaning turns on stress the spelling does not mark. */
+  stressNote: string | null;
 };
 
 type Draft = { wordId: string; kind: "word" | "syll"; audio: string; url: string };
@@ -51,7 +55,13 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     [words, stageFilter, query]
   );
 
-  const missingAudio = words.filter((w) => !w.hasTts && !w.hasHuman).length;
+  // Probe non-words are excluded from both counts. They are deliberately left
+  // without audio, so counting them as "still need pronunciation" would show a
+  // warning that can never be cleared and would invite someone to clear it —
+  // which would break the probe.
+  const realWords = words.filter((w) => !w.isPseudo);
+  const probeWords = words.length - realWords.length;
+  const missingAudio = realWords.filter((w) => !w.hasTts && !w.hasHuman).length;
 
   /** Play the clip actually used by learners (specialist voice wins). */
   function preview(w: WordRow, kind: "word" | "syll" = "word") {
@@ -229,8 +239,9 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         <div>
           <h1 className="text-3xl font-extrabold text-ink">Word bank</h1>
           <p className="mt-1 max-w-3xl text-sm font-semibold text-ink-muted">
-            {words.length} Filipino words, sequenced by the Marungko Approach and tagged by
-            syllable pattern and difficulty.{" "}
+            {realWords.length} Filipino words, sequenced by the Marungko Approach and tagged by
+            syllable pattern and difficulty
+            {probeWords > 0 && `, plus ${probeWords} probe non-words`}.{" "}
             {missingAudio > 0 ? (
               <span className="text-orange">
                 {missingAudio} still need pronunciation audio — use the ✨ button.
@@ -410,11 +421,31 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
               const rowBusy = busyId === w.id;
               return (
                 <tr key={w.id} className="align-top transition hover:bg-cream/60">
-                  <td className="px-5 py-3 text-base font-extrabold text-ink">{w.text}</td>
+                  <td className="px-5 py-3 text-base font-extrabold text-ink">
+                    {w.text}
+                    {w.isPseudo && (
+                      <span
+                        className="ml-2 inline-block rounded-full bg-peach-soft px-2 py-0.5 align-middle text-xs font-bold text-peach-deep"
+                        title="A made-up word used only in the decoding probe. Never appears in practice and never gets audio."
+                      >
+                        probe
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">{w.syllables}</td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">S{w.stage}</td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">L{w.level}</td>
-                  <td className="px-3 py-3 font-semibold text-ink-muted">{w.meaningEn ?? "—"}</td>
+                  <td className="px-3 py-3 font-semibold text-ink-muted">
+                    {w.meaningEn ?? "—"}
+                    {w.stressNote && (
+                      <span
+                        className="mt-1 block text-xs font-bold text-orange"
+                        title="Filipino does not write stress and the transcript does not capture it, so the app scores both readings the same. Judge this word by ear."
+                      >
+                        stress: {w.stressNote}
+                      </span>
+                    )}
+                  </td>
 
                   {/* Accepted ASR spellings */}
                   <td className="px-3 py-3">
