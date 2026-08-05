@@ -10,6 +10,8 @@ const schema = z.object({
   stage: z.number().int().min(1).max(7),
   level: z.number().int().min(1).max(5),
   meaningEn: z.string().max(60).optional(),
+  /** Add this as a decoding-probe non-word rather than an instructional word. */
+  isPseudo: z.boolean().optional(),
 });
 
 /** Specialists curate the instructional word bank. */
@@ -28,11 +30,37 @@ export async function POST(req: Request) {
   }
 
   const text = parsed.data.text.toLowerCase();
-  const existing = await prisma.word.findUnique({ where: { text } });
-  if (existing) return NextResponse.json({ error: "That word already exists." }, { status: 409 });
+  const isPseudo = parsed.data.isPseudo === true;
+
+  const existing = await prisma.word.findUnique({
+    where: { text },
+    select: { isPseudo: true },
+  });
+  if (existing) {
+    // Worth distinguishing. Adding a probe word that already exists as a real
+    // one is not a duplicate-entry annoyance — it is the mistake that makes the
+    // probe measure recall instead of decoding, and it would be invisible
+    // afterwards, so it is named plainly here rather than at the seam.
+    return NextResponse.json(
+      {
+        error:
+          isPseudo && !existing.isPseudo
+            ? `“${text}” is already a real word in the bank, so it cannot be used as a probe non-word.`
+            : "That word already exists.",
+      },
+      { status: 409 }
+    );
+  }
 
   const word = await prisma.word.create({
-    data: { ...parsed.data, text, meaningEn: parsed.data.meaningEn || null },
+    data: {
+      ...parsed.data,
+      text,
+      isPseudo,
+      // A probe word has no meaning to gloss, and giving it one would invite
+      // someone to teach it.
+      meaningEn: isPseudo ? null : parsed.data.meaningEn || null,
+    },
   });
 
   return NextResponse.json(word, { status: 201 });

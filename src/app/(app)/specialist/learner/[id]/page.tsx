@@ -12,6 +12,9 @@ import SessionPhases, { type PhaseSession } from "@/components/specialist/Sessio
 import SelfCorrection, { type CorrectionPair } from "@/components/specialist/SelfCorrection";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
+import { isScoredActivity } from "@/lib/activity";
+import { getLang } from "@/lib/lang";
+import { getDict } from "@/lib/i18n";
 import { retentionDays } from "@/lib/retention-policy";
 
 /** How far below the threshold still counts as a borderline reading. */
@@ -24,6 +27,8 @@ export default async function LearnerDetailPage({
 }) {
   await requireSpecialist();
   const { id } = await params;
+  const lang = await getLang();
+  const t = getDict(lang).specialist;
 
   const profile = await prisma.learnerProfile.findUnique({
     where: { id },
@@ -211,6 +216,7 @@ export default async function LearnerDetailPage({
     total: s.total,
     correct: s.correct,
     phase: s.phase,
+    scored: isScoredActivity(s.type),
   }));
 
   const recorded = new Set(withRecording.map((a) => a.id));
@@ -282,7 +288,7 @@ export default async function LearnerDetailPage({
         href="/specialist"
         className="no-print inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
       >
-        <ArrowLeft size={16} /> All learners
+        <ArrowLeft size={16} /> {t.allLearners}
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
@@ -297,13 +303,13 @@ export default async function LearnerDetailPage({
             href={`/api/export?what=attempts&learnerId=${profile.id}`}
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
-            <Download size={16} /> Attempts CSV
+            <Download size={16} /> {t.attemptsCsv}
           </a>
           <a
             href={`/api/export?what=sessions&learnerId=${profile.id}`}
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
-            <Download size={16} /> Sessions CSV
+            <Download size={16} /> {t.sessionsCsv}
           </a>
           <PrintButton />
         </div>
@@ -311,19 +317,19 @@ export default async function LearnerDetailPage({
 
       {/* Specialist controls */}
       <section className="no-print mt-5 rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-extrabold text-ink">Intervention controls</h2>
-        <LearnerControls learnerId={profile.id} currentLevel={profile.level} words={words} />
+        <h2 className="mb-4 text-lg font-extrabold text-ink">{t.interventionControls}</h2>
+        <LearnerControls learnerId={profile.id} currentLevel={profile.level} words={words} lang={lang} />
         {practiceItems.length > 0 && (
           <div className="mt-4 border-t border-line pt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Current practice list
+              {t.currentPracticeList}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {practiceItems.map((p) => (
                 <span key={p.id} className="rounded-full bg-cream px-3 py-1 text-sm font-bold text-ink">
                   {p.word.text}
                   <span className="ml-1.5 text-xs font-semibold text-ink-muted">
-                    {p.source === "SPECIALIST" ? "pinned" : `×${p.missCount}`}
+                    {p.source === "SPECIALIST" ? t.pinned : `×${p.missCount}`}
                   </span>
                 </span>
               ))}
@@ -337,10 +343,10 @@ export default async function LearnerDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-              <ShieldCheck size={20} className="text-primary" /> Scoring reliability check
+              <ShieldCheck size={20} className="text-primary" /> {t.reliabilityCheck}
             </h2>
             <p className="text-sm font-semibold text-ink-muted">
-              Replay recorded readings and confirm or dispute the system&apos;s scoring.
+              {t.reliabilitySub}
             </p>
           </div>
           <div className="rounded-2xl bg-primary-soft px-5 py-3 text-center">
@@ -348,7 +354,7 @@ export default async function LearnerDetailPage({
               {agreementPct === null ? "—" : `${agreementPct}%`}
             </p>
             <p className="text-xs font-bold text-ink-soft">
-              specialist–system agreement ({reviewed} reviewed)
+              {t.agreementChip(reviewed)}
             </p>
           </div>
         </div>
@@ -362,13 +368,10 @@ export default async function LearnerDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-2xl">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-              <Sparkles size={20} className="text-peach-deep" /> Decoding probe (non-words)
+              <Sparkles size={20} className="text-peach-deep" /> {t.probeTitle}
             </h2>
             <p className="text-sm font-semibold text-ink-muted">
-              Made-up words cannot be read from memory, so these separate decoding from
-              sight-word recall — the difference between a learner who has learned to decode
-              and one who has learned this word bank. Score them by ear: the recogniser
-              writes the nearest real word and its verdict is not trustworthy here.
+              {t.probeSub}
             </p>
           </div>
           <div className="rounded-2xl bg-peach-soft px-5 py-3 text-center">
@@ -376,8 +379,7 @@ export default async function LearnerDetailPage({
               {probeAccuracy === null ? "—" : `${probeAccuracy}%`}
             </p>
             <p className="text-xs font-bold text-ink-soft">
-              read correctly ({probeReviewed.length} scored
-              {probePending > 0 ? `, ${probePending} to review` : ""})
+              {t.probeChip(probeReviewed.length, probePending)}
             </p>
           </div>
         </div>
@@ -398,7 +400,7 @@ export default async function LearnerDetailPage({
 
       {/* Full progress report */}
       <div className="mt-5">
-        <LearnerReport learnerId={profile.id} />
+        <LearnerReport learnerId={profile.id} lang={lang} />
       </div>
 
       <LearnerDataControls

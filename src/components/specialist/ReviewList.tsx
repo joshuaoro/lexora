@@ -36,9 +36,12 @@ const ENGINE_LABELS: Record<string, string> = {
  * In `agreement` mode the specialist answers "was the system right?" directly.
  *
  * In `probe` mode they answer a different question — "did the child read this
- * non-word correctly?" — because on a made-up word the system's verdict is not
- * worth agreeing or disagreeing with: Whisper writes down the nearest real
- * word, so a perfectly decoded "sulek" comes back as "sulat" and scores wrong.
+ * non-word correctly?" — because on a made-up word the machine verdict is not
+ * something to ratify. It is a language model transcribing a word that has no
+ * entry in any language, and how often it guesses right is precisely what is
+ * unknown; the first real probe run had it write seven of eight correctly and
+ * garble the eighth, which is neither reliable enough to trust nor bad enough
+ * to discard. So a person decides, and the transcript is kept beside them.
  *
  * Both still store `agrees`, and it keeps its single meaning: whether the human
  * and the machine reached the same conclusion. The probe verdict is folded into
@@ -68,15 +71,21 @@ export default function ReviewList({
   );
   const [noteOpen, setNoteOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
 
   async function review(attemptId: string, agrees: boolean, note?: string) {
     setBusy(attemptId);
+    setFailed(null);
     const res = await tryFetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attemptId, agrees, note: note ?? notes[attemptId] ?? undefined }),
     });
+    // A verdict that fails to save used to leave the button exactly as it was,
+    // which is indistinguishable from not having pressed it. These verdicts are
+    // the agreement metric and the probe score, so a lost one is not cosmetic.
     if (res?.ok) setReviews((r) => ({ ...r, [attemptId]: agrees }));
+    else setFailed(attemptId);
     setBusy(null);
   }
 
@@ -140,11 +149,11 @@ export default function ReviewList({
                 </p>
               )}
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                {/* On a probe the machine verdict is shown greyed and labelled
-                    unreliable rather than hidden. It is real data — the whole
-                    point of pairing it with a human verdict — but presenting it
-                    in the usual green/red would invite the specialist to just
-                    ratify it, and on a non-word it is usually wrong. */}
+                {/* On a probe the machine verdict is greyed rather than hidden.
+                    It is real data — pairing it with a human verdict is how the
+                    study learns how far it can be trusted — but showing it in
+                    the usual green/red would invite the specialist to simply
+                    ratify it, which would make the pair worthless. */}
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
                     isProbe
@@ -155,12 +164,12 @@ export default function ReviewList({
                   }`}
                   title={
                     isProbe
-                      ? "The recogniser writes the nearest real word, so this verdict is not reliable on a non-word. Judge by ear."
+                      ? "The recogniser is transcribing a word that exists in no language. Decide from the recording, not from this."
                       : undefined
                   }
                 >
                   system: {a.correct ? "correct" : (a.errorType ?? "incorrect")}
-                  {isProbe && " (unreliable)"}
+                  {isProbe && " (decide by ear)"}
                 </span>
                 {/* The app scores letters; this word's meaning is carried by
                     stress, which the transcript does not record. Both readings
@@ -284,6 +293,11 @@ export default function ReviewList({
             {noteOpen !== a.id && notes[a.id] && (
               <p className="w-full pl-1 text-xs font-semibold italic text-ink-muted">
                 “{notes[a.id]}”
+              </p>
+            )}
+            {failed === a.id && (
+              <p role="alert" className="w-full pl-1 text-xs font-bold text-orange">
+                That verdict was not saved — check the connection and press it again.
               </p>
             )}
           </li>

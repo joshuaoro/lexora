@@ -189,10 +189,16 @@ export default async function DashboardPage() {
                         })}
                       </p>
                     </div>
-                    {/* The Reader is listening practice, so it has no score. */}
+                    {/* The Reader is listening practice, so it has no score.
+                        The probe has none yet — a teacher marks it later — and
+                        a child who read every word must not be shown 0/8. */}
                     {s.type === "READER" ? (
                       <span className="shrink-0 rounded-full bg-primary-soft px-3 py-1 text-sm font-bold text-primary">
                         {t.wordsHeard(s.total)}
+                      </span>
+                    ) : s.type === "PSEUDO_PROBE" ? (
+                      <span className="shrink-0 rounded-full bg-peach-soft px-3 py-1 text-sm font-bold text-peach-deep">
+                        {t.probeReadCount(s.total)}
                       </span>
                     ) : (
                       <span

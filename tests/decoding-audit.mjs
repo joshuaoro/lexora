@@ -192,8 +192,8 @@ const page = await api(`/specialist/learner/${learner.learnerId}`, { cookie: spe
 const pageHtml = await page.text();
 check("the learner page shows a decoding-probe section", /Decoding probe/i.test(pageHtml));
 check(
-  "and warns that the machine verdict is not to be trusted there",
-  /unreliable/i.test(pageHtml),
+  "and tells the specialist to decide from the recording, not the transcript",
+  /decide by ear/i.test(pageHtml),
   "caveat present"
 );
 
@@ -420,11 +420,160 @@ await p.goto(`${BASE}/exercises`, { waitUntil: "networkidle" });
 check(
   "once done, the probe rests instead of staying clickable",
   (await p.getByRole("link", { name: /Silly words/i }).count()) === 0 &&
-    /few days/i.test(await p.locator("main").innerText()),
+    /Resting/i.test(await p.locator("main").innerText()),
   "cooldown in effect"
 );
 
 check("no page errors during the probe", pageErrors.length === 0, pageErrors.slice(0, 2).join(" | ") || "clean");
+
+/* ── 9. a probe session must never read as eight failures ──────────────── */
+section("[9] an unscored session is shown as a count, not as 0/n");
+
+// The child above completed a probe run. Nothing about it has been marked, so
+// its session row carries correct = 0 — which the generic "correct/total"
+// rendering turned into "0/8" on the child's own dashboard.
+await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+const dash = await p.locator("main").innerText();
+check("the child's dashboard does not show 0/8 for the probe", !/0\/8/.test(dash), "no false zero");
+check("it shows how many were read instead", /8 read/i.test(dash), "count shown");
+
+const spCtx = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
+const spPage = await spCtx.newPage();
+await spPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await spPage.fill("#email", "specialist@lexora.ph");
+await spPage.fill("#password", PASSWORD);
+await spPage.click("button[type=submit]");
+await spPage.waitForURL("**/specialist", { timeout: 30000 });
+await spPage.goto(`${BASE}/specialist/learner/${child.learnerId}`, { waitUntil: "networkidle" });
+const spText = await spPage.locator("main").innerText();
+check(
+  "the specialist's session list does not show 0/8 either",
+  !/pseudo probe · 0\/8/i.test(spText),
+  "no false zero"
+);
+
+/* ── 10. probe words a specialist adds ─────────────────────────────────── */
+section("[10] a specialist can author probe words");
+
+const suggested = await json(`/api/words/suggest?stage=4&count=8`, { cookie: specialist });
+check("suggestions are offered", suggested.status === 200 && suggested.body.candidates?.length > 0,
+  `${suggested.body.candidates?.length ?? 0} candidates`);
+
+const bankTexts = new Set(
+  (await query(`SELECT text FROM "Word"`)).map((w) => w.text.toLowerCase())
+);
+check(
+  "no suggestion duplicates a word already in the bank",
+  (suggested.body.candidates ?? []).every((c) => !bankTexts.has(c.text)),
+  "all new"
+);
+check(
+  "every suggestion uses only letters taught by that stage",
+  (suggested.body.candidates ?? []).every((c) => /^[msaioubetklyng]+$/.test(c.text)),
+  (suggested.body.candidates ?? []).map((c) => c.text).join(", ")
+);
+check(
+  "and its syllable split spells the word",
+  (suggested.body.candidates ?? []).every((c) => c.syllables.split("-").join("") === c.text),
+  "consistent"
+);
+
+const mine = "zt" + Array.from({ length: 4 }, () => "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]).join("");
+const added = await json("/api/words", {
+  cookie: specialist,
+  method: "POST",
+  body: {
+    text: mine,
+    syllables: mine.slice(0, 2) + "-" + mine.slice(2),
+    pattern: "CVCV",
+    stage: 7,
+    level: 1,
+    isPseudo: true,
+  },
+});
+check("a specialist can add a probe word", added.status === 201, `HTTP ${added.status}`);
+if (added.body?.id) {
+  const row = await one(
+    `SELECT "isPseudo", "meaningEn", "audioWord" FROM "Word" WHERE id = $1`,
+    [added.body.id]
+  );
+  check("it is stored as a probe word", row.isPseudo === true);
+  check("with no gloss and no audio", row.meaningEn === null && row.audioWord === null, "silent");
+  await query(`DELETE FROM "Word" WHERE id = $1`, [added.body.id]);
+}
+
+// The mistake that would silently break the probe: registering a real word.
+const clash = await json("/api/words", {
+  cookie: specialist,
+  method: "POST",
+  body: { text: "bahay", syllables: "ba-hay", pattern: "CVCVC", stage: 6, level: 2, isPseudo: true },
+});
+check(
+  "a real word is refused as a probe word",
+  clash.status === 409 && /already a real word/i.test(clash.body.error ?? ""),
+  clash.body.error ?? `HTTP ${clash.status}`
+);
+
+/* ── 11. exports are named for what they contain ───────────────────────── */
+section("[11] each CSV download is named for its type and its scope");
+
+const named = async (path) => {
+  const res = await api(path, { cookie: specialist });
+  return res.headers.get("content-disposition") ?? "";
+};
+const allName = await named("/api/export?what=attempts");
+const oneName = await named(`/api/export?what=attempts&learnerId=${child.learnerId}`);
+const sessName = await named("/api/export?what=sessions");
+check("a whole-cohort export says so", /attempts-all-learners-/.test(allName), allName);
+check("a single-learner export carries the name", /attempts-auditbot-/.test(oneName), oneName);
+check("and the type still varies", /sessions-all-learners-/.test(sessName), sessName);
+check("the two attempt exports are named differently", allName !== oneName, "distinct");
+
+/* ── 12. the specialist workspace follows the language toggle ──────────── */
+section("[12] switching to Filipino changes the specialist pages too");
+
+await spPage.goto(`${BASE}/specialist`, { waitUntil: "networkidle" });
+
+/**
+ * Press the toggle, then reload before reading the page.
+ *
+ * The toggle sets a cookie and calls router.refresh(). Whether that repaint has
+ * landed at any given millisecond is timing, and asserting on it made this
+ * section pass and fail on alternate runs against identical code — which is
+ * worse than no test, because the flake looks exactly like the bug.
+ *
+ * What was actually broken, and what this checks, is different: these pages had
+ * no Filipino strings at all and never received the language, so they rendered
+ * in English no matter what the cookie said. Reloading separates that question
+ * from refresh timing, which the learner-side suite already covers.
+ */
+const fil = spPage.getByRole("button", { name: "Filipino" }).first();
+await fil.click();
+
+const langCookie = (await spCtx.cookies()).find((c) => c.name === "lexora_lang");
+check("the toggle records Filipino", langCookie?.value === "fil", langCookie?.value ?? "unset");
+
+await spPage.reload({ waitUntil: "networkidle" });
+const filText = await spPage.locator("main").innerText();
+check(
+  "the learners table is translated",
+  /Mga mag-aaral ko/i.test(filText),
+  filText.slice(0, 90).replace(/\n+/g, " | ")
+);
+check("and it is no longer the English heading", !/My learners/i.test(filText), "switched");
+
+await spPage.goto(`${BASE}/specialist/learner/${child.learnerId}`, { waitUntil: "networkidle" });
+const filLearner = await spPage.locator("main").innerText();
+check(
+  "the learner page header is translated",
+  /Mga kontrol sa interbensyon/i.test(filLearner),
+  "controls heading in Filipino"
+);
+check(
+  "and the report inside it is too, which it never was before",
+  /Kabuuang accuracy|Karaniwang oras kada salita/i.test(filLearner),
+  "report follows the toggle"
+);
 
 await browser.close();
 

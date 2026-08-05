@@ -74,6 +74,8 @@ const en = {
     recentEmpty: "Nothing here yet — your finished activities will show up in this list.",
     scoreChip: (c: number, t: number) => `${c}/${t} correct`,
     wordsHeard: (n: number) => `${n} words heard`,
+    // Deliberately a count and not a score. Nobody has marked these yet.
+    probeReadCount: (n: number) => `${n} read`,
   },
   reader: {
     title: "Reader",
@@ -109,7 +111,7 @@ const en = {
       desc: "Made-up words to sound out. Nobody knows these ones!",
       skill: "Decoding check",
     },
-    probeResting: "Come back to this one in a few days.",
+    probeResting: (when: string) => `Resting — you can play this again on ${when}.`,
   },
   session: {
     intro: {
@@ -219,6 +221,57 @@ const en = {
     missed: (n: number) => `missed ×${n}`,
     mastered: (n: number) => `Mastered ⭐ (${n})`,
     streakAria: (s: number) => `${s} of 2 correct in a row`,
+  },
+  /**
+   * The specialist workspace.
+   *
+   * These pages were the one part of LEXORA the language toggle did not reach:
+   * pressing FIL changed the learner side and left the specialist side in
+   * English, which reads as the toggle being broken rather than as a scoping
+   * decision. That matters more than it looks, because the reading specialists
+   * are the people who score this app against ISO/IEC 25010 — a control that
+   * visibly does not work is something they will rate, and rightly.
+   *
+   * Filipino here is Taglish, matching the rest of the app: assessment terms a
+   * Philippine reading centre already uses in English (accuracy, level, CSV,
+   * baseline) stay in English, because translating them would be less clear,
+   * not more.
+   */
+  specialist: {
+    welcomeBack: "Welcome back",
+    badge: "Reading specialist",
+    cohortOverview: "Cohort overview",
+    summaryCsv: "Summary CSV",
+    allAttemptsCsv: "All attempts CSV",
+    allSessionsCsv: "All sessions CSV",
+    attemptsCsv: "Attempts CSV",
+    sessionsCsv: "Sessions CSV",
+    myLearners: (n: number) => `My learners (${n})`,
+    noLearners: "No learners yet. Learners appear here as soon as they register.",
+    colLearner: "Learner",
+    colLevel: "Level",
+    colAccuracy: "Accuracy",
+    colWordsAttempted: "Words attempted",
+    colPracticeWords: "Practice words",
+    colLastActive: "Last active",
+    never: "never",
+    openProgress: (name: string) => `Open ${name}'s progress`,
+    allLearners: "All learners",
+    interventionControls: "Intervention controls",
+    currentPracticeList: "Current practice list",
+    pinned: "pinned",
+    difficultyLevel: "Difficulty level",
+    addPracticeWord: "Add a practice word",
+    typeAWord: "Type a word…",
+    add: "Add",
+    reliabilityCheck: "Scoring reliability check",
+    reliabilitySub: "Replay recorded readings and confirm or dispute the system's scoring.",
+    agreementChip: (n: number) => `specialist–system agreement (${n} reviewed)`,
+    probeTitle: "Decoding probe (non-words)",
+    probeSub:
+      "Made-up words cannot be read from memory, so these separate decoding from sight-word recall — the difference between a learner who has learned to decode and one who has learned this word bank. Score them by ear. The recogniser is transcribing words that exist in no language, and how often it gets them right is one of the things this study is measuring, so its verdict is shown for comparison rather than for approval.",
+    probeChip: (scored: number, pending: number) =>
+      `read correctly (${scored} scored${pending > 0 ? `, ${pending} to review` : ""})`,
   },
   reports: {
     title: "My reading report",
@@ -417,6 +470,7 @@ const fil: Dict = {
     recentEmpty: "Wala pa rito — lalabas dito ang mga natapos mong aktibidad.",
     scoreChip: (c, t) => `${c}/${t} tama`,
     wordsHeard: (n) => `${n} salitang napakinggan`,
+    probeReadCount: (n) => `${n} nabasa`,
   },
   reader: {
     title: "Pagbasa",
@@ -452,7 +506,7 @@ const fil: Dict = {
       desc: "Mga imbentong salita na tutunugin. Walang nakakaalam nito!",
       skill: "Pagsusuri sa pagbasa",
     },
-    probeResting: "Balikan mo ito sa loob ng ilang araw.",
+    probeResting: (when) => `Nagpapahinga — mapaglalaruan mo ulit ito sa ${when}.`,
   },
   session: {
     intro: {
@@ -555,6 +609,43 @@ const fil: Dict = {
     missed: (n) => `namali ×${n}`,
     mastered: (n) => `Na-master ⭐ (${n})`,
     streakAria: (s) => `${s} sa 2 na sunod na tama`,
+  },
+  specialist: {
+    welcomeBack: "Kumusta ulit",
+    badge: "Reading specialist",
+    cohortOverview: "Pangkalahatang tanaw ng cohort",
+    summaryCsv: "Summary CSV",
+    allAttemptsCsv: "Lahat ng attempts CSV",
+    allSessionsCsv: "Lahat ng sessions CSV",
+    attemptsCsv: "Attempts CSV",
+    sessionsCsv: "Sessions CSV",
+    myLearners: (n) => `Mga mag-aaral ko (${n})`,
+    noLearners: "Wala pang mag-aaral. Lilitaw sila rito paglagpas nilang mag-register.",
+    colLearner: "Mag-aaral",
+    colLevel: "Level",
+    colAccuracy: "Accuracy",
+    colWordsAttempted: "Salitang sinubukan",
+    colPracticeWords: "Salitang pinapraktis",
+    colLastActive: "Huling aktibo",
+    never: "wala pa",
+    openProgress: (name) => `Buksan ang progreso ni ${name}`,
+    allLearners: "Lahat ng mag-aaral",
+    interventionControls: "Mga kontrol sa interbensyon",
+    currentPracticeList: "Kasalukuyang listahan ng praktis",
+    pinned: "naka-pin",
+    difficultyLevel: "Antas ng hirap",
+    addPracticeWord: "Magdagdag ng salitang praktis",
+    typeAWord: "Mag-type ng salita…",
+    add: "Idagdag",
+    reliabilityCheck: "Pagsusuri sa pagiging maaasahan ng scoring",
+    reliabilitySub:
+      "Pakinggang muli ang mga naitalang pagbasa at kumpirmahin o tutulan ang scoring ng sistema.",
+    agreementChip: (n) => `pagkakasundo ng specialist at sistema (${n} nasuri)`,
+    probeTitle: "Pagsusuri sa pagdedekowd (mga salitang imbento)",
+    probeSub:
+      "Hindi puwedeng basahin sa memorya ang mga imbentong salita, kaya inihihiwalay nito ang pagdedekowd sa pagkilala ng salitang kabisado — ang pagkakaiba ng mag-aaral na natutong magdekowd at ng natutong kabisaduhin ang word bank na ito. Suriin ito sa pamamagitan ng pakikinig. Nagta-transcribe ang recogniser ng mga salitang wala sa kahit anong wika, at bahagi ng sinusukat ng pag-aaral na ito kung gaano ito kadalas tumama — kaya ipinapakita ang hatol nito para paghambingan, hindi para sang-ayunan.",
+    probeChip: (scored, pending) =>
+      `tamang nabasa (${scored} nasuri${pending > 0 ? `, ${pending} pang susuriin` : ""})`,
   },
   reports: {
     title: "Ulat ng pagbasa ko",

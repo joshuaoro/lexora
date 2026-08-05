@@ -177,10 +177,12 @@ it separates letter–sound knowledge from sight-word recall.
   counted in accuracy.** A probe item a child can listen to, or has been taught, has stopped
   being one. A 7-day cooldown keeps the activity from being ground down by repetition.
 - **Scored by a specialist, by ear.** Whisper is a language model before it is a
-  transcriber: asked to write a word that does not exist it returns the nearest one that
-  does, so a correctly decoded `sulek` comes back as `sulat`. The ASR transcript is stored
-  beside the human verdict rather than instead of it, which also yields human-vs-machine
-  agreement on exactly the items where agreement is expected to be worst.
+  transcriber, and here it is transcribing words that exist in no language. The first real
+  probe run had it write seven of eight non-words correctly and garble the eighth — better
+  than expected, and still not something to score a study on. The transcript is therefore
+  stored *beside* the human verdict rather than instead of it, which turns the uncertainty
+  into a measurement: `specialist_correct` against `correct` gives human-vs-machine
+  agreement on unfamiliar items, directly comparable with the same figure on real words.
 
 ### Stress-contrastive words
 Six bank words carry a `stressNote`: `bukas`, `tubo`, `pito`, `puto`, `buhay`, `hapon`.
@@ -302,7 +304,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 9 suites against http://localhost:3000 (291 checks)
+npm run audit             # all 9 suites against http://localhost:3000 (311 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
@@ -310,7 +312,7 @@ npm run audit:ui          # learner journeys, specialist workflows, responsive  
 npm run audit:links       # every route reachable from the navigation  (46)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
-npm run audit:decoding    # non-word probe, latency guard, stress caveats  (44)
+npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (14)
 npm run audit:perf        # budgets on a throttled low-end device

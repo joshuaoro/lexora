@@ -2,9 +2,13 @@ import Link from "next/link";
 import { ChevronRight, Users, Download } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
+import { getLang } from "@/lib/lang";
+import { getDict } from "@/lib/i18n";
 
 export default async function SpecialistPage() {
   const session = await requireSpecialist();
+  const lang = await getLang();
+  const t = getDict(lang).specialist;
 
   const learners = await prisma.learnerProfile.findMany({
     include: {
@@ -45,12 +49,12 @@ export default async function SpecialistPage() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-ink-muted">Welcome back</p>
+          <p className="text-sm font-semibold text-ink-muted">{t.welcomeBack}</p>
           <h1 className="text-3xl font-extrabold text-ink">
             {session.name} <span aria-hidden>👋</span>
           </h1>
           <span className="mt-2 inline-block rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
-            Reading specialist
+            {t.badge}
           </span>
         </div>
         {/* CSV exports for statistical treatment */}
@@ -59,25 +63,25 @@ export default async function SpecialistPage() {
             href="/specialist/cohort"
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
-            <Users size={16} /> Cohort overview
+            <Users size={16} /> {t.cohortOverview}
           </Link>
           <a
             href="/api/export?what=summary"
             className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark"
           >
-            <Download size={16} /> Summary CSV
+            <Download size={16} /> {t.summaryCsv}
           </a>
           <a
             href="/api/export?what=attempts"
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
-            <Download size={16} /> All attempts CSV
+            <Download size={16} /> {t.allAttemptsCsv}
           </a>
           <a
             href="/api/export?what=sessions"
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
-            <Download size={16} /> All sessions CSV
+            <Download size={16} /> {t.allSessionsCsv}
           </a>
         </div>
       </div>
@@ -85,24 +89,24 @@ export default async function SpecialistPage() {
       <section className="mt-6 rounded-2xl border border-line bg-card shadow-sm">
         <div className="flex items-center gap-2 border-b border-line px-6 py-4">
           <Users size={20} className="text-primary" />
-          <h2 className="text-lg font-extrabold text-ink">My learners ({learners.length})</h2>
+          <h2 className="text-lg font-extrabold text-ink">{t.myLearners(learners.length)}</h2>
         </div>
 
         {learners.length === 0 ? (
           <p className="px-6 py-8 text-sm text-ink-soft">
-            No learners yet. Learners appear here as soon as they register.
+            {t.noLearners}
           </p>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full min-w-160 text-left text-sm">
             <thead>
               <tr className="text-xs font-bold uppercase tracking-wide text-ink-muted">
-                <th className="px-6 py-3">Learner</th>
-                <th className="px-3 py-3">Level</th>
-                <th className="px-3 py-3">Accuracy</th>
-                <th className="px-3 py-3">Words attempted</th>
-                <th className="px-3 py-3">Practice words</th>
-                <th className="px-3 py-3">Last active</th>
+                <th className="px-6 py-3">{t.colLearner}</th>
+                <th className="px-3 py-3">{t.colLevel}</th>
+                <th className="px-3 py-3">{t.colAccuracy}</th>
+                <th className="px-3 py-3">{t.colWordsAttempted}</th>
+                <th className="px-3 py-3">{t.colPracticeWords}</th>
+                <th className="px-3 py-3">{t.colLastActive}</th>
                 <th className="px-3 py-3"></th>
               </tr>
             </thead>
@@ -147,13 +151,13 @@ export default async function SpecialistPage() {
                     </td>
                     <td className="px-3 py-4 font-semibold text-ink-soft">
                       {s.last
-                        ? s.last.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                        : "never"}
+                        ? s.last.toLocaleDateString(lang === "fil" ? "fil-PH" : "en-US", { month: "short", day: "numeric" })
+                        : t.never}
                     </td>
                     <td className="px-3 py-4">
                       <Link
                         href={`/specialist/learner/${l.id}`}
-                        aria-label={`Open ${l.user.name}'s progress`}
+                        aria-label={t.openProgress(l.user.name)}
                         className="inline-flex rounded-lg p-1.5 text-primary transition hover:bg-primary-soft"
                       >
                         <ChevronRight size={18} />

@@ -21,7 +21,8 @@ const PROBE_COOLDOWN_DAYS = 7;
 
 export default async function ExercisesPage() {
   const { profile, learnerId } = await requireLearner();
-  const dict = getDict(await getLang());
+  const lang = await getLang();
+  const dict = getDict(lang);
 
   const since = new Date();
   since.setDate(since.getDate() - PROBE_COOLDOWN_DAYS);
@@ -30,6 +31,12 @@ export default async function ExercisesPage() {
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
   });
+
+  // "Come back in a few days" told a child nothing they could act on, and told
+  // a specialist planning an endline session even less. Say the date.
+  const probeReturns = recentProbe
+    ? new Date(recentProbe.createdAt.getTime() + PROBE_COOLDOWN_DAYS * 86_400_000)
+    : null;
 
   const activities = [
     { type: "read-aloud", icon: Mic, tone: "bg-primary-soft text-primary", ...dict.exercises.readAloud },
@@ -65,7 +72,13 @@ export default async function ExercisesPage() {
                 </div>
                 <h2 className="mt-4 text-xl font-extrabold text-ink">{title}</h2>
                 <p className="mt-1 text-sm font-semibold text-ink-soft">
-                  {dict.exercises.probeResting}
+                  {dict.exercises.probeResting(
+                    probeReturns!.toLocaleDateString(lang === "fil" ? "fil-PH" : "en-US", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  )}
                 </p>
                 <span className="mt-3 inline-block rounded-full bg-cream px-3 py-1 text-xs font-bold text-ink-muted">
                   {skill}

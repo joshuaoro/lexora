@@ -42,6 +42,34 @@ function csvResponse(csv: string, filename: string) {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Build the download name.
+ *
+ * Every export used to be `lexora-attempts-2026-08-05.csv` regardless of who it
+ * was for, so pulling one learner after another left a Downloads folder of
+ * files with the same name and a string of "(1)", "(2)" suffixes — and no way
+ * to tell whose data was in which. At the end of a study, with five children
+ * and three export types, that is a genuine way to analyse the wrong file.
+ *
+ * The learner's name is slugified rather than interpolated: it comes from user
+ * input and lands in a Content-Disposition header, where a quote or a newline
+ * would let the filename break out of the header.
+ */
+function slug(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/[\s_]+/g, "-")
+    .toLowerCase()
+    .slice(0, 40);
+}
+
+function exportName(what: string, who: string | null): string {
+  const scope = who ? slug(who) || "learner" : "all-learners";
+  return `lexora-${what}-${scope}-${stamp()}.csv`;
+}
+
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -57,6 +85,17 @@ export async function GET(req: Request) {
     }
     learnerId = session.learnerId;
   }
+
+  // Resolved once so every export type names its file the same way, including
+  // the learner's own download of their own records.
+  const scopedTo = learnerId
+    ? (
+        await prisma.learnerProfile.findUnique({
+          where: { id: learnerId },
+          select: { user: { select: { name: true } } },
+        })
+      )?.user.name ?? null
+    : null;
 
   if (what === "attempts") {
     const scope = learnerId ? { learnerId } : {};
@@ -164,7 +203,7 @@ export async function GET(req: Request) {
         ],
         rows
       ),
-      `lexora-attempts-${stamp()}.csv`
+      exportName("attempts", scopedTo)
     );
   }
 
@@ -197,7 +236,7 @@ export async function GET(req: Request) {
         ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase", "completed"],
         rows
       ),
-      `lexora-sessions-${stamp()}.csv`
+      exportName("sessions", scopedTo)
     );
   }
 
@@ -331,7 +370,7 @@ export async function GET(req: Request) {
         ],
         rows
       ),
-      `lexora-summary-${stamp()}.csv`
+      exportName("summary", scopedTo)
     );
   }
 

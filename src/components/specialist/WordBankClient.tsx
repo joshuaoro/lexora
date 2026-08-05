@@ -27,7 +27,15 @@ type WordRow = {
 
 type Draft = { wordId: string; kind: "word" | "syll"; audio: string; url: string };
 
-const EMPTY_FORM = { text: "", syllables: "", pattern: "", stage: 1, level: 1, meaningEn: "" };
+const EMPTY_FORM = {
+  text: "",
+  syllables: "",
+  pattern: "",
+  stage: 1,
+  level: 1,
+  meaningEn: "",
+  isPseudo: false,
+};
 const MAX_RECORD_MS = 6000;
 
 export default function WordBankClient({ words }: { words: WordRow[] }) {
@@ -43,7 +51,36 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editingVariants, setEditingVariants] = useState<string | null>(null);
   const [variantDraft, setVariantDraft] = useState("");
+  const [candidates, setCandidates] = useState<
+    { text: string; syllables: string; pattern: string; level: number }[]
+  >([]);
+  const [suggestStage, setSuggestStage] = useState(4);
+  const [suggesting, setSuggesting] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
+
+  /**
+   * Ask the server for candidate non-words.
+   *
+   * These are letter combinations that obey Filipino syllable shape and the
+   * Marungko sequence — nothing more. Whether a candidate is actually a
+   * non-word is a judgement only a person who speaks Tagalog and Cebuano can
+   * make, so nothing is saved until the specialist picks one and submits it.
+   */
+  async function suggest() {
+    setSuggesting(true);
+    setMessage(null);
+    const res = await tryFetch(`/api/words/suggest?stage=${suggestStage}`);
+    const data = (await res?.json().catch(() => ({}))) ?? {};
+    setSuggesting(false);
+    if (!res?.ok) {
+      setMessage(res ? "Could not fetch suggestions." : "No internet connection. Check it and try again.");
+      return;
+    }
+    setCandidates(data.candidates ?? []);
+    if ((data.candidates ?? []).length === 0) {
+      setMessage(`No new combinations left at stage ${suggestStage} — try a later stage.`);
+    }
+  }
 
   const filtered = useMemo(
     () =>
@@ -85,7 +122,8 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         ...form,
         stage: Number(form.stage),
         level: Number(form.level),
-        meaningEn: form.meaningEn || undefined,
+        meaningEn: form.isPseudo ? undefined : form.meaningEn || undefined,
+        isPseudo: form.isPseudo,
       }),
     });
     const data = (await res?.json().catch(() => ({}))) ?? {};
@@ -94,6 +132,18 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
       setMessage(res ? (data.error ?? "Could not add the word.") : "No internet connection. Check it and try again.");
       return;
     }
+
+    // A probe word is deliberately left silent. Generating audio for it would
+    // let a child press listen and be handed the answer, which is the one thing
+    // that stops it being a probe.
+    if (form.isPseudo) {
+      setBusy(false);
+      setMessage(`“${data.text}” added as a probe non-word — no audio, and it will never appear in practice.`);
+      setForm(EMPTY_FORM);
+      router.refresh();
+      return;
+    }
+
     // Give the new word a pronunciation immediately — otherwise learners would
     // hear it read with English phonics.
     setMessage(`“${data.text}” added — generating pronunciation…`);
@@ -340,15 +390,100 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              English gloss (optional)
+              English gloss {form.isPseudo ? "(not used for probe words)" : "(optional)"}
             </span>
             <input
               value={form.meaningEn}
               onChange={(e) => setForm({ ...form, meaningEn: e.target.value })}
-              placeholder="house"
-              className={`${input} w-full`}
+              placeholder={form.isPseudo ? "—" : "house"}
+              disabled={form.isPseudo}
+              className={`${input} w-full disabled:opacity-50`}
             />
           </label>
+
+          {/* ── Probe non-word ─────────────────────────────────────────── */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-start gap-3 rounded-2xl border border-line bg-cream/60 p-4">
+              <input
+                type="checkbox"
+                checked={form.isPseudo}
+                onChange={(e) => setForm({ ...form, isPseudo: e.target.checked })}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-peach-deep"
+              />
+              <span>
+                <span className="block text-sm font-extrabold text-ink">
+                  This is a probe non-word
+                </span>
+                <span className="mt-0.5 block text-xs font-semibold text-ink-muted">
+                  A made-up word for the decoding probe. It gets no audio and no meaning, never
+                  appears in practice, and never affects a learner&apos;s level or accuracy — it
+                  exists only to check whether a child can decode letters they have not memorised.
+                  It must not be a real word in <strong>Tagalog or Cebuano</strong>, or a local
+                  name.
+                </span>
+              </span>
+            </label>
+
+            {form.isPseudo && (
+              <div className="mt-3 rounded-2xl border border-line bg-white p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={suggest}
+                    disabled={suggesting}
+                    className="flex items-center gap-2 rounded-xl bg-peach px-4 py-2 text-sm font-bold text-peach-deep transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Sparkles size={16} /> {suggesting ? "Thinking…" : "Suggest non-words"}
+                  </button>
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                    for stage
+                    <select
+                      value={suggestStage}
+                      onChange={(e) => setSuggestStage(Number(e.target.value))}
+                      className="rounded-lg border border-line bg-white px-2 py-1 text-sm font-bold text-ink outline-none focus:border-primary"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="text-xs font-semibold text-ink-muted">
+                    Suggestions are only letter combinations — you decide which are genuinely not
+                    words.
+                  </span>
+                </div>
+
+                {candidates.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {candidates.map((c) => (
+                      <li key={c.text}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              text: c.text,
+                              syllables: c.syllables,
+                              pattern: c.pattern,
+                              level: c.level,
+                              stage: suggestStage,
+                              meaningEn: "",
+                              isPseudo: true,
+                            })
+                          }
+                          className="rounded-full border border-line bg-cream px-3 py-1.5 text-sm font-bold text-ink transition hover:border-peach-deep hover:bg-peach-soft"
+                        >
+                          {c.syllables}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-3">
             <button
               type="submit"

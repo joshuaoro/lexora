@@ -158,7 +158,13 @@ export default async function LearnerReport({
                       {dict.activity[s.type] ?? s.type}
                     </td>
                     <td className="py-2.5 text-right font-bold text-ink">
-                      {s.type === "READER" ? `${s.total} heard` : `${s.correct}/${s.total}`}
+                      {/* A probe session has no score until a specialist has
+                          listened, so showing 0/8 would read as eight failures. */}
+                      {s.type === "READER"
+                        ? `${s.total} heard`
+                        : s.type === "PSEUDO_PROBE"
+                          ? dict.dashboard.probeReadCount(s.total)
+                          : `${s.correct}/${s.total}`}
                     </td>
                   </tr>
                 ))}

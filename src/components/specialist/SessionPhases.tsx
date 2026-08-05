@@ -11,6 +11,8 @@ export type PhaseSession = {
   total: number;
   correct: number;
   phase: string;
+  /** False for Reader and probe sessions, which carry a count but no score. */
+  scored: boolean;
 };
 
 const PHASES = ["BASELINE", "REGULAR", "ENDLINE"] as const;
@@ -40,9 +42,11 @@ const TONE: Record<string, string> = {
 export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }) {
   const [rows, setRows] = useState(sessions);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function setPhase(id: string, phase: string) {
     setBusy(id);
+    setError(null);
     const previous = rows;
     // Optimistic: tagging a dozen sessions in a row shouldn't feel like waiting.
     setRows((r) => r.map((s) => (s.id === id ? { ...s, phase } : s)));
@@ -51,7 +55,13 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phase }),
     });
-    if (!res?.ok) setRows(previous);
+    if (!res?.ok) {
+      // The tag used to snap back with nothing said, which looks like a
+      // misclick rather than a failed save — and this is the tag the pre/post
+      // comparison is built on, so a silently lost one is expensive.
+      setRows(previous);
+      setError(res ? "Could not save that tag." : "No internet connection — the tag was not saved.");
+    }
     setBusy(null);
   }
 
@@ -80,6 +90,12 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
         </div>
       </div>
 
+      {error && (
+        <p role="alert" className="mt-4 rounded-xl bg-orange-soft px-4 py-2.5 text-sm font-bold text-orange">
+          {error}
+        </p>
+      )}
+
       {rows.length === 0 ? (
         <p className="mt-4 text-sm text-ink-soft">
           No completed sessions yet. They appear here once the learner finishes an activity.
@@ -91,7 +107,10 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
               <div className="min-w-40">
                 <p className="font-extrabold text-ink">{s.date}</p>
                 <p className="text-xs font-semibold text-ink-muted">
-                  {s.type} · {s.correct}/{s.total}
+                  {/* Unscored activities have no correct count to show. A probe
+                      session reads 0 however well it went, because the marking
+                      happens later and by ear. */}
+                  {s.type} · {s.scored ? `${s.correct}/${s.total}` : `${s.total} items`}
                 </p>
               </div>
               <div
