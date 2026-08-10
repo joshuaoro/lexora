@@ -104,6 +104,84 @@ npm run calibration:check     # κ/MCC against hand-computed values, and the rep
 npm run audit:calibration     # end to end, including a deliberately too-strict threshold
 ```
 
+### Blind review: keeping the labels independent
+Every agreement figure in this study rests on a specialist judging a reading the system had
+already judged — and until now, the review row put the machine's answer **above the play
+button**: the transcript, the verdict in green or red, and the similarity score, all before
+the specialist could hear anything. Those judgements feed the specialist–system agreement
+percentage (Objective 2), Cohen's κ, and the fitted threshold. None of them were independent
+of the thing they measured.
+
+**Blind review is now the default.** The transcript, verdict, engine and similarity are not
+rendered at all — absent from the response, not hidden with CSS — until the specialist has
+committed a verdict, at which point the system's reading is revealed for comparison. The
+question becomes "did the learner read this correctly?" rather than "was the system right?",
+reusing the mapping the non-word probe already used. Leaving blind mode takes a deliberate
+press of *"Switch to quick review (shows AI verdict first)"*, and the current mode is shown
+at all times.
+
+`AttemptReview.blind` records the condition **per review**, so the anchored and unanchored
+populations never merge. The calibration reports agreement under each separately — the gap
+between them is a finding about anchoring, not a footnote about method. Reviews recorded
+before this existed are `blind = false`, which is the truthful value for them.
+
+### What a specialist heard: observation tags
+Grouping misreadings by linguistic feature is only worth doing if the features are real, and
+derived from ASR transcripts they would not be — see the demo-data warning below. So the
+categories come from a person listening: optional chips shown **after** the verdict, headed
+*"What did you observe?"*, covering vowel, initial/final consonant, digraph, cluster, syllable
+dropped/added, **stress**, self-correction and "could not tell".
+
+- **Optional on purpose.** A blank is honest missing data; a forced choice is noise. Every
+  report prints coverage alongside the distribution: *"categories recorded for N of M reviewed
+  misreadings (X%)"*.
+- **Stress is the point of including it.** Filipino does not write stress, so *búkas* and
+  *bukás* reach the scorer as identical letters. A specialist's ear is the only instrument the
+  study has for a marker its own literature calls diagnostic.
+- **Self-correction is separated, not counted as an error** — the child produced the right
+  word. It is also named *"self-corrected within the recording"* to distinguish it from the
+  app-prompted re-read already measured as `retries` / `retry_success_pct`.
+
+### Decoding or memorisation?
+On each learner page, real-word accuracy beside non-word accuracy. A child at 90% on real
+words and 40% on non-words is recognising this word bank rather than decoding it, which calls
+for a different intervention.
+
+**Both sides are specialist verdicts.** The obvious version of this chart puts the app's
+machine-scored real-word accuracy next to the human-scored probe accuracy — and would confound
+the scorer with the construct, showing a "memorisation gap" that is really a marking-method
+gap. Minimums are stated: **10 reviewed real words and 8 reviewed probe words** (one full probe
+run; the calibration's 30 is unreachable behind a 7-day cooldown). Counts sit beside every
+percentage, a caution appears below 20 on either side, and the blind composition of the
+underlying verdicts is displayed — anchoring could bias the two sides *unequally*, since the
+machine is more reliable on real words than on non-words.
+
+### IEP draft export
+**Specialist → learner → IEP draft**, or `/api/export?what=iep&learnerId=…` — plain text for
+pasting into a DepEd IEP. States the word-level scope, placement, accuracy, decoding time,
+the error profile **from specialist tags only**, and the decoding-vs-recall result. Suggestions
+appear under *"Points to consider (data-derived prompts — for the teacher's professional
+judgement)"* and are phrased as things to look at, never as instructions: an app that states it
+does not diagnose should not be writing "recommended intervention". Carries the disclaimer
+inline and refuses outright for a demo learner.
+
+### Demo accounts are quarantined
+`prisma/seed.ts` gives the demo learners a fortnight of **fabricated** history: `mutate()`
+invents misreadings by swapping `b↔d`, `p→b`, `m↔n`, `u→o`, `e→i` — very nearly the textbook
+dyslexia error profile. Aggregated with real participants that does not look like noise, it
+looks like a finding, and it would survive into a cohort chart and a CSV handed to a
+statistician.
+
+`LearnerProfile.isDemo` excludes them by default from cohort figures, the learners list, the
+calibration and every export. Including them takes `?demo=1` on a page or `includeDemo=true`
+on an export, they are badged `[DEMO]` when shown, and `npm run words:sync` flags the accounts
+on a database that is already running. A learner's own dashboard is untouched — this is about
+aggregation.
+
+> **Expected on a fresh study database:** until real participants have been enrolled and their
+> readings reviewed, the cohort figures, calibration and divergence chart will all read "not
+> enough data". That is the quarantine working, not a fault.
+
 > **Known limitation for the Validation chapter.** In an integration probe over 25 words (synthesized Filipino speech, not children's voices), Whisper matched the target exactly on 20/25 before variants. Every miss was a **Marungko stage 7 loanword or digraph** (`krus`, `dyip`, `tsinelas`, `mangga`, `bulaklak`), and two of them (`dyip`, `tsinelas`) returned a *different* spelling on each run. The seeded variant list was derived from synthesized speech and should be re-validated against real recordings during the reliability check; stage 7 items warrant closer specialist attention when computing agreement.
 
 ### Filipino pronunciation audio
@@ -359,16 +437,16 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (343 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (379 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
-npm run audit:links       # every route reachable from the navigation  (48)
+npm run audit:links       # every route reachable from the navigation  (50)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
-npm run audit:calibration # threshold fitted to specialist verdicts  (25)
+npm run audit:calibration # calibration, blind review, tags, demo, IEP  (59)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device

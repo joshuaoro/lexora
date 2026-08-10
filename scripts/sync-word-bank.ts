@@ -69,6 +69,26 @@ async function main() {
   }
   console.log(`Stress caveats: ${noted} applied, ${Object.keys(STRESS_NOTES).length - noted} unchanged.`);
 
+  // ── Demo accounts ──────────────────────────────────────────────────────
+  /**
+   * Flag the seeded demo learners on a database that is already running.
+   *
+   * The seed sets this for a fresh install, but the seed also deletes every
+   * table, so it can never be run against a live study database. These two
+   * accounts carry the fabricated reading history `mutate()` invents — b↔d,
+   * m↔n, u→o — and until they are flagged, every cohort figure and every
+   * exported result silently includes it.
+   *
+   * Matched on the seeded addresses only. A real participant is never touched.
+   */
+  const DEMO_EMAILS = ["learner1@lexora.ph", "learner2@lexora.ph"];
+  const { count: flagged } = await prisma.learnerProfile.updateMany({
+    where: { isDemo: false, user: { email: { in: DEMO_EMAILS } } },
+    data: { isDemo: true },
+  });
+  const demoTotal = await prisma.learnerProfile.count({ where: { isDemo: true } });
+  console.log(`Demo accounts: ${flagged} newly flagged, ${demoTotal} flagged in total.`);
+
   // ── Sanity ─────────────────────────────────────────────────────────────
   const [real, pseudo, missingAudio] = await Promise.all([
     prisma.word.count({ where: { isPseudo: false } }),

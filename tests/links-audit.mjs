@@ -18,7 +18,10 @@ const browser = await chromium.launch({
 /** Every route the app is expected to expose, by role. */
 const EXPECTED = {
   learner: ["/dashboard", "/reader", "/exercises", "/practice", "/reports", "/settings"],
-  specialist: ["/specialist", "/specialist/words"],
+  // ?demo=1 so the crawl can still reach a learner detail page: the only
+  // learners in a fresh database are demo accounts, and those are hidden by
+  // default. Without it this suite would stop covering that route entirely.
+  specialist: ["/specialist", "/specialist?demo=1", "/specialist/words"],
   public: ["/", "/login", "/register", "/privacy"],
 };
 

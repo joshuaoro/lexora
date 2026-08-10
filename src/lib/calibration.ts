@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { scoreReading, activeScoreThreshold } from "./scoring";
+import { viaLearnerScope } from "./demo";
 
 /**
  * Fitting LEXORA's acceptance threshold to specialist judgements.
@@ -33,6 +34,8 @@ export type LabelledReading = {
   /** The specialist's own verdict, recovered from their agreement. */
   specialistCorrect: boolean;
   isPseudo: boolean;
+  /** Was the machine's verdict hidden when this judgement was made? */
+  blind: boolean;
 };
 
 /**
@@ -43,18 +46,23 @@ export type LabelledReading = {
  * for the same reason they are excluded everywhere else — a reading taken after
  * the word was modelled is not an independent measure.
  */
-export async function loadLabelledReadings(): Promise<LabelledReading[]> {
+export async function loadLabelledReadings(
+  { includeDemo = false }: { includeDemo?: boolean } = {}
+): Promise<LabelledReading[]> {
   const rows = await prisma.attempt.findMany({
     where: {
       isRetry: false,
       activityType: { in: ["READ_ALOUD", "PRACTICE", "PSEUDO_PROBE"] },
       review: { isNot: null },
+      // Demo learners carry fabricated readings; a threshold fitted to those
+      // would be fitted to a seed script.
+      ...viaLearnerScope(includeDemo),
     },
     select: {
       target: true,
       transcript: true,
       correct: true,
-      review: { select: { agrees: true } },
+      review: { select: { agrees: true, blind: true } },
       word: { select: { variants: true, isPseudo: true } },
     },
   });
@@ -70,6 +78,7 @@ export async function loadLabelledReadings(): Promise<LabelledReading[]> {
     // specialist's own verdict is that agreement applied to the machine's.
     specialistCorrect: r.review!.agrees === r.correct,
     isPseudo: r.word?.isPseudo ?? false,
+    blind: r.review!.blind,
   }));
 }
 
@@ -237,6 +246,28 @@ export type Calibration = {
   pseudoSampleSize: number;
   pseudo: ThresholdMetrics | null;
   enoughData: boolean;
+  /**
+   * The same fit computed over blind and anchored labels separately.
+   *
+   * Until blind review existed, a specialist saw the machine's verdict — in
+   * colour, with its similarity — above the play button, so their judgement was
+   * not independent of the thing it was judging. Agreement measured that way is
+   * inflated by an unknown amount, and the only way to find out by how much is
+   * to keep the two populations apart and report both. The gap between them is
+   * a finding about anchoring, not a footnote about methods.
+   *
+   * Either side is null when too few labels of that kind exist to say anything.
+   */
+  byCondition: {
+    blind: ConditionSummary | null;
+    anchored: ConditionSummary | null;
+  };
+};
+
+/** Agreement at the threshold in force, for one labelling condition. */
+export type ConditionSummary = {
+  n: number;
+  atCurrent: ThresholdMetrics;
 };
 
 function sweep(replayed: Replayed[], labels: boolean[]): ThresholdMetrics[] {
@@ -332,7 +363,25 @@ export function calibrate(
     ? metricsFor(confusionAt(pseudoReplayed, pseudoLabels, currentThreshold), currentRounded)
     : null;
 
+  // Agreement at the threshold in force, split by whether the machine's verdict
+  // was visible when the label was made. Reported even on small samples, with
+  // the count attached, because the comparison is the point — but a single-digit
+  // n is not worth computing at all.
+  const MIN_CONDITION = 5;
+  const condition = (want: boolean): ConditionSummary | null => {
+    const subset = real.filter((r) => r.blind === want);
+    if (subset.length < MIN_CONDITION) return null;
+    return {
+      n: subset.length,
+      atCurrent: metricsFor(
+        confusionAt(subset.map(replay), subset.map((r) => r.specialistCorrect), currentThreshold),
+        currentRounded
+      ),
+    };
+  };
+
   return {
+    byCondition: { blind: condition(true), anchored: condition(false) },
     curve,
     current,
     bestByMcc,
@@ -347,6 +396,8 @@ export function calibrate(
 }
 
 /** Load and calibrate in one call. */
-export async function calibrationReport(): Promise<Calibration> {
-  return calibrate(await loadLabelledReadings());
+export async function calibrationReport(
+  opts: { includeDemo?: boolean } = {}
+): Promise<Calibration> {
+  return calibrate(await loadLabelledReadings(opts));
 }

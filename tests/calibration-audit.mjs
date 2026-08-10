@@ -13,10 +13,11 @@
  *   npm run audit:calibration -- https://your-app.vercel.app
  */
 import { spawn } from "node:child_process";
+import { chromium } from "playwright-core";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
-  BASE, api, login, check, section, report, one,
+  BASE, PASSWORD, api, json, login, check, section, report, one, query,
   createTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -284,6 +285,348 @@ check(
   /95% CI/i.test(fittedPage),
   "interval shown"
 );
+
+/* ── 6. demo learners stay out of every aggregate ──────────────────────── */
+section("[6] fabricated demo history is excluded by default");
+
+const demoCount = await one(`SELECT COUNT(*)::int AS n FROM "LearnerProfile" WHERE "isDemo"`);
+check("the seeded demo learners are flagged", demoCount.n >= 2, `${demoCount.n} flagged`);
+
+const rowsOf = async (path) => {
+  const text = await (await api(path, { cookie: specialist })).text();
+  return text.replace(/^﻿/, "").trim().split("\r\n").length - 1;
+};
+const summaryDefault = await rowsOf("/api/export?what=summary");
+const summaryWithDemo = await rowsOf("/api/export?what=summary&includeDemo=true");
+check(
+  "the summary export omits them unless asked",
+  summaryWithDemo > summaryDefault,
+  `${summaryDefault} rows default, ${summaryWithDemo} with includeDemo=true`
+);
+
+const listDefault = await (await api("/specialist", { cookie: specialist })).text();
+const listWithDemo = await (await api("/specialist?demo=1", { cookie: specialist })).text();
+const demoName = (
+  await one(
+    `SELECT u.name FROM "LearnerProfile" lp JOIN "User" u ON u.id = lp."userId" WHERE lp."isDemo" LIMIT 1`
+  )
+)?.name;
+check(
+  "the learners list hides them by default",
+  demoName ? !listDefault.includes(`>${demoName}<`) : true,
+  demoName ?? "none"
+);
+check(
+  "and shows them, badged, behind the toggle",
+  demoName ? listWithDemo.includes(`>${demoName}<`) && /demo<\/span>/i.test(listWithDemo) : true,
+  "badged"
+);
+
+/* ── 7. blind review actually removes the anchors ──────────────────────── */
+section("[7] blind review hides the machine's answer until a verdict exists");
+
+/**
+ * Asserted on the response body, not on a class name.
+ *
+ * A panel hidden with CSS is still in the document, still readable, and still
+ * anchoring — so a test that checks for `hidden` or `sr-only` would pass on an
+ * implementation that fixes nothing. What matters is that the transcript, the
+ * verdict and the similarity are not sent at all.
+ */
+const anchorLearner = await createTestLearner("blind");
+const anchorWords = await query(
+  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 3`
+);
+for (const w of anchorWords) {
+  await api("/api/attempts", {
+    cookie: anchorLearner.cookie,
+    method: "POST",
+    body: { activityType: "READ_ALOUD", wordId: w.id, target: w.text, browserTranscript: "zzzz", responseMs: 1500 },
+  });
+}
+
+const blindPage = await (
+  await api(`/specialist/learner/${anchorLearner.learnerId}`, { cookie: specialist })
+).text();
+const count = (h, re) => (h.match(re) ?? []).length;
+check(
+  "the review list defaults to blind",
+  /Blind review/.test(blindPage) && /hidden until you decide/.test(blindPage),
+  "banner + prompt present"
+);
+check(
+  "no verdict chip is sent for an unreviewed reading",
+  count(blindPage, /system: /g) === 0,
+  `${count(blindPage, /system: /g)} leaked`
+);
+check(
+  "no transcript is sent",
+  count(blindPage, /Heard:/g) === 0,
+  `${count(blindPage, /Heard:/g)} leaked`
+);
+check(
+  "no similarity score is sent",
+  count(blindPage, /Similarity to the target word/g) === 0,
+  `${count(blindPage, /Similarity to the target word/g)} leaked`
+);
+check(
+  "but the recording is still playable and the opt-out is offered",
+  /Switch to quick review/.test(blindPage),
+  "deliberate opt-out present"
+);
+
+/* ── 8. the verdict records how it was made, and what was heard ────────── */
+section("[8] blind flag and observation tags round-trip");
+
+const toJudge = await one(
+  `SELECT id, correct FROM "Attempt" WHERE "learnerId" = $1 ORDER BY "createdAt" LIMIT 1`,
+  [anchorLearner.learnerId]
+);
+const judged = await json("/api/reviews", {
+  cookie: specialist,
+  method: "POST",
+  body: { attemptId: toJudge.id, agrees: true, blind: true, tags: ["vowel", "stress"] },
+});
+check("a blind verdict with tags is accepted", judged.status < 300, `HTTP ${judged.status}`);
+
+const stored = await one(
+  `SELECT r.blind, COUNT(t.id)::int AS tags
+     FROM "AttemptReview" r LEFT JOIN "ReviewErrorTag" t ON t."reviewId" = r.id
+    WHERE r."attemptId" = $1 GROUP BY r.blind`,
+  [toJudge.id]
+);
+check("blind is recorded on the review", stored.blind === true);
+check("both tags are stored", stored.tags === 2, `${stored.tags} tags`);
+
+// Re-tagging must replace, not accumulate — otherwise unticking a chip is
+// impossible and the distribution inflates with every edit.
+await json("/api/reviews", {
+  cookie: specialist,
+  method: "POST",
+  body: { attemptId: toJudge.id, agrees: true, blind: true, tags: ["vowel"] },
+});
+const afterRetag = await one(
+  `SELECT COUNT(*)::int AS n FROM "ReviewErrorTag" t
+     JOIN "AttemptReview" r ON r.id = t."reviewId" WHERE r."attemptId" = $1`,
+  [toJudge.id]
+);
+check("re-tagging replaces rather than accumulates", afterRetag.n === 1, `${afterRetag.n} tags`);
+
+// A verdict saved without a `tags` field must not wipe tags recorded earlier.
+await json("/api/reviews", {
+  cookie: specialist,
+  method: "POST",
+  body: { attemptId: toJudge.id, agrees: true, blind: true, note: "a later note" },
+});
+const afterNote = await one(
+  `SELECT COUNT(*)::int AS n FROM "ReviewErrorTag" t
+     JOIN "AttemptReview" r ON r.id = t."reviewId" WHERE r."attemptId" = $1`,
+  [toJudge.id]
+);
+check("saving a note alone leaves tags untouched", afterNote.n === 1, `${afterNote.n} tags`);
+
+const unknown = await json("/api/reviews", {
+  cookie: specialist,
+  method: "POST",
+  body: { attemptId: toJudge.id, agrees: true, tags: ["vowel", "not_a_real_category"] },
+});
+check("an unknown category is dropped, not stored", unknown.status < 300 && unknown.body.tags?.length === 1,
+  JSON.stringify(unknown.body.tags));
+
+/* ── 9. the two labelling conditions are reported apart ────────────────── */
+section("[9] the calibration separates blind from anchored labels");
+
+const calCsvHeaders = await (await api("/api/export?what=calibration", { cookie: specialist })).text();
+check("the calibration export still parses", calCsvHeaders.includes("cohens_kappa"), "intact");
+
+const calPage = await (await api("/specialist/calibration", { cookie: specialist })).text();
+check(
+  "the calibration page explains what is and is not adapted",
+  /nothing\s+is fine-tuned/i.test(calPage),
+  "stated"
+);
+
+/* ── 10. decoding vs recall, compared like with like ───────────────────── */
+section("[10] the divergence panel refuses to draw on too little");
+
+const emptyStateHtml = blindPage;
+check("the panel is present", /Decoding or memorisation/i.test(emptyStateHtml), "shown");
+check(
+  "and shows the empty state with its counts at this data volume",
+  /Not enough reviewed readings yet/i.test(emptyStateHtml) && /one full probe run/i.test(emptyStateHtml),
+  "thresholds explained"
+);
+
+/* ── 11. the IEP draft states rather than prescribes ───────────────────── */
+section("[11] the IEP draft");
+
+const iep = await api(`/api/export?what=iep&learnerId=${anchorLearner.learnerId}`, {
+  cookie: specialist,
+});
+const iepText = await iep.text();
+check("it downloads as plain text", iep.ok && /text\/plain/.test(iep.headers.get("content-type") ?? ""), `HTTP ${iep.status}`);
+check("named as a .txt for pasting into a document", /filename="lexora-iep-[^"]+\.txt"/.test(iep.headers.get("content-disposition") ?? ""), iep.headers.get("content-disposition") ?? "");
+check("it states the word-level scope", /Connected text, reading fluency/i.test(iepText), "delimitation stated");
+check(
+  "suggestions are labelled as the teacher's judgement, not instructions",
+  /for the teacher's professional judgement/i.test(iepText) &&
+    /not clinical recommendations/i.test(iepText),
+  "framed as prompts"
+);
+check("it carries the disclaimer", /does not diagnose dyslexia/i.test(iepText), "present");
+check(
+  "the error profile is sourced from listening, not transcripts",
+  /from specialist listening, not automatic scoring/i.test(iepText),
+  "sourced"
+);
+
+const demoLearner = await one(`SELECT id FROM "LearnerProfile" WHERE "isDemo" LIMIT 1`);
+if (demoLearner) {
+  const refused = await api(`/api/export?what=iep&learnerId=${demoLearner.id}`, { cookie: specialist });
+  check(
+    "and it refuses a demo learner, whose history is fabricated",
+    refused.status === 404,
+    `HTTP ${refused.status}`
+  );
+}
+
+/* ── 12. the divergence chart must not filter on `blind` ───────────────── */
+section("[12] decoding vs recall draws on anchored labels too");
+
+/**
+ * The obvious wrong implementation is the one that silently shows nothing.
+ *
+ * `blind` says whether the *machine's* verdict was visible. This chart compares
+ * two sets of *human* verdicts, so the machine is not a term in the comparison
+ * and filtering to blind-only would empty the panel for no benefit — every
+ * review recorded before blind mode existed is `blind = false`.
+ *
+ * So the fixture below is deliberately all-anchored. If someone later adds
+ * `blind: true` to the query, this section fails instead of the panel quietly
+ * going blank in production.
+ */
+const divLearner = await createTestLearner("diverge");
+const realPool = await query(
+  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 10`
+);
+const probePool = await query(`SELECT id, text FROM "Word" WHERE "isPseudo" ORDER BY text LIMIT 8`);
+
+const recordReviewed = async (word, activityType, heard, agrees) => {
+  const posted = await api("/api/attempts", {
+    cookie: divLearner.cookie,
+    method: "POST",
+    body: { activityType, wordId: word.id, target: word.text, browserTranscript: heard, responseMs: 1500 },
+  });
+  const { id } = await posted.json().catch(() => ({}));
+  if (!id) return false;
+  // blind: false throughout — the whole point of this fixture.
+  const saved = await json("/api/reviews", {
+    cookie: specialist,
+    method: "POST",
+    body: { attemptId: id, agrees, blind: false },
+  });
+  return saved.status < 300;
+};
+
+let seeded = 0;
+// Real words read well: 9 of 10 judged correct.
+for (let i = 0; i < realPool.length; i++) {
+  const ok = await recordReviewed(realPool[i], "READ_ALOUD", realPool[i].text, i !== 0);
+  if (ok) seeded++;
+}
+// Probe words read poorly: 2 of 8 judged correct — the memorisation signature.
+for (let i = 0; i < probePool.length; i++) {
+  const ok = await recordReviewed(probePool[i], "PSEUDO_PROBE", "zzzz", i < 2);
+  if (ok) seeded++;
+}
+check("18 anchored reviews seeded on both sides", seeded === 18, `${seeded}/18`);
+
+/**
+ * Read in a browser, not from the response body.
+ *
+ * A server-component page is served as an RSC flight payload, and text built
+ * from interpolated values — `({correct}/{n})` — is serialised as separate
+ * array elements rather than as the string a person sees. Matching "(9/10)"
+ * against that payload fails on a panel that renders it perfectly well. What is
+ * being asserted here is what a specialist reads, so the assertion has to run
+ * where the reading happens.
+ *
+ * (Section 7 above deliberately does the opposite and greps the payload: there
+ * the claim is that the transcript and similarity are never *sent*, which is a
+ * stronger property than not being displayed.)
+ */
+const divBrowser = await chromium.launch({
+  channel: process.env.AUDIT_BROWSER ?? "msedge",
+  headless: true,
+});
+const divPage = await divBrowser.newPage();
+await divPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await divPage.fill("#email", "specialist@lexora.ph");
+await divPage.fill("#password", PASSWORD);
+await divPage.click("button[type=submit]");
+await divPage.waitForURL("**/specialist", { timeout: 30000 });
+await divPage.goto(`${BASE}/specialist/learner/${divLearner.learnerId}`, {
+  waitUntil: "networkidle",
+});
+const divText = await divPage.locator("main").innerText();
+await divBrowser.close();
+
+check(
+  "the chart renders even though no label was blind",
+  !/Not enough reviewed readings yet/.test(divText),
+  "drew figures"
+);
+check(
+  "it reports the counts beside the percentages",
+  /\(\d+\/10\)/.test(divText) && /\(\d+\/8\)/.test(divText),
+  divText.match(/\(\d+\/(?:10|8)\)/g)?.join(" ") ?? "no denominators"
+);
+check(
+  "it warns that the sample is thin",
+  /Fewer than 20 readings/.test(divText),
+  "caution shown"
+);
+check(
+  "and names differential anchoring rather than assuming it away",
+  /Judged blind: 0\/10 real words, 0\/8 probe words/.test(divText) &&
+    /anchoring could affect the two sides unequally/.test(divText),
+  divText.match(/Judged blind: [^.]+/)?.[0] ?? "composition missing"
+);
+
+/* ── 13. self-correction is a behaviour, not an error ──────────────────── */
+section("[13] self-correction is reported apart from the error categories");
+
+const scAttempt = await one(
+  `SELECT a.id FROM "Attempt" a JOIN "AttemptReview" r ON r."attemptId" = a.id
+    WHERE a."learnerId" = $1 AND a.correct = false ORDER BY a."createdAt" LIMIT 1`,
+  [divLearner.learnerId]
+);
+if (scAttempt) {
+  await json("/api/reviews", {
+    cookie: specialist,
+    method: "POST",
+    body: { attemptId: scAttempt.id, agrees: false, blind: false, tags: ["self_corrected"] },
+  });
+  const scIep = await (
+    await api(`/api/export?what=iep&learnerId=${divLearner.learnerId}`, { cookie: specialist })
+  ).text();
+  check(
+    "it is reported as a behaviour, in its own sentence",
+    /self-corrected within the recording/i.test(scIep) &&
+      /reading behaviour rather than an error/i.test(scIep),
+    "separated"
+  );
+  check(
+    "and never listed among the error categories",
+    !/^\s*Self-corrected in the recording: \d+/m.test(scIep),
+    "not counted as an error"
+  );
+  check(
+    "coverage is stated with the distribution, never a bare count",
+    /Categories were recorded for \d+ of \d+ reviewed misreadings \(\d+%\)/.test(scIep),
+    "denominator present"
+  );
+}
 
 report("Calibration audit");
 await endSuite();

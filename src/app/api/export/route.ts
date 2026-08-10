@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { patternFamily as patternFamilyFor, PLAUSIBLE, median } from "@/lib/stats";
 import { calibrationReport } from "@/lib/calibration";
+import { learnerScope, viaLearnerScope, includeDemoFrom } from "@/lib/demo";
+import { buildIepDraft } from "@/lib/iep";
 
 /**
  * CSV export of learner data for statistical treatment.
@@ -79,6 +81,17 @@ export async function GET(req: Request) {
   const what = url.searchParams.get("what") ?? "attempts";
   let learnerId = url.searchParams.get("learnerId") ?? undefined;
 
+  /**
+   * Demo learners are excluded unless asked for by name.
+   *
+   * Their reading history is fabricated, and an export is the artefact most
+   * likely to be opened in SPSS and reported without anyone re-checking where
+   * the rows came from. Opting in is a deliberate query parameter, never a
+   * default. Requesting one learner explicitly still works — this governs the
+   * cohort-wide exports, not a specialist looking at a specific child.
+   */
+  const includeDemo = includeDemoFrom(url);
+
   // Learners may only export their own records. The cohort-wide exports —
   // everyone's summary, and the calibration fitted across all of them — are
   // specialist-only.
@@ -101,7 +114,7 @@ export async function GET(req: Request) {
     : null;
 
   if (what === "attempts") {
-    const scope = learnerId ? { learnerId } : {};
+    const scope = learnerId ? { learnerId } : viaLearnerScope(includeDemo);
 
     // Every field is named rather than using `include`, which keeps all scalar
     // columns — and one of those columns is the base64 recording. The export
@@ -212,7 +225,7 @@ export async function GET(req: Request) {
 
   if (what === "sessions") {
     const sessions = await prisma.activitySession.findMany({
-      where: { ...(learnerId ? { learnerId } : {}), total: { gt: 0 } },
+      where: { ...(learnerId ? { learnerId } : viaLearnerScope(includeDemo)), total: { gt: 0 } },
       orderBy: { createdAt: "asc" },
       include: { learner: { include: { user: { select: { name: true } } } } },
     });
@@ -245,6 +258,7 @@ export async function GET(req: Request) {
 
   if (what === "summary") {
     const learners = await prisma.learnerProfile.findMany({
+      where: learnerScope(includeDemo),
       include: { user: { select: { name: true, email: true } } },
       orderBy: { user: { name: "asc" } },
     });
@@ -387,7 +401,7 @@ export async function GET(req: Request) {
    * breaks every tool that would read this.
    */
   if (what === "calibration") {
-    const cal = await calibrationReport();
+    const cal = await calibrationReport({ includeDemo });
 
     const mark = (t: number) =>
       [
@@ -438,6 +452,41 @@ export async function GET(req: Request) {
       ),
       exportName("calibration", null)
     );
+  }
+
+  /**
+   * A plain-text reading summary for a SPED teacher to paste into an IEP.
+   *
+   * Text rather than CSV because its destination is a Word document, not SPSS.
+   * Specialist-only and always for one named learner: this is a document about
+   * a child, and there is no cohort version of it.
+   */
+  if (what === "iep") {
+    if (session.role !== "SPECIALIST") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    if (!learnerId) {
+      return NextResponse.json({ error: "learnerId is required" }, { status: 400 });
+    }
+
+    const draft = await buildIepDraft(learnerId);
+    if (!draft) {
+      // Either no such learner, or a demo account — whose reading history is
+      // fabricated and must never leave the app looking like a record of a
+      // child. Refused outright rather than caveated, because a caveat stops
+      // travelling with the text the moment it is pasted somewhere else.
+      return NextResponse.json(
+        { error: "No IEP draft available for this learner (demo accounts are excluded)." },
+        { status: 404 }
+      );
+    }
+
+    return new NextResponse(draft, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${exportName("iep", scopedTo).replace(/\.csv$/, ".txt")}"`,
+      },
+    });
   }
 
   return NextResponse.json({ error: "Unknown export type" }, { status: 400 });

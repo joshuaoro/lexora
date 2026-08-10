@@ -61,8 +61,9 @@ const reading = (
   transcript: string | null,
   specialistCorrect: boolean,
   variants: string[] = [],
-  isPseudo = false
-): LabelledReading => ({ target, transcript, variants, specialistCorrect, isPseudo });
+  isPseudo = false,
+  blind = true
+): LabelledReading => ({ target, transcript, variants, specialistCorrect, isPseudo, blind });
 
 const at = (cal: ReturnType<typeof calibrate>, t: number) =>
   cal.curve.find((row) => row.threshold === t)!;
@@ -134,8 +135,33 @@ const withProbes = calibrate(
 check("the fit ignores them", withProbes.sampleSize === separable.length, `n=${withProbes.sampleSize}`);
 check("but they are counted and reported", withProbes.pseudoSampleSize === 8 && withProbes.pseudo !== null);
 
-/* ── 5. the current threshold is always on the curve ───────────────────── */
-console.log("\n[5] the setting in force is always reported");
+/* ── 5. blind and anchored labels are kept apart ───────────────────────── */
+console.log("\n[5] the two labelling conditions are reported separately");
+
+// Twelve blind labels the machine agrees with, and twelve anchored ones where
+// it does not — a deliberately extreme split, so if the two populations were
+// pooled the difference between them would vanish into one middling figure.
+const mixed: LabelledReading[] = [];
+for (let i = 0; i < 12; i++) mixed.push(reading("bahay", "bahay", true, [], false, true));
+for (let i = 0; i < 12; i++) mixed.push(reading("bahay", "zzzzz", true, [], false, false));
+for (let i = 0; i < 12; i++) mixed.push(reading("araw", "zzzzz", false, [], false, true));
+const split = calibrate(mixed, 0.95);
+
+check("blind labels are counted on their own", split.byCondition.blind?.n === 24, `n=${split.byCondition.blind?.n}`);
+check("anchored labels are counted on their own", split.byCondition.anchored?.n === 12, `n=${split.byCondition.anchored?.n}`);
+check(
+  "and they do not agree with the machine equally — which is the point",
+  split.byCondition.blind !== null &&
+    split.byCondition.anchored !== null &&
+    split.byCondition.blind.atCurrent.accuracy !== split.byCondition.anchored.atCurrent.accuracy,
+  `blind ${split.byCondition.blind?.atCurrent.accuracy.toFixed(2)} vs anchored ${split.byCondition.anchored?.atCurrent.accuracy.toFixed(2)}`
+);
+
+const allBlind = calibrate(separable, 0.95); // helper defaults blind = true
+check("a condition with too few labels is withheld, not guessed", allBlind.byCondition.anchored === null);
+
+/* ── 6. the current threshold is always on the curve ───────────────────── */
+console.log("\n[6] the setting in force is always reported");
 
 for (const t of [0.5, 0.85, 0.95, 1]) {
   const cal = calibrate(separable, t);

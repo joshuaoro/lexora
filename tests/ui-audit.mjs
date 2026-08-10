@@ -153,6 +153,10 @@ const sp = await sctx.newPage();
 watch(sp, "specialist");
 await signIn(sp, "specialist@lexora.ph", "/specialist");
 
+// Juan is a demo account, and demo accounts are excluded from the learners list
+// by default now — their reading history is fabricated and must not reach a
+// cohort figure. This suite uses Juan deliberately as a fixture, so it opts in.
+await sp.goto(`${BASE}/specialist?demo=1`, { waitUntil: "networkidle" });
 await sp.click("text=Juan");
 await sp.waitForSelector("text=Scoring reliability check", { timeout: 20000 });
 const juanId = sp.url().split("/").pop();

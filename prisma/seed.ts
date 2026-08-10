@@ -122,7 +122,9 @@ async function main() {
   const juan = await prisma.user.create({
     data: {
       email: "learner1@lexora.ph", password, name: "Juan", role: "LEARNER",
-      learnerProfile: { create: { level: 2, stage: 4 } },
+      // isDemo: this account carries the fabricated history generated below,
+      // which must never reach a cohort chart or an exported result.
+      learnerProfile: { create: { level: 2, stage: 4, isDemo: true } },
     },
     include: { learnerProfile: true },
   });
@@ -130,7 +132,7 @@ async function main() {
   await prisma.user.create({
     data: {
       email: "learner2@lexora.ph", password, name: "Ana", role: "LEARNER",
-      learnerProfile: { create: {} },
+      learnerProfile: { create: { isDemo: true } },
     },
   });
 

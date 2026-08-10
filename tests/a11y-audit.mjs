@@ -85,6 +85,9 @@ await spage.fill("#password", PASSWORD);
 await spage.click("button[type=submit]");
 await spage.waitForURL("**/specialist", { timeout: 30000 });
 
+// Demo learners are hidden by default; this scan wants any learner page at
+// all, so it asks for them explicitly rather than silently skipping the route.
+await spage.goto(`${BASE}/specialist?demo=1`, { waitUntil: "networkidle" });
 const learnerHref = await spage
   .locator('a[href^="/specialist/learner/"]')
   .first()

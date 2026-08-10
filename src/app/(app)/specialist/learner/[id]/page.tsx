@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShieldCheck, Download, Sparkles } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Download, Sparkles, FileText } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import LearnerReport from "@/components/LearnerReport";
@@ -16,6 +16,8 @@ import { isScoredActivity } from "@/lib/activity";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import { retentionDays } from "@/lib/retention-policy";
+import { divergence } from "@/lib/divergence";
+import DivergencePanel from "@/components/specialist/DivergencePanel";
 
 /** How far below the threshold still counts as a borderline reading. */
 const BORDERLINE_BAND = 0.15;
@@ -29,6 +31,8 @@ export default async function LearnerDetailPage({
   const { id } = await params;
   const lang = await getLang();
   const t = getDict(lang).specialist;
+
+  const learnerDivergence = await divergence(id);
 
   const profile = await prisma.learnerProfile.findUnique({
     where: { id },
@@ -71,7 +75,7 @@ export default async function LearnerDetailPage({
         engine: true,
         altTranscript: true,
         score: true,
-        review: { select: { agrees: true, note: true } },
+        review: { select: { agrees: true, note: true, tags: { select: { tag: true } } } },
         word: { select: { stressNote: true } },
       },
     }),
@@ -116,7 +120,7 @@ export default async function LearnerDetailPage({
         engine: true,
         altTranscript: true,
         score: true,
-        review: { select: { agrees: true, note: true } },
+        review: { select: { agrees: true, note: true, tags: { select: { tag: true } } } },
         word: { select: { stressNote: true } },
       },
     }),
@@ -160,7 +164,7 @@ export default async function LearnerDetailPage({
         engine: true,
         altTranscript: true,
         score: true,
-        review: { select: { agrees: true, note: true } },
+        review: { select: { agrees: true, note: true, tags: { select: { tag: true } } } },
         session: { select: { phase: true } },
       },
     }),
@@ -237,7 +241,9 @@ export default async function LearnerDetailPage({
     engine: a.engine,
     altTranscript: a.altTranscript,
     score: a.score,
-    review: a.review,
+    review: a.review
+      ? { agrees: a.review.agrees, note: a.review.note, tags: a.review.tags.map((t) => t.tag) }
+      : null,
     stressNote: a.word?.stressNote ?? null,
   }));
 
@@ -253,7 +259,9 @@ export default async function LearnerDetailPage({
     engine: a.engine,
     altTranscript: a.altTranscript,
     score: a.score,
-    review: a.review,
+    review: a.review
+      ? { agrees: a.review.agrees, note: a.review.note, tags: a.review.tags.map((t) => t.tag) }
+      : null,
     stressNote: a.word?.stressNote ?? null,
   }));
 
@@ -269,7 +277,9 @@ export default async function LearnerDetailPage({
     engine: a.engine,
     altTranscript: a.altTranscript,
     score: a.score,
-    review: a.review,
+    review: a.review
+      ? { agrees: a.review.agrees, note: a.review.note, tags: a.review.tags.map((t) => t.tag) }
+      : null,
   }));
 
   // The probe result is the specialist's count, not the system's — and it is
@@ -311,6 +321,15 @@ export default async function LearnerDetailPage({
           >
             <Download size={16} /> {t.sessionsCsv}
           </a>
+          {!profile.isDemo && (
+            <a
+              href={`/api/export?what=iep&learnerId=${profile.id}`}
+              className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
+              title="Plain-text reading summary to paste into an IEP. Observations only — the recommendations remain the teacher's."
+            >
+              <FileText size={16} /> IEP draft
+            </a>
+          )}
           <PrintButton />
         </div>
       </div>
@@ -387,6 +406,8 @@ export default async function LearnerDetailPage({
           <ReviewList attempts={probeAttempts} mode="probe" />
         </div>
       </section>
+
+      <DivergencePanel d={learnerDivergence} />
 
       <ThresholdCalibration
         attempts={borderlineAttempts}

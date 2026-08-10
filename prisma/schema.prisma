@@ -33,6 +33,20 @@ model LearnerProfile {
   level    Int    @default(1) // adaptive difficulty 1–5
   stage    Int    @default(1) // Marungko stage reached 1–7
   settings String @default("{}") // accessibility settings JSON
+  /**
+   * A demonstration account, not a study participant.
+   *
+   * The seeded demo learners carry a fortnight of *fabricated* reading history:
+   * `mutate()` in prisma/seed.ts invents misreadings by swapping b↔d, p→b, m↔n,
+   * u→o and e→i — which is, almost exactly, the textbook dyslexia error
+   * profile. Left in the aggregates, that invented data would produce a cohort
+   * chart and an error distribution that look like a convincing research
+   * finding and are a seed script's output.
+   *
+   * So every query that sums across learners excludes these by default, and
+   * showing them takes a deliberate act.
+   */
+  isDemo   Boolean @default(false)
 
   attempts      Attempt[]
   sessions      ActivitySession[]
@@ -205,7 +219,54 @@ model AttemptReview {
   specialist   User     @relation(fields: [specialistId], references: [id], onDelete: Cascade)
   agrees       Boolean // specialist agrees with the system's correct/incorrect verdict
   note         String?
+  /**
+   * Whether the machine's verdict was hidden when this judgement was made.
+   *
+   * It was not, for every review recorded before this column existed. The
+   * review row used to show the transcript, the verdict in green or red, and
+   * the similarity score *above* the play button — so a specialist met the
+   * answer before they could hear the reading, and the agreement percentage,
+   * Cohen's κ and the fitted threshold all rest on labels that were not
+   * independent of the thing they measure.
+   *
+   * Recording it per review rather than assuming it: without this flag the
+   * anchored and unanchored judgements become one population and the repair
+   * can never be demonstrated. With it, the difference between κ under each
+   * condition is a result worth reporting.
+   */
+  blind        Boolean  @default(false)
   createdAt    DateTime @default(now())
+
+  tags ReviewErrorTag[]
+}
+
+/**
+ * What a reading specialist heard, in their words rather than the recogniser's.
+ *
+ * Grouping misreadings by linguistic feature is only worth doing if the
+ * features are real. Derived from ASR transcripts they would not be: most of
+ * the transcripts in this database were invented by the seed script, and the
+ * genuine ones carry the recogniser's own spelling — "Bahai" for *bahay*, "CC"
+ * for *sisi* — which is orthography and noise, not a child's phonology.
+ *
+ * So the categories come from someone listening. Optional, always: a specialist
+ * who is unsure leaves it blank, and a blank is honest missing data where a
+ * forced choice would be noise. Every report over these must state its coverage
+ * alongside the distribution.
+ *
+ * A relation rather than a delimited column because these are a controlled
+ * vocabulary meant to be counted — one groupBy, and no room for the spelling
+ * drift a free-text field invites.
+ */
+model ReviewErrorTag {
+  id       String        @id @default(cuid())
+  reviewId String
+  review   AttemptReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  tag      String
+
+  // One of each tag per review; re-tagging is idempotent.
+  @@unique([reviewId, tag])
+  @@index([tag])
 }
 
 // Personalized practice list: auto-added on misreads, or pinned by a specialist.

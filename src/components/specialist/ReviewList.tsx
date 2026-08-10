@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines, Eye, EyeOff } from "lucide-react";
+import { ERROR_TAGS } from "@/lib/error-tags";
 import { tryFetch } from "@/lib/net";
 
 export type ReviewableAttempt = {
@@ -16,7 +17,7 @@ export type ReviewableAttempt = {
   engine: string | null; // "server" (Whisper) | "browser" (Web Speech)
   altTranscript: string | null;
   score: number; // similarity to the target, 0–1
-  review: { agrees: boolean; note: string | null } | null;
+  review: { agrees: boolean; note: string | null; tags?: string[] } | null;
   /** Set when the word's meaning depends on stress the spelling does not mark. */
   stressNote?: string | null;
 };
@@ -59,6 +60,17 @@ export default function ReviewList({
   mode?: "agreement" | "probe";
 }) {
   const isProbe = mode === "probe";
+
+  /**
+   * Blind is the default, and the probe is blind by construction.
+   *
+   * The machine's verdict used to sit above the play button in green or red
+   * with its similarity beside it, so a specialist met the answer before they
+   * could hear the reading. Every one of those judgements feeds the agreement
+   * percentage, Cohen's κ and the fitted threshold, and none of them was
+   * independent of the thing it was measuring.
+   */
+  const [blind, setBlind] = useState(true);
   const [reviews, setReviews] = useState<Record<string, boolean>>(
     Object.fromEntries(
       attempts.filter((a) => a.review).map((a) => [a.id, a.review!.agrees])
@@ -69,24 +81,59 @@ export default function ReviewList({
       attempts.filter((a) => a.review?.note).map((a) => [a.id, a.review!.note!])
     )
   );
+  const [tags, setTags] = useState<Record<string, string[]>>(
+    Object.fromEntries(attempts.filter((a) => a.review?.tags?.length).map((a) => [a.id, a.review!.tags!]))
+  );
   const [noteOpen, setNoteOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  /** Rows the specialist has judged in this sitting, so the reveal is theirs. */
+  const [justJudged, setJustJudged] = useState<Set<string>>(new Set());
 
-  async function review(attemptId: string, agrees: boolean, note?: string) {
+  /**
+   * Whether this row may show the machine's verdict.
+   *
+   * In quick review, always. In blind review, only once the specialist has
+   * committed a judgement — either now or in an earlier sitting, since a row
+   * already carrying a review has nothing left to anchor.
+   */
+  function revealed(attemptId: string): boolean {
+    return !blind || reviews[attemptId] !== undefined || justJudged.has(attemptId);
+  }
+
+  async function review(attemptId: string, agrees: boolean, note?: string, nextTags?: string[]) {
     setBusy(attemptId);
     setFailed(null);
     const res = await tryFetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attemptId, agrees, note: note ?? notes[attemptId] ?? undefined }),
+      body: JSON.stringify({
+        attemptId,
+        agrees,
+        note: note ?? notes[attemptId] ?? undefined,
+        // What was actually on screen when this judgement was formed, not what
+        // the toggle happens to say later.
+        blind: blind && !justJudged.has(attemptId) && reviews[attemptId] === undefined,
+        ...(nextTags !== undefined ? { tags: nextTags } : {}),
+      }),
     });
     // A verdict that fails to save used to leave the button exactly as it was,
     // which is indistinguishable from not having pressed it. These verdicts are
     // the agreement metric and the probe score, so a lost one is not cosmetic.
-    if (res?.ok) setReviews((r) => ({ ...r, [attemptId]: agrees }));
-    else setFailed(attemptId);
+    if (res?.ok) {
+      setReviews((r) => ({ ...r, [attemptId]: agrees }));
+      setJustJudged((s) => new Set(s).add(attemptId));
+    } else setFailed(attemptId);
     setBusy(null);
+  }
+
+  /** Toggle one observation chip and save immediately. */
+  async function toggleTag(attemptId: string, tag: string) {
+    const current = tags[attemptId] ?? [];
+    const next = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag];
+    setTags((t) => ({ ...t, [attemptId]: next }));
+    const agrees = reviews[attemptId];
+    if (agrees !== undefined) await review(attemptId, agrees, undefined, next);
   }
 
   /** Save a written observation alongside the verdict (kept for the audit trail). */
@@ -117,12 +164,47 @@ export default function ReviewList({
   }
 
   return (
-    <ul className="divide-y divide-line">
+    <>
+      {/*
+        The mode, always on screen, and leaving it is a sentence rather than a
+        switch. A specialist who has just recorded twenty verdicts should never
+        have to remember which condition produced them, and stepping out of
+        blind review should take a moment's thought — the friction is the point,
+        but it is not a lock: there are real reasons to look first.
+      */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-cream/60 px-4 py-2.5">
+        <span className="flex items-center gap-2 text-sm font-extrabold text-ink">
+          {blind ? (
+            <>
+              <EyeOff size={16} className="text-primary" /> Blind review
+              <span className="font-semibold text-ink-muted">
+                — the system&apos;s verdict is hidden until you decide
+              </span>
+            </>
+          ) : (
+            <>
+              <Eye size={16} className="text-orange" /> Quick review
+              <span className="font-semibold text-orange">
+                — verdicts recorded now are marked as not blind
+              </span>
+            </>
+          )}
+        </span>
+        <button
+          onClick={() => setBlind((b) => !b)}
+          className="shrink-0 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-bold text-ink-soft transition hover:bg-cream-dark"
+        >
+          {blind ? "Switch to quick review (shows AI verdict first)" : "Return to blind review"}
+        </button>
+      </div>
+
+      <ul className="divide-y divide-line">
       {attempts.map((a) => {
         const reviewed = reviews[a.id];
         // The specialist's own verdict, recovered from the stored agreement:
         // they agreed with a "correct" verdict, or disagreed with a wrong one.
         const readCorrectly = reviewed === undefined ? undefined : reviewed === a.correct;
+        const show = revealed(a.id);
         return (
           <li key={a.id} className="flex flex-wrap items-center gap-3 py-3">
             <div className="min-w-32">
@@ -137,16 +219,33 @@ export default function ReviewList({
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold text-ink-soft">
-                Heard:{" "}
-                <span className="font-bold text-ink">
-                  {a.transcript ? `“${a.transcript}”` : "(nothing)"}
-                </span>
-              </p>
-              {a.altTranscript && (
-                <p className="text-xs font-semibold text-ink-muted">
-                  Browser heard: “{a.altTranscript}”
+              {/*
+                Everything the machine concluded lives behind `revealed`. Not
+                dimmed, not collapsed — absent from the markup, because a panel
+                hidden with CSS is still on the page and still anchoring, and
+                because a test that checks for it should be checking the
+                response body rather than a class name.
+              */}
+              {!show ? (
+                <p className="text-sm font-semibold text-ink-muted">
+                  Play the recording, then say whether the learner read{" "}
+                  <span className="font-bold text-ink">{a.target}</span> correctly. The
+                  system&apos;s reading is hidden until you decide.
                 </p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-ink-soft">
+                    Heard:{" "}
+                    <span className="font-bold text-ink">
+                      {a.transcript ? `“${a.transcript}”` : "(nothing)"}
+                    </span>
+                  </p>
+                  {a.altTranscript && (
+                    <p className="text-xs font-semibold text-ink-muted">
+                      Browser heard: “{a.altTranscript}”
+                    </p>
+                  )}
+                </>
               )}
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                 {/* On a probe the machine verdict is greyed rather than hidden.
@@ -154,6 +253,7 @@ export default function ReviewList({
                     study learns how far it can be trusted — but showing it in
                     the usual green/red would invite the specialist to simply
                     ratify it, which would make the pair worthless. */}
+                {show && (
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${
                     isProbe
@@ -171,6 +271,7 @@ export default function ReviewList({
                   system: {a.correct ? "correct" : (a.errorType ?? "incorrect")}
                   {isProbe && " (decide by ear)"}
                 </span>
+                )}
                 {/* The app scores letters; this word's meaning is carried by
                     stress, which the transcript does not record. Both readings
                     look identical to the scorer, so this one has to be heard. */}
@@ -182,19 +283,22 @@ export default function ReviewList({
                     <AudioLines size={12} /> {a.stressNote}
                   </span>
                 )}
-                {a.engine && (
+                {show && a.engine && (
                   <span className="inline-block rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary">
                     {ENGINE_LABELS[a.engine] ?? a.engine}
                   </span>
                 )}
                 {/* How close the reading was to the target — the number the
-                    accept/reject decision was actually made on. */}
-                <span
-                  className="inline-block rounded-full bg-cream px-2 py-0.5 text-xs font-bold text-ink-muted"
-                  title="Similarity to the target word"
-                >
-                  {a.score.toFixed(2)}
-                </span>
+                    accept/reject decision was actually made on, and the single
+                    most anchoring thing on the row. */}
+                {show && (
+                  <span
+                    className="inline-block rounded-full bg-cream px-2 py-0.5 text-xs font-bold text-ink-muted"
+                    title="Similarity to the target word"
+                  >
+                    {a.score.toFixed(2)}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -295,6 +399,50 @@ export default function ReviewList({
                 “{notes[a.id]}”
               </p>
             )}
+
+            {/*
+              Shown only once a verdict exists, and only for a misreading.
+              Offering categories before the judgement would be a second way to
+              anchor it, and a child who read the word correctly has nothing to
+              categorise.
+
+              "Observe" rather than "hear" because the list is not all errors:
+              self-correction is a reading behaviour that ends in the right
+              word. Never required — a specialist who is unsure leaves it, and a
+              blank is honest missing data where a forced guess would be noise.
+            */}
+            {readCorrectly === false && (
+              <div className="w-full border-t border-line pt-2.5 pl-1">
+                <p className="text-xs font-bold text-ink-muted">
+                  What did you observe?{" "}
+                  <span className="font-semibold">optional — skip if unsure</span>
+                </p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {ERROR_TAGS.map((t) => {
+                    const on = (tags[a.id] ?? []).includes(t.id);
+                    return (
+                      <li key={t.id}>
+                        <button
+                          onClick={() => toggleTag(a.id, t.id)}
+                          disabled={busy === a.id}
+                          aria-pressed={on}
+                          title={t.hintEn}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-bold transition disabled:opacity-50 ${
+                            on
+                              ? t.kind === "behaviour"
+                                ? "border-primary bg-primary-soft text-primary"
+                                : "border-peach-deep bg-peach-soft text-peach-deep"
+                              : "border-line bg-white text-ink-muted hover:border-ink-muted hover:text-ink"
+                          }`}
+                        >
+                          {t.en}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
             {failed === a.id && (
               <p role="alert" className="w-full pl-1 text-xs font-bold text-orange">
                 That verdict was not saved — check the connection and press it again.
@@ -303,6 +451,7 @@ export default function ReviewList({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </>
   );
 }

@@ -4,19 +4,30 @@ import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
+import { learnerScope, includeDemoFromParams } from "@/lib/demo";
+import DemoToggle from "@/components/specialist/DemoToggle";
 
-export default async function SpecialistPage() {
+export default async function SpecialistPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireSpecialist();
   const lang = await getLang();
   const t = getDict(lang).specialist;
+  const includeDemo = includeDemoFromParams(await searchParams);
 
-  const learners = await prisma.learnerProfile.findMany({
-    include: {
-      user: true,
-      _count: { select: { practiceItems: { where: { mastered: false } } } },
-    },
-    orderBy: { user: { name: "asc" } },
-  });
+  const [learners, demoCount] = await Promise.all([
+    prisma.learnerProfile.findMany({
+      where: learnerScope(includeDemo),
+      include: {
+        user: true,
+        _count: { select: { practiceItems: { where: { mastered: false } } } },
+      },
+      orderBy: { user: { name: "asc" } },
+    }),
+    prisma.learnerProfile.count({ where: { isDemo: true } }),
+  ]);
 
   // Per-learner accuracy and last activity in two grouped queries
   const [accGroups, lastAttempts] = await Promise.all([
@@ -59,6 +70,7 @@ export default async function SpecialistPage() {
         </div>
         {/* CSV exports for statistical treatment */}
         <div className="flex flex-wrap gap-2.5">
+          <DemoToggle count={demoCount} />
           <Link
             href="/specialist/cohort"
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
@@ -72,19 +84,19 @@ export default async function SpecialistPage() {
             <Scale size={16} /> {t.calibration}
           </Link>
           <a
-            href="/api/export?what=summary"
+            href={`/api/export?what=summary${includeDemo ? "&includeDemo=true" : ""}`}
             className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark"
           >
             <Download size={16} /> {t.summaryCsv}
           </a>
           <a
-            href="/api/export?what=attempts"
+            href={`/api/export?what=attempts${includeDemo ? "&includeDemo=true" : ""}`}
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
             <Download size={16} /> {t.allAttemptsCsv}
           </a>
           <a
-            href="/api/export?what=sessions"
+            href={`/api/export?what=sessions${includeDemo ? "&includeDemo=true" : ""}`}
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
             <Download size={16} /> {t.allSessionsCsv}
@@ -129,6 +141,14 @@ export default async function SpecialistPage() {
                       >
                         {l.user.name}
                       </Link>
+                      {l.isDemo && (
+                        <span
+                          className="ml-2 rounded-full bg-orange-soft px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide text-orange"
+                          title="Demonstration account. Its reading history is fabricated by the seed script and must never appear in a reported result."
+                        >
+                          demo
+                        </span>
+                      )}
                       <p className="text-xs font-semibold text-ink-muted">{l.user.email}</p>
                     </td>
                     <td className="px-3 py-4 font-bold text-ink">

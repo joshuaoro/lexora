@@ -3,6 +3,8 @@ import { ArrowLeft, Download, Users } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { patternFamily } from "@/lib/stats";
+import { learnerScope, includeDemoFromParams } from "@/lib/demo";
+import DemoToggle from "@/components/specialist/DemoToggle";
 
 /**
  * Every learner on one screen.
@@ -31,14 +33,25 @@ function accuracyTone(value: number | null) {
   return "bg-red-soft text-red";
 }
 
-export default async function CohortPage() {
+export default async function CohortPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireSpecialist();
+  const includeDemo = includeDemoFromParams(await searchParams);
 
+  // Filtering here is enough: every query below is scoped by `learnerId in ids`,
+  // so excluding a learner from this list removes them from every figure on the
+  // page. Demo learners carry fabricated readings — see src/lib/demo.ts.
   const learners = await prisma.learnerProfile.findMany({
+    where: learnerScope(includeDemo),
     include: { user: { select: { name: true } } },
     orderBy: { user: { name: "asc" } },
   });
   const ids = learners.map((l) => l.id);
+  // Shown on the toggle so a specialist knows how much is being held back.
+  const demoCount = await prisma.learnerProfile.count({ where: { isDemo: true } });
 
   const [accGroups, errorGroups, sessionGroups, patternRows, practiceGroups] = await Promise.all([
     prisma.attempt.groupBy({
@@ -137,14 +150,22 @@ export default async function CohortPage() {
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
             All {learners.length} learners side by side, over {cohortTotal} scored readings.
             First readings only — re-reads taken after a word was modelled are excluded.
+            {includeDemo
+              ? " Demo learners are included: their reading history is fabricated and must not be reported."
+              : demoCount > 0
+                ? ` ${demoCount} demo learner${demoCount === 1 ? "" : "s"} excluded.`
+                : ""}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+        <DemoToggle count={demoCount} />
         <a
-          href="/api/export?what=summary"
+          href={`/api/export?what=summary${includeDemo ? "&includeDemo=true" : ""}`}
           className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark"
         >
           <Download size={16} /> Summary CSV
         </a>
+        </div>
       </div>
 
       <section className="mt-6 rounded-2xl border border-line bg-card shadow-sm">
