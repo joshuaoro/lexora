@@ -66,7 +66,44 @@ for (const path of ["/dashboard", "/reader", "/exercises", "/practice", "/report
   allViolations.push(...(await scan(page, path)));
 }
 
-section("[3] an exercise in progress (the screen children use most)");
+/**
+ * The specialist workspace was never scanned, and it should have been.
+ *
+ * Reading specialists are the people who score this app against ISO/IEC 25010,
+ * and accessibility sits under the Interaction Capability characteristic they
+ * rate — so an AA failure on their own pages is both a real barrier and a mark
+ * against the study's own instrument. Leaving these out found nothing for
+ * months and then found 256 contrast failures on the word bank in one sweep:
+ * a single dimmed class, repeated once per word.
+ */
+section("[3] specialist pages");
+const sctx = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
+const spage = await sctx.newPage();
+await spage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await spage.fill("#email", "specialist@lexora.ph");
+await spage.fill("#password", PASSWORD);
+await spage.click("button[type=submit]");
+await spage.waitForURL("**/specialist", { timeout: 30000 });
+
+const learnerHref = await spage
+  .locator('a[href^="/specialist/learner/"]')
+  .first()
+  .getAttribute("href")
+  .catch(() => null);
+
+for (const path of [
+  "/specialist",
+  "/specialist/cohort",
+  "/specialist/calibration",
+  "/specialist/words",
+  ...(learnerHref ? [learnerHref] : []),
+]) {
+  await spage.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+  allViolations.push(...(await scan(spage, path)));
+}
+await sctx.close();
+
+section("[4] an exercise in progress (the screen children use most)");
 await page.goto(`${BASE}/exercises/listen-choose`, { waitUntil: "networkidle" });
 await page.locator("button:has-text('Start!')").click();
 await page
@@ -75,7 +112,7 @@ await page
   .waitFor({ state: "visible", timeout: 30000 });
 allViolations.push(...(await scan(page, "/exercises/listen-choose (mid-exercise)")));
 
-section("[4] keyboard-only navigation");
+section("[5] keyboard-only navigation");
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 const reachable = await page.evaluate(() => {
   const sel =
@@ -101,7 +138,7 @@ check(
   focusVisible ? `${focusVisible.tag} outline ${focusVisible.outline}` : "nothing focused"
 );
 
-section("[5] reduced motion");
+section("[6] reduced motion");
 const reduced = await browser.newContext({
   viewport: { width: 1280, height: 900 },
   reducedMotion: "reduce",

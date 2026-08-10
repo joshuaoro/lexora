@@ -14,7 +14,7 @@
  * for a job done a handful of times.
  */
 import { chromium } from "playwright-core";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const SOURCE = join("src", "app", "icon.svg");

@@ -359,7 +359,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (338 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (343 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
@@ -370,7 +370,7 @@ npm run audit:reporting   # decoding time, calibration, retries, phase, retentio
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
 npm run audit:calibration # threshold fitted to specialist verdicts  (25)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
-npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (14)
+npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device
 npm run audit:prod        # smoke test after a deployment
 ```

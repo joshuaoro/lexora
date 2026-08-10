@@ -10,6 +10,10 @@ export type Lang = "en" | "fil";
 const en = {
   common: {
     signOut: "Sign out",
+    // Shown only when sign-out fails: the cookie is httpOnly, so a failed
+    // request means the session is still live and saying nothing would leave
+    // the next child on a shared tablet inside this one's account.
+    signOutFailed: "Could not sign out — you are still signed in. Check your connection and try again.",
     welcomeBack: "Welcome back",
     learnerBadge: "Learner",
     specialistBadge: "Reading specialist",
@@ -409,6 +413,7 @@ export type Dict = typeof en;
 const fil: Dict = {
   common: {
     signOut: "Mag-sign out",
+    signOutFailed: "Hindi ka na-sign out — naka-sign in ka pa rin. Tingnan ang koneksyon at subukan ulit.",
     welcomeBack: "Kumusta ulit",
     learnerBadge: "Mag-aaral",
     specialistBadge: "Reading specialist",

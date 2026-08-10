@@ -130,14 +130,31 @@ export default function LoginPage() {
           </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-dashed border-line bg-cream-dark/50 p-4 text-xs text-ink-soft">
+      {/*
+        Working credentials, printed on the front door.
+
+        This block listed specialist@lexora.ph and its password to every visitor
+        of the deployed site — and that account can open every learner's
+        records and play back every recording. No guessing, no code: the way in
+        was written on the page. Harmless while the database holds only demo
+        data, and a complete breach of five children's voice recordings the day
+        real accounts exist.
+
+        Now off unless NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS is explicitly set, so a
+        defense demo can switch it on and the study deployment never has it.
+        Read at build time, which is what NEXT_PUBLIC_ means: changing it
+        requires a redeploy rather than a toggle someone can flip by accident.
+      */}
+      {process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "1" && (
+        <div className="mt-4 rounded-2xl border border-dashed border-line bg-cream-dark/50 p-4 text-xs text-ink-soft">
           <p className="font-bold">Demo accounts (password: lexora123)</p>
           <ul className="mt-1 space-y-0.5">
             <li>learner1@lexora.ph — learner with sample history</li>
             <li>learner2@lexora.ph — learner, fresh account</li>
             <li>specialist@lexora.ph — reading specialist</li>
-        </ul>
-      </div>
+          </ul>
+        </div>
+      )}
     </AuthShell>
   );
 }

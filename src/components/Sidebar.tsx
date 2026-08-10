@@ -43,6 +43,8 @@ export default function Sidebar({ role, lang }: { role: "LEARNER" | "SPECIALIST"
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const dict = getDict(lang);
   const nav = role === "SPECIALIST" ? SPECIALIST_NAV : LEARNER_NAV;
 
@@ -53,8 +55,26 @@ export default function Sidebar({ role, lang }: { role: "LEARNER" | "SPECIALIST"
     return pathname === href || pathname.startsWith(href + "/");
   }
 
+  /**
+   * Sign out, and only claim to have done so if it worked.
+   *
+   * The session cookie is httpOnly, so only the server can clear it — the
+   * browser cannot tidy up on its own if the request fails. This used to
+   * navigate to /login regardless, and /login does not check for an existing
+   * session, so a failed sign-out left a child looking at a login form while
+   * still signed in. On a tablet shared by five children in the same room, the
+   * next one to open the app would have been in the previous child's account,
+   * reading their progress and playing back their recordings.
+   */
   async function signOut() {
-    await tryFetch("/api/auth/logout", { method: "POST" });
+    setSigningOut(true);
+    const res = await tryFetch("/api/auth/logout", { method: "POST" });
+    setSigningOut(false);
+    if (!res?.ok) {
+      setSignOutError(dict.common.signOutFailed);
+      return;
+    }
+    setSignOutError(null);
     router.push("/login");
     router.refresh();
   }
@@ -84,13 +104,21 @@ export default function Sidebar({ role, lang }: { role: "LEARNER" | "SPECIALIST"
   );
 
   const signOutButton = (
-    <button
-      onClick={signOut}
-      className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] font-bold text-ink-soft transition hover:bg-cream hover:text-ink"
-    >
-      <LogOut size={19} strokeWidth={2.2} />
-      {dict.common.signOut}
-    </button>
+    <div>
+      <button
+        onClick={signOut}
+        disabled={signingOut}
+        className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] font-bold text-ink-soft transition hover:bg-cream hover:text-ink disabled:opacity-60"
+      >
+        <LogOut size={19} strokeWidth={2.2} />
+        {dict.common.signOut}
+      </button>
+      {signOutError && (
+        <p role="alert" className="mt-1 px-4 text-xs font-bold text-orange">
+          {signOutError}
+        </p>
+      )}
+    </div>
   );
 
   return (

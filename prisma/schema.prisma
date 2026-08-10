@@ -151,6 +151,15 @@ model ActivitySession {
   createdAt   DateTime @default(now())
 
   attempts Attempt[]
+
+  // Postgres does not index a foreign key for you, and every one of this
+  // table's queries filters on the learner: the dashboard's minutes and
+  // completed counts, the report's recent activities, and the probe cooldown
+  // that runs on every visit to the exercises page. All were sequential scans.
+  // Harmless at forty rows and not something to leave in a table that gains a
+  // row for every activity five children complete over eight weeks.
+  @@index([learnerId, createdAt])
+  @@index([learnerId, type])
 }
 
 model Attempt {

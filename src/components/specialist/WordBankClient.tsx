@@ -254,8 +254,19 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
   async function removeRecording(word: WordRow) {
     setBusyId(word.id);
-    await tryFetch(`/api/words/${word.id}/audio`, { method: "DELETE" });
+    const res = await tryFetch(`/api/words/${word.id}/audio`, { method: "DELETE" });
     setBusyId(null);
+    // Reported the removal whether or not it happened. A specialist who deletes
+    // a recording they are unhappy with, is told it is gone, and then hears it
+    // played to a child has been lied to by the interface.
+    if (!res?.ok) {
+      setMessage(
+        res
+          ? `Could not remove the recording of “${word.text}” — it is still in use.`
+          : "No internet connection. Check it and try again."
+      );
+      return;
+    }
     setMessage(`Removed your recording of “${word.text}” — the generated voice is back.`);
     router.refresh();
   }
@@ -620,7 +631,11 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                         title="Spellings the recognizer may return for a correct reading"
                         className="rounded-lg px-2 py-1 text-left text-xs font-semibold text-ink-muted transition hover:bg-cream-dark hover:text-ink"
                       >
-                        {w.variants || <span className="text-ink-muted/70">+ add</span>}
+                        {/* Not dimmed. The palette's ink-muted is chosen to
+                            clear 4.5:1 on this background; knocking it to 70%
+                            opacity took it to 3.0:1 and failed AA on every word
+                            in the bank at once — 256 nodes from one class. */}
+                        {w.variants || <span className="text-ink-muted">+ add</span>}
                       </button>
                     )}
                   </td>

@@ -34,9 +34,11 @@ export async function POST(req: Request) {
     where: { learnerId: ctx.learnerId, total: 0, createdAt: { lt: staleBefore } },
   });
 
-  // Recordings past the retention window go at the same time. Scores and
-  // transcripts are untouched, so no reported figure moves.
-  await purgeExpiredRecordings(ctx.learnerId);
+  // Recordings past the retention window go at the same time — everyone's, not
+  // just this learner's, so a child who has stopped using the app still has
+  // their voice aged out as the privacy notice promises. Scores and transcripts
+  // are untouched, so no reported figure moves.
+  await purgeExpiredRecordings();
 
   const activity = await prisma.activitySession.create({
     data: {
