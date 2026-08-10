@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { patternFamily as patternFamilyFor, PLAUSIBLE, median } from "@/lib/stats";
+import { calibrationReport } from "@/lib/calibration";
 
 /**
  * CSV export of learner data for statistical treatment.
@@ -78,9 +79,11 @@ export async function GET(req: Request) {
   const what = url.searchParams.get("what") ?? "attempts";
   let learnerId = url.searchParams.get("learnerId") ?? undefined;
 
-  // Learners may only export their own records
+  // Learners may only export their own records. The cohort-wide exports —
+  // everyone's summary, and the calibration fitted across all of them — are
+  // specialist-only.
   if (session.role !== "SPECIALIST") {
-    if (!session.learnerId || what === "summary") {
+    if (!session.learnerId || what === "summary" || what === "calibration") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     learnerId = session.learnerId;
@@ -371,6 +374,69 @@ export async function GET(req: Request) {
         rows
       ),
       exportName("summary", scopedTo)
+    );
+  }
+
+  /**
+   * The threshold sweep — the table that goes in the Validation chapter.
+   *
+   * One row per candidate cut-point with the full confusion matrix and every
+   * agreement statistic, so the operating point can be defended from the data
+   * rather than asserted. The chosen and current thresholds are flagged in
+   * their own column instead of a comment line, because a stray non-data row
+   * breaks every tool that would read this.
+   */
+  if (what === "calibration") {
+    const cal = await calibrationReport();
+
+    const mark = (t: number) =>
+      [
+        t === cal.current.threshold ? "current" : "",
+        cal.bestByMcc && t === cal.bestByMcc.threshold ? "best_mcc" : "",
+        cal.bestByYouden && t === cal.bestByYouden.threshold ? "best_youden" : "",
+      ]
+        .filter(Boolean)
+        .join("+");
+
+    const rows = cal.curve.map((m) => [
+      m.threshold.toFixed(2),
+      m.tp, m.fp, m.tn, m.fn, m.n,
+      m.accuracy.toFixed(4),
+      m.sensitivity.toFixed(4),
+      m.specificity.toFixed(4),
+      m.precision.toFixed(4),
+      m.kappa.toFixed(4),
+      m.mcc.toFixed(4),
+      m.youden.toFixed(4),
+      mark(m.threshold),
+      cal.plateau && m.threshold >= cal.plateau.from && m.threshold <= cal.plateau.to ? 1 : 0,
+      cal.interval && m.threshold >= cal.interval.low && m.threshold <= cal.interval.high ? 1 : 0,
+    ]);
+
+    return csvResponse(
+      toCsv(
+        [
+          "threshold",
+          // Positive class is "the specialist judged this read correctly".
+          "true_positive", "false_positive", "true_negative", "false_negative", "n_reviewed",
+          "accuracy", "sensitivity", "specificity", "precision",
+          // Cohen's κ is the figure the oral-reading literature reports;
+          // Matthews' correlation is the one that survives this sample being
+          // lopsided, since most readings are correct.
+          "cohens_kappa", "matthews_mcc", "youden_j",
+          // Which thresholds are the current setting and the fitted optima.
+          "marker",
+          // in_plateau = 1 marks thresholds within 0.01 MCC of the peak: if
+          // many rows carry it, the optimum is weakly identified and the single
+          // best value must not be quoted on its own.
+          "in_plateau",
+          // in_bootstrap_ci = 1 marks the 95% interval for the optimum over
+          // 1000 resamples of the reviewed readings.
+          "in_bootstrap_ci",
+        ],
+        rows
+      ),
+      exportName("calibration", null)
     );
   }
 

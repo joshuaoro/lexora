@@ -1,0 +1,289 @@
+/**
+ * Threshold-calibration audit.
+ *
+ * LEXORA does not fine-tune the acoustic model — Whisper is pre-trained and
+ * called through an API. What it does adapt is the decision on top: the
+ * similarity at which a transcript counts as a correct reading, fitted to the
+ * verdicts reading specialists have recorded. These figures are destined for a
+ * Validation chapter, so the arithmetic is checked twice — once against values
+ * worked out by hand (scripts/check-calibration.ts), and once here by
+ * recomputing every statistic from the exported confusion matrix with a second,
+ * independent implementation.
+ *
+ *   npm run audit:calibration -- https://your-app.vercel.app
+ */
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import {
+  BASE, api, login, check, section, report, one,
+  createTestLearner, endSuite,
+} from "./helpers.mjs";
+
+console.log(`Calibration audit against ${BASE}`);
+
+const specialist = await login("specialist@lexora.ph");
+if (!specialist) {
+  console.error("Could not sign in as specialist@lexora.ph — is the database seeded?");
+  process.exit(1);
+}
+
+/* ── 1. the arithmetic, against values computed by hand ────────────────── */
+section("[1] metric arithmetic (scripts/check-calibration.ts)");
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const arithmeticOk = await new Promise((resolve) => {
+  const child = spawn("npx", ["tsx", "scripts/check-calibration.ts"], {
+    cwd: repoRoot,
+    shell: process.platform === "win32",
+    stdio: "ignore",
+  });
+  child.on("close", (code) => resolve(code === 0));
+  child.on("error", () => resolve(false));
+});
+check(
+  "κ, MCC and the threshold replay match hand-computed values",
+  arithmeticOk,
+  arithmeticOk ? "20 checks" : "run `npm run calibration:check` to see which failed"
+);
+
+/* ── 2. the page ───────────────────────────────────────────────────────── */
+section("[2] the calibration page");
+
+const page = await api("/specialist/calibration", { cookie: specialist });
+const html = await page.text();
+check("a specialist can open it", page.status === 200, `HTTP ${page.status}`);
+check("it explains what is and is not being adapted", /nothing\s+is fine-tuned/i.test(html), "stated");
+check(
+  "and says it will not move the threshold by itself",
+  /never changes the setting/i.test(html),
+  "stated"
+);
+
+const learner = await createTestLearner("calib");
+const denied = await api("/specialist/calibration", { cookie: learner.cookie });
+const deniedBody = await denied.text();
+/**
+ * Asserted on the body, not the status.
+ *
+ * A Next.js server-component redirect is streamed *inside* a 200 — the browser
+ * is told to navigate by the payload, not by a 3xx. So `status !== 200` looks
+ * like a security check and is really a check on a framework detail; it fails
+ * on a page that is perfectly well guarded, and would pass on one that leaked
+ * its contents behind a 200. What matters is that none of the cohort's figures
+ * reach a learner.
+ */
+check(
+  "a learner is redirected away rather than shown it",
+  /\/dashboard/.test(deniedBody),
+  `HTTP ${denied.status}, redirect in payload`
+);
+check(
+  "and none of the calibration reaches them",
+  !/Scoring threshold calibration|Matthews|Best by MCC/i.test(deniedBody),
+  "no figures in the response"
+);
+
+const deniedCsv = await api("/api/export?what=calibration", { cookie: learner.cookie });
+check("nor export it", deniedCsv.status === 403, `HTTP ${deniedCsv.status}`);
+
+/* ── 3. the export, recomputed independently ───────────────────────────── */
+section("[3] the exported sweep, checked against a second implementation");
+
+const res = await api("/api/export?what=calibration", { cookie: specialist });
+check("the calibration CSV downloads", res.ok, `HTTP ${res.status}`);
+check(
+  "named for what it is",
+  /filename="lexora-calibration-all-learners-\d{4}-\d{2}-\d{2}\.csv"/.test(
+    res.headers.get("content-disposition") ?? ""
+  ),
+  res.headers.get("content-disposition") ?? ""
+);
+
+const csv = (await res.text()).replace(/^﻿/, "");
+const [headerLine, ...dataLines] = csv.trim().split("\r\n");
+const cols = headerLine.split(",");
+const rows = dataLines.map((line) => {
+  const cells = line.split(",");
+  return Object.fromEntries(cols.map((c, i) => [c, cells[i]]));
+});
+
+check("one row per candidate threshold", rows.length === 51, `${rows.length} rows`);
+check(
+  "spanning 0.50 to 1.00",
+  rows[0].threshold === "0.50" && rows[rows.length - 1].threshold === "1.00",
+  `${rows[0].threshold}–${rows[rows.length - 1].threshold}`
+);
+
+/**
+ * Second implementation of the two statistics, written from the textbook
+ * definitions rather than by importing the app's. Two independent versions
+ * agreeing on every row is a far stronger check than either alone — a
+ * transposed term would survive a single implementation and land in the paper.
+ */
+function kappaFrom(tp, fp, tn, fn) {
+  const n = tp + fp + tn + fn;
+  if (!n) return 0;
+  const po = (tp + tn) / n;
+  const pe = ((tp + fp) / n) * ((tp + fn) / n) + ((fn + tn) / n) * ((fp + tn) / n);
+  return pe === 1 ? 0 : (po - pe) / (1 - pe);
+}
+function mccFrom(tp, fp, tn, fn) {
+  const d = Math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn));
+  return d === 0 ? 0 : (tp * tn - fp * fn) / d;
+}
+
+let kappaMismatch = null;
+let mccMismatch = null;
+let youdenMismatch = null;
+let countMismatch = null;
+
+for (const r of rows) {
+  const tp = +r.true_positive, fp = +r.false_positive;
+  const tn = +r.true_negative, fn = +r.false_negative;
+
+  if (tp + fp + tn + fn !== +r.n_reviewed && !countMismatch) {
+    countMismatch = `t=${r.threshold}: ${tp + fp + tn + fn} vs n=${r.n_reviewed}`;
+  }
+  if (Math.abs(kappaFrom(tp, fp, tn, fn) - +r.cohens_kappa) > 5e-5 && !kappaMismatch) {
+    kappaMismatch = `t=${r.threshold}: ${kappaFrom(tp, fp, tn, fn).toFixed(4)} vs ${r.cohens_kappa}`;
+  }
+  if (Math.abs(mccFrom(tp, fp, tn, fn) - +r.matthews_mcc) > 5e-5 && !mccMismatch) {
+    mccMismatch = `t=${r.threshold}: ${mccFrom(tp, fp, tn, fn).toFixed(4)} vs ${r.matthews_mcc}`;
+  }
+  const sens = tp + fn === 0 ? 0 : tp / (tp + fn);
+  const spec = tn + fp === 0 ? 0 : tn / (tn + fp);
+  if (Math.abs(sens + spec - 1 - +r.youden_j) > 5e-5 && !youdenMismatch) {
+    youdenMismatch = `t=${r.threshold}: ${(sens + spec - 1).toFixed(4)} vs ${r.youden_j}`;
+  }
+}
+
+check("the confusion matrix sums to the sample size on every row", !countMismatch, countMismatch ?? "consistent");
+check("Cohen's κ matches an independent implementation", !kappaMismatch, kappaMismatch ?? "all 51 rows agree");
+check("MCC matches an independent implementation", !mccMismatch, mccMismatch ?? "all 51 rows agree");
+check("Youden's J matches sensitivity + specificity − 1", !youdenMismatch, youdenMismatch ?? "all 51 rows agree");
+
+// Acceptance can only loosen as the bar drops, so the count of accepted
+// readings must never increase with the threshold. A break here would mean the
+// replay is not monotonic — the clearest sign it has stopped mirroring the
+// scorer.
+let monotonic = true;
+for (let i = 1; i < rows.length; i++) {
+  const prev = +rows[i - 1].true_positive + +rows[i - 1].false_positive;
+  const curr = +rows[i].true_positive + +rows[i].false_positive;
+  if (curr > prev) monotonic = false;
+}
+check("raising the threshold never accepts more readings", monotonic, "monotonic");
+
+const marked = rows.filter((r) => r.marker.includes("current"));
+check("the threshold in force is marked", marked.length === 1, marked.map((r) => r.threshold).join(","));
+
+/* ── 4. what it reports depends honestly on how much data there is ─────── */
+section("[4] the sample-size guard");
+
+const reviewed = await one(
+  `SELECT COUNT(*)::int AS n
+     FROM "Attempt" a
+     JOIN "AttemptReview" r ON r."attemptId" = a.id
+     LEFT JOIN "Word" w ON w.id = a."wordId"
+    WHERE a."isRetry" = false
+      AND a."activityType" IN ('READ_ALOUD','PRACTICE')
+      AND COALESCE(w."isPseudo", false) = false`
+);
+const hasFit = rows.some((r) => r.marker.includes("best_mcc"));
+
+if (reviewed.n >= 30) {
+  check("with enough reviewed readings, an operating point is recommended", hasFit, `n=${reviewed.n}`);
+  check(
+    "and the page reports the fitted point rather than a bare number",
+    /Best by MCC/i.test(html),
+    "shown"
+  );
+} else {
+  check("below the minimum, no operating point is recommended", !hasFit, `n=${reviewed.n}`);
+  check(
+    "and the page says how many more are needed",
+    /Not enough reviewed readings/i.test(html),
+    "shortfall shown"
+  );
+}
+
+/* ── 5. it actually detects a threshold set too strictly ───────────────── */
+section("[5] end to end: a too-strict threshold is found in the data");
+
+/**
+ * The scenario the feature exists for.
+ *
+ * Forty readings are recorded and reviewed. Twenty are read perfectly, ten are
+ * nothing like the word, and ten are a single substituted vowel — "buhay" for
+ * *bahay*, similarity exactly 0.80 — which the specialist listens to and judges
+ * **correct**, because the child said the word properly and the recogniser
+ * mis-spelled it.
+ *
+ * At the 0.95 in force those ten are scored as misreadings. The calibration
+ * should see that and put the optimum at or below 0.80. Asserted directionally
+ * rather than on an exact figure, because the cohort already holds a handful of
+ * real reviewed readings and the point is the finding, not a float.
+ */
+const cal = await createTestLearner("calibfit");
+
+const record = async (target, heard, agrees) => {
+  const posted = await api("/api/attempts", {
+    cookie: cal.cookie,
+    method: "POST",
+    body: { activityType: "READ_ALOUD", target, browserTranscript: heard, responseMs: 1500 },
+  });
+  const { id } = await posted.json().catch(() => ({}));
+  if (!id) return false;
+  const reviewed = await api("/api/reviews", {
+    cookie: specialist,
+    method: "POST",
+    body: { attemptId: id, agrees },
+  });
+  return reviewed.ok;
+};
+
+let recorded = 0;
+for (let i = 0; i < 20; i++) if (await record("bahay", "bahay", true)) recorded++;
+for (let i = 0; i < 10; i++) if (await record("bahay", "zzzzz", true)) recorded++;
+// The interesting ten: system says wrong, specialist disagrees.
+for (let i = 0; i < 10; i++) if (await record("bahay", "buhay", false)) recorded++;
+check("40 readings recorded and reviewed", recorded === 40, `${recorded}/40`);
+
+const fitted = await (await api("/api/export?what=calibration", { cookie: specialist })).text();
+const fitRows = fitted
+  .replace(/^﻿/, "")
+  .trim()
+  .split("\r\n")
+  .slice(1)
+  .map((line) => {
+    const c = line.split(",");
+    return { threshold: +c[0], mcc: +c[11], marker: c[13] };
+  });
+
+const best = fitRows.find((r) => r.marker.includes("best_mcc"));
+check("an operating point is now recommended", Boolean(best), best ? `${best.threshold}` : "none");
+check(
+  "and it sits at or below 0.80, where the disputed readings are accepted",
+  Boolean(best) && best.threshold <= 0.8,
+  best ? `best = ${best.threshold.toFixed(2)}` : "none"
+);
+
+const at80 = fitRows.find((r) => r.threshold === 0.8);
+const at95 = fitRows.find((r) => r.threshold === 0.95);
+check(
+  "0.80 agrees with the specialists better than the 0.95 in force",
+  at80.mcc > at95.mcc,
+  `MCC ${at80.mcc.toFixed(3)} at 0.80 vs ${at95.mcc.toFixed(3)} at 0.95`
+);
+
+const fittedPage = await (await api("/specialist/calibration", { cookie: specialist })).text();
+check("the page shows the fitted point", /Best by MCC/i.test(fittedPage), "shown");
+check(
+  "and reports the bootstrap interval rather than a bare number",
+  /95% CI/i.test(fittedPage),
+  "interval shown"
+);
+
+report("Calibration audit");
+await endSuite();

@@ -6,7 +6,7 @@
  *   npm run audit:links -- https://your-app.vercel.app
  */
 import { chromium } from "playwright-core";
-import { BASE, PASSWORD, check, section, report, closeDb } from "./helpers.mjs";
+import { BASE, PASSWORD, check, section, report, closeDb, one, query } from "./helpers.mjs";
 
 console.log(`Link audit against ${BASE}`);
 
@@ -68,6 +68,35 @@ const pub = await crawl("public", null, null, EXPECTED.public);
 for (const [path, status] of pub) check(`public ${path}`, status === 200, `HTTP ${status}`);
 
 section("[2] learner pages (crawled from the navigation)");
+
+/**
+ * Give the demo learner a word to practise before crawling.
+ *
+ * `/practice/session` is only linked when the practice list has something in
+ * it, which is correct: there is nothing to open otherwise. But the demo
+ * learner's list empties as earlier suites master their way through it, and the
+ * link check then failed on an app that was behaving exactly as designed —
+ * reporting a broken link where there was none.
+ *
+ * Asserting the precondition is better than making the check conditional: a
+ * check that quietly skips itself whenever the state is inconvenient stops
+ * being a check at all, and this one exists to catch a route going unreachable.
+ */
+const demo = await one(
+  `SELECT lp.id FROM "LearnerProfile" lp
+     JOIN "User" u ON u.id = lp."userId" WHERE u.email = 'learner1@lexora.ph'`
+);
+if (demo) {
+  const word = await one(`SELECT id FROM "Word" WHERE NOT "isPseudo" ORDER BY text LIMIT 1`);
+  await query(
+    `INSERT INTO "PracticeItem" (id, "learnerId", "wordId", source, "missCount", streak, mastered, "updatedAt", "createdAt")
+     VALUES ($1, $2, $3, 'SPECIALIST', 1, 0, false, NOW(), NOW())
+     ON CONFLICT ("learnerId", "wordId")
+     DO UPDATE SET mastered = false, streak = 0`,
+    [`pi${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`, demo.id, word.id]
+  );
+}
+
 const learner = await crawl("learner", "learner1@lexora.ph", "/dashboard", EXPECTED.learner);
 for (const [path, status] of learner) {
   // Signing out mid-crawl can bounce a page to /login; that is not a broken link.
@@ -104,6 +133,7 @@ const { join } = await import("node:path");
 for (const segment of [
   "specialist",
   "specialist/cohort",
+  "specialist/calibration",
   "specialist/words",
   "specialist/learner/[id]",
   "reports",

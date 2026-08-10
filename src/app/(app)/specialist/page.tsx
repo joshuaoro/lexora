@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Users, Download } from "lucide-react";
+import { ChevronRight, Users, Download, Scale } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
@@ -64,6 +64,12 @@ export default async function SpecialistPage() {
             className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
           >
             <Users size={16} /> {t.cohortOverview}
+          </Link>
+          <Link
+            href="/specialist/calibration"
+            className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
+          >
+            <Scale size={16} /> {t.calibration}
           </Link>
           <a
             href="/api/export?what=summary"

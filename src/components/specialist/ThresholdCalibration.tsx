@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Scale } from "lucide-react";
 import ReviewList, { type ReviewableAttempt } from "./ReviewList";
 
@@ -60,11 +61,15 @@ export default function ThresholdCalibration({
             </p>
             <ReviewList attempts={attempts} />
             <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-xs font-semibold text-ink-soft">
-              If most of these turn out to be correct readings, lower{" "}
-              <code className="font-mono">SCORE_THRESHOLD</code>{" "}
-              in the deployment settings and
-              note the change in your validation records. If most are genuine misreadings, the
-              threshold is doing its job.
+              Every verdict you record here becomes a labelled example. Once enough have been
+              collected across all learners,{" "}
+              <Link href="/specialist/calibration" className="font-bold text-primary hover:underline">
+                Threshold calibration
+              </Link>{" "}
+              fits the acceptance line to those judgements and reports how far the current
+              setting is from where the evidence puts it. These borderline readings are the most
+              valuable ones to review, because they are the only ones whose verdict actually
+              changes as the line moves.
             </p>
           </>
         )}

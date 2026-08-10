@@ -13,7 +13,7 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 | # | Objective | Where it lives |
 |---|-----------|----------------|
 | 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus |
-| 2 | Pre-trained ASR scoring of word-level oral reading + specialist agreement check | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, agreement % is computed) |
+| 2 | Pre-trained ASR scoring of word-level oral reading + specialist agreement check, with the acceptance threshold calibrated against those specialist verdicts | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, agreement % is computed) |
 | 3 | AI-assisted reading assessment: immediate pronunciation feedback + personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read so the last time a child says a missed word they say it right; **Practice list** (auto-populated on misreads) |
 | 4 | Adaptive word-level exercises driven by recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`); promotion also requires that decoding is not slowing, since accuracy alone is the weaker marker in a transparent orthography; specialists can override per learner |
 | 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable, leading with accuracy *and* typical time per word), **Specialist** learner views, **Cohort overview** (all learners side by side, accuracy per syllable pattern). Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there. An activity left partway still counts its minutes but is not an activity *completed* |
@@ -29,7 +29,11 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 - **Silly words** — the decoding probe. Stage-matched non-words that cannot be read from memory, so they separate decoding from sight-word recall. Assessment only: no audio, no verdict shown to the child, no effect on level or practice, scored afterwards by a specialist listening to the recording. Rests for 7 days after a run.
 
 ### Speech recognition (oral reading assessment)
-Readings are scored by **`whisper-large-v3-turbo`**, a pre-trained ASR model accessed through Groq's OpenAI-compatible API with the language fixed to Tagalog (`tl`). No model is trained or fine-tuned, and learner audio is never used for training — consistent with the study delimitation.
+Readings are scored by **`whisper-large-v3-turbo`**, a pre-trained ASR model accessed through Groq's OpenAI-compatible API with the language fixed to Tagalog (`tl`).
+
+**What is and is not adapted.** The acoustic model is pre-trained and stays that way: nothing is fine-tuned, and no learner recording is ever used as training data. What *is* adapted to this population is the **decision layer on top of it** — the similarity at which a transcript counts as a correct reading — which is fitted to reading specialists' own verdicts and reported with the evidence. See [Threshold calibration](#threshold-calibration-fitting-the-decision-layer) below.
+
+This is a deliberate methodological choice, not an omission. Fine-tuning Whisper on this study's data would be unsound three times over: with **five participants** there is no held-out set, so fine-tuning on their recordings and then evaluating on the same five children is training on the test set; using children's voice recordings as training data is a different processing purpose under **RA 10173** from the assessment purpose parents consented to; and the deployment target is serverless, which cannot host a fine-tuned model. Calibrating the decision layer against human labels achieves real adaptation at this sample size, and produces figures that are directly comparable with the published literature.
 
 The target word is deliberately **not** sent as a decoding prompt: biasing the recognizer toward the expected word would hide the very misreadings the system must detect.
 
@@ -48,6 +52,57 @@ Two safeguards stop the recognizer from turning a correct reading into a scored 
 - **Accepted spellings** per word (Word bank → *Accepted spellings*): loanwords and digraphs come back in English orthography, e.g. `krus` → "cross", `mangga` → "manga", `bulaklak` → "bulaklaq". These are compared **exactly**, so they can never mask a genuine misreading — verified by a control case where a clip saying *bahay* scored against target *buhay* is still marked incorrect.
 
 Reading specialists can add spellings inline as they observe them during testing.
+
+### Threshold calibration: fitting the decision layer
+**Specialist → Threshold calibration**, or `/api/export?what=calibration` for the table.
+
+A reading is accepted when its similarity to the target reaches `SCORE_THRESHOLD` (0.95 by
+default). That cut-point was reasoned from the word bank against clear synthesized speech —
+but the children this is for bring accents, hesitation and a noisy room, so whether it is
+set correctly is an empirical question, and every reading a specialist reviews is a
+labelled answer to it.
+
+`src/lib/calibration.ts` sweeps the cut-point from 0.50 to 1.00 and, at each value, tallies
+the confusion matrix against the specialists' verdicts and reports **accuracy, sensitivity,
+specificity, precision, Cohen's κ, Matthews' correlation (MCC) and Youden's J**.
+
+- **MCC leads, not accuracy or F1.** Most readings are correct, so the sample is lopsided:
+  a scorer that accepted everything would post a high accuracy and a respectable F1 while
+  being useless. MCC only rises when all four cells of the matrix are good
+  ([Chicco & Jurman, 2020](https://link.springer.com/article/10.1186/s12864-019-6413-7)).
+- **The sweep replays the real rule**, not `score >= t`. `scoreReading()` also accepts an
+  approved ASR spelling outright and demands an exact match for words of ≤ 3 letters, both
+  of which ignore the threshold — so a naive sweep would report metrics for a classifier
+  the app does not run. Verified: a 3-letter near-miss scoring 0.67 is refused at *every*
+  threshold, which a naive sweep would have accepted at 0.50–0.66.
+- **Comparable figures.** For automatic scoring of children's oral reading, published
+  agreement is **κ = .54, human 92% vs ASR 88%** classification accuracy
+  ([Frontiers in Education](https://www.frontiersin.org/journals/education/articles/10.3389/feduc.2026.1671946/full)),
+  and the best of six ASR systems on Dutch oral reading reached **MCC = 0.63**
+  ([arXiv:2306.03444](https://arxiv.org/abs/2306.03444)). Both were measured on
+  typically-developing readers, and the first study found agreement was **significantly
+  lower for students with disabilities** — which is this entire participant group. Treat
+  them as context, not as targets.
+- **Guards against over-claiming.** No operating point is recommended below 30 reviewed
+  readings. Thresholds within 0.01 MCC of the peak are reported as a **plateau**, because
+  a wide flat region means the optimum is weakly identified
+  ([Youden index](https://www.sciencedirect.com/topics/medicine-and-dentistry/youden-index))
+  and the single best value must not be quoted alone. A 95% interval for the optimum comes
+  from 1000 bootstrap resamples.
+- **Probe non-words are held out** of the fit and reported separately — they are scored by
+  ear precisely because the machine's verdict on a non-word measures the recogniser rather
+  than justifying a cut-point.
+
+**The page recommends; it never moves the threshold.** Changing `SCORE_THRESHOLD` mid-study
+would mean baseline and endline were scored by different rules. Since the similarity is
+stored on every attempt, the sound order is to leave it fixed for the study's duration and
+re-score the exported data at analysis time if the calibration warrants it — reporting both
+figures.
+
+```bash
+npm run calibration:check     # κ/MCC against hand-computed values, and the replay rule
+npm run audit:calibration     # end to end, including a deliberately too-strict threshold
+```
 
 > **Known limitation for the Validation chapter.** In an integration probe over 25 words (synthesized Filipino speech, not children's voices), Whisper matched the target exactly on 20/25 before variants. Every miss was a **Marungko stage 7 loanword or digraph** (`krus`, `dyip`, `tsinelas`, `mangga`, `bulaklak`), and two of them (`dyip`, `tsinelas`) returned a *different* spelling on each run. The seeded variant list was derived from synthesized speech and should be re-validated against real recordings during the reliability check; stage 7 items warrant closer specialist attention when computing agreement.
 
@@ -304,15 +359,16 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 9 suites against http://localhost:3000 (311 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (338 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
-npm run audit:links       # every route reachable from the navigation  (46)
+npm run audit:links       # every route reachable from the navigation  (48)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
+npm run audit:calibration # threshold fitted to specialist verdicts  (25)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (14)
 npm run audit:perf        # budgets on a throttled low-end device
