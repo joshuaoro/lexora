@@ -198,6 +198,15 @@ its own question directly.
   deliberately neutral and is asserted in the audit: they are never called errors,
   failures or invalid data, because nothing about them went wrong.
 
+### Development record
+[`docs/development-record.md`](docs/development-record.md) is the long-form account of how
+the application came to be this way: the six study constraints every design decision traces
+back to, the measurement chain end to end, the seven methodological safeguards and what each
+one protects, the full commit chronology, and every defect found during development with its
+mechanism rather than only its symptom. This README says what LEXORA does; that document says
+why it does it that way. Written for the Methodology and Validation chapters, and for whoever
+picks the project up next.
+
 ### Deferred ideas
 [`docs/deferred-ideas.md`](docs/deferred-ideas.md) records what was considered and
 deliberately set aside, with the reason and what would have to change to revisit it —
