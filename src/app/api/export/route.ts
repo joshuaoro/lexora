@@ -455,6 +455,57 @@ export async function GET(req: Request) {
   }
 
   /**
+   * Agreement split by labelling condition — blind against anchored.
+   *
+   * Its own export rather than extra rows on the sweep. Appending two labelled
+   * rows to a table that is otherwise one-row-per-threshold broke four parsers
+   * the moment it shipped, including this project's own: a reader cannot tell a
+   * data row from an annotation without special-casing it, and every tool has
+   * to learn the exception. Two tables, each uniform, cost nothing.
+   *
+   * These are measured at the threshold in force rather than swept, because the
+   * question is what the recorded labels say — not how agreement would move if
+   * the cut-point were somewhere else.
+   */
+  if (what === "agreement-conditions") {
+    if (session.role !== "SPECIALIST") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    const cal = await calibrationReport({ includeDemo });
+    const row = (label: string, c: typeof cal.byCondition.blind) =>
+      c === null
+        ? [label, 0, "", "", "", "", "", "", "", "", "", ""]
+        : [
+            label,
+            c.n,
+            c.atCurrent.threshold.toFixed(2),
+            c.atCurrent.tp, c.atCurrent.fp, c.atCurrent.tn, c.atCurrent.fn,
+            c.atCurrent.accuracy.toFixed(4),
+            c.atCurrent.sensitivity.toFixed(4),
+            c.atCurrent.specificity.toFixed(4),
+            c.atCurrent.kappa.toFixed(4),
+            c.atCurrent.mcc.toFixed(4),
+          ];
+
+    return csvResponse(
+      toCsv(
+        [
+          // blind = 1 means the machine's transcript, verdict and similarity
+          // were withheld until the specialist had committed a judgement. Every
+          // review recorded before blind review existed is anchored, and the
+          // difference between the two rows is a result about anchoring rather
+          // than a footnote about method.
+          "condition", "n_reviews", "threshold",
+          "true_positive", "false_positive", "true_negative", "false_negative",
+          "accuracy", "sensitivity", "specificity", "cohens_kappa", "matthews_mcc",
+        ],
+        [row("blind", cal.byCondition.blind), row("anchored", cal.byCondition.anchored)]
+      ),
+      exportName("agreement-conditions", null)
+    );
+  }
+
+  /**
    * A plain-text reading summary for a SPED teacher to paste into an IEP.
    *
    * Text rather than CSV because its destination is a Word document, not SPSS.

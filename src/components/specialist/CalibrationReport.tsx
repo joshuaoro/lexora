@@ -242,6 +242,75 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
             </p>
           )}
 
+          {/*
+            The comparison blind review exists to make.
+            Until it was introduced, a specialist saw the machine's verdict — in
+            colour, with its similarity — above the play button, so their
+            judgement was not independent of the thing it judged. Agreement
+            measured that way is inflated by an unknown amount, and the only way
+            to find out by how much is to keep the two populations apart. A
+            visible difference here is a result about anchoring; no difference is
+            evidence the earlier labels were sound. Either is worth reporting,
+            and neither can be claimed without this table.
+          */}
+          {(cal.byCondition.blind || cal.byCondition.anchored) && (
+            <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-extrabold text-ink">
+                Blind versus anchored judgements
+              </h2>
+              <p className="mb-4 max-w-3xl text-sm font-semibold text-ink-muted">
+                Agreement at the threshold in force, split by whether the machine&apos;s verdict
+                was hidden when the specialist decided. Reviews recorded before blind review
+                existed are all anchored: the verdict, the transcript and the similarity were on
+                screen above the play button.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["Judged blind", cal.byCondition.blind],
+                    ["Judged with the verdict visible", cal.byCondition.anchored],
+                  ] as const
+                ).map(([label, c]) => (
+                  <div key={label} className="rounded-2xl border border-line bg-cream/50 px-5 py-4">
+                    <p className="text-sm font-extrabold text-ink">{label}</p>
+                    {c === null ? (
+                      <p className="mt-1 text-sm font-semibold text-ink-muted">
+                        Too few to report yet.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-2xl font-extrabold text-ink">
+                          {pct(c.atCurrent.accuracy)}
+                        </p>
+                        <p className="text-sm font-semibold text-ink-muted">
+                          agreement over {c.n} reading{c.n === 1 ? "" : "s"}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-ink-soft">
+                          κ {c.atCurrent.kappa.toFixed(2)} · MCC {c.atCurrent.mcc.toFixed(2)}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {cal.byCondition.blind && cal.byCondition.anchored && (
+                <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-xs font-semibold text-ink-soft">
+                  {Math.abs(
+                    cal.byCondition.anchored.atCurrent.kappa - cal.byCondition.blind.atCurrent.kappa
+                  ) >= 0.1
+                    ? `Anchored judgements agree with the system ${
+                        cal.byCondition.anchored.atCurrent.kappa > cal.byCondition.blind.atCurrent.kappa
+                          ? "more"
+                          : "less"
+                      } than blind ones — a difference of ${Math.abs(
+                        cal.byCondition.anchored.atCurrent.kappa - cal.byCondition.blind.atCurrent.kappa
+                      ).toFixed(2)} in κ. Report both figures and say which condition each came from.`
+                    : "The two conditions agree closely, which is evidence that seeing the verdict first did not pull the judgements. Worth stating explicitly rather than leaving implied."}
+                </p>
+              )}
+            </section>
+          )}
+
           <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
             <h2 className="text-lg font-extrabold text-ink">How this compares</h2>
             <p className="mb-4 text-sm font-semibold text-ink-muted">

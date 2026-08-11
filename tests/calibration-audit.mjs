@@ -375,6 +375,39 @@ check(
   "deliberate opt-out present"
 );
 
+/**
+ * The word must not run into the next one.
+ *
+ * This prompt is the only text in the app that interpolates a word mid-sentence
+ * between two literal spaces, and it shipped reading "read talocorrectly" — the
+ * space after the tag was dropped. Checked on rendered text rather than the
+ * payload, because that is where the join is visible at all.
+ */
+const blindBrowser = await chromium.launch({
+  channel: process.env.AUDIT_BROWSER ?? "msedge",
+  headless: true,
+});
+const blindView = await blindBrowser.newPage();
+await blindView.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await blindView.fill("#email", "specialist@lexora.ph");
+await blindView.fill("#password", PASSWORD);
+await blindView.click("button[type=submit]");
+await blindView.waitForURL("**/specialist", { timeout: 30000 });
+await blindView.goto(`${BASE}/specialist/learner/${anchorLearner.learnerId}`, {
+  waitUntil: "networkidle",
+});
+const promptText = await blindView
+  .locator("text=/Play the recording/")
+  .first()
+  .innerText()
+  .catch(() => "");
+await blindBrowser.close();
+check(
+  "the target word is spaced away from the words either side of it",
+  /learner read \S+ correctly\./.test(promptText),
+  promptText.slice(0, 80) || "prompt not found"
+);
+
 /* ── 8. the verdict records how it was made, and what was heard ────────── */
 section("[8] blind flag and observation tags round-trip");
 
@@ -425,6 +458,72 @@ const afterNote = await one(
 );
 check("saving a note alone leaves tags untouched", afterNote.n === 1, `${afterNote.n} tags`);
 
+/**
+ * Tagging must not rewrite how the verdict was formed.
+ *
+ * The client saves the whole review again when a chip is pressed, and the first
+ * version recomputed `blind` at that moment — by which point the verdict had
+ * been revealed, so a blind judgement was silently rewritten as an anchored one.
+ * Nothing on screen changes when that happens; it only shows up as a shrinking
+ * blind population in the analysis, months later.
+ *
+ * Driven through the browser because the bug lived in the client's bookkeeping,
+ * not in the route: posting the right value by hand would prove nothing.
+ */
+const provBrowser = await chromium.launch({
+  channel: process.env.AUDIT_BROWSER ?? "msedge",
+  headless: true,
+});
+const provPage = await provBrowser.newPage();
+await provPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await provPage.fill("#email", "specialist@lexora.ph");
+await provPage.fill("#password", PASSWORD);
+await provPage.click("button[type=submit]");
+await provPage.waitForURL("**/specialist", { timeout: 30000 });
+await provPage.goto(`${BASE}/specialist/learner/${anchorLearner.learnerId}`, {
+  waitUntil: "networkidle",
+});
+
+/**
+ * These readings were transcribed as "zzzz", so the system marked them
+ * incorrect. Agreeing with it is therefore the verdict that means "the child
+ * misread this" — and only a misreading offers the observation chips, since a
+ * correct reading has nothing to categorise.
+ */
+const agreeBtn = provPage.getByRole("button", { name: /I agree with the system/ }).first();
+await agreeBtn.click();
+await provPage.waitForTimeout(1500);
+const chip = provPage.getByRole("button", { name: "Vowel" }).first();
+const tagged = (await chip.count()) > 0;
+if (tagged) {
+  await chip.click();
+  await provPage.waitForTimeout(1500);
+}
+await provBrowser.close();
+
+check("the observation chips appear once a misreading is recorded", tagged, tagged ? "shown" : "no chips");
+if (tagged) {
+  // One row, not an aggregate: grouping by `blind` would collapse every review
+  // for this learner into two buckets and report a total rather than this one.
+  const prov = await one(
+    `SELECT r.blind, COUNT(t.id)::int AS tags
+       FROM "AttemptReview" r
+       JOIN "Attempt" a ON a.id = r."attemptId"
+       LEFT JOIN "ReviewErrorTag" t ON t."reviewId" = r.id
+      WHERE a."learnerId" = $1
+      GROUP BY r.id, r.blind
+      HAVING COUNT(t.id) > 0
+      ORDER BY COUNT(t.id) DESC LIMIT 1`,
+    [anchorLearner.learnerId]
+  );
+  check(
+    "tagging a blind verdict leaves it recorded as blind",
+    prov?.blind === true,
+    `blind=${prov?.blind}, tags=${prov?.tags}`
+  );
+  check("and the tag was still saved", (prov?.tags ?? 0) >= 1, `${prov?.tags ?? 0} tag(s)`);
+}
+
 const unknown = await json("/api/reviews", {
   cookie: specialist,
   method: "POST",
@@ -445,6 +544,35 @@ check(
   /nothing\s+is fine-tuned/i.test(calPage),
   "stated"
 );
+check(
+  "and reports the blind-versus-anchored comparison rather than only computing it",
+  /Blind versus anchored judgements/i.test(calPage),
+  "surfaced"
+);
+
+/**
+ * Its own table, deliberately.
+ *
+ * These two rows were briefly appended to the threshold sweep and broke four
+ * parsers in this very suite, because a table that is one-row-per-threshold
+ * stops being that the moment it carries an annotation. The sweep is checked
+ * above for exactly 51 rows; this checks the conditions are still reachable.
+ */
+const condRes = await api("/api/export?what=agreement-conditions", { cookie: specialist });
+const condCsv = (await condRes.text()).replace(/^﻿/, "").trim().split("\r\n");
+check("the condition split has its own export", condRes.ok, `HTTP ${condRes.status}`);
+check(
+  "with one row per condition and nothing else",
+  condCsv.length === 3 && /^blind,/.test(condCsv[1]) && /^anchored,/.test(condCsv[2]),
+  `${condCsv.length - 1} rows`
+);
+check(
+  "carrying κ and MCC for each",
+  /cohens_kappa,matthews_mcc$/.test(condCsv[0]),
+  condCsv[0].split(",").slice(-2).join(",")
+);
+const condDenied = await api("/api/export?what=agreement-conditions", { cookie: learner.cookie });
+check("and a learner cannot export it", condDenied.status === 403, `HTTP ${condDenied.status}`);
 
 /* ── 10. decoding vs recall, compared like with like ───────────────────── */
 section("[10] the divergence panel refuses to draw on too little");

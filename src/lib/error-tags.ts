@@ -114,16 +114,6 @@ export function isValidTag(id: string): boolean {
   return BY_ID.has(id);
 }
 
-export function tagLabel(id: string, lang: "en" | "fil" = "en"): string {
-  const t = BY_ID.get(id);
-  return t ? (lang === "fil" ? t.fil : t.en) : id;
-}
-
-/** Only the tags that describe something the child got wrong. */
-export function errorTagIds(): string[] {
-  return ERROR_TAGS.filter((t) => t.kind === "error").map((t) => t.id);
-}
-
 /**
  * Distribution over tagged reviews, with the denominator it was computed from.
  *

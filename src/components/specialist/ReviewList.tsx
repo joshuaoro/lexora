@@ -89,6 +89,21 @@ export default function ReviewList({
   const [failed, setFailed] = useState<string | null>(null);
   /** Rows the specialist has judged in this sitting, so the reveal is theirs. */
   const [justJudged, setJustJudged] = useState<Set<string>>(new Set());
+  /**
+   * Whether each verdict was formed blind, fixed at the moment it was formed.
+   *
+   * Recomputing this on every save was wrong in a way that only shows up in the
+   * data: judging a row blind stored `blind = true`, then adding an observation
+   * tag saved the row again — and by then the verdict was on screen, so the
+   * recomputed value was false and quietly overwrote it. The provenance of the
+   * label would have been rewritten by an action taken after the label existed,
+   * turning blind judgements into anchored ones in the very comparison blind
+   * review was built to make.
+   *
+   * A change of mind is different and does re-evaluate: pressing the other
+   * button after the reveal really was decided with the answer visible.
+   */
+  const [judgedBlind, setJudgedBlind] = useState<Record<string, boolean>>({});
 
   /**
    * Whether this row may show the machine's verdict.
@@ -101,9 +116,30 @@ export default function ReviewList({
     return !blind || reviews[attemptId] !== undefined || justJudged.has(attemptId);
   }
 
-  async function review(attemptId: string, agrees: boolean, note?: string, nextTags?: string[]) {
+  /**
+   * Was the machine's verdict hidden when this row's verdict was formed?
+   *
+   * `verdictChange` distinguishes the two reasons this function is called. A new
+   * or changed verdict is being formed now, so it is judged by what is on
+   * screen now. A note or a tag is an annotation *of a verdict that already
+   * exists*, and must carry that verdict's original provenance rather than
+   * re-deriving it from a screen that has since revealed the answer.
+   */
+  function blindFor(attemptId: string, verdictChange: boolean): boolean {
+    if (!verdictChange && judgedBlind[attemptId] !== undefined) return judgedBlind[attemptId];
+    return blind && !justJudged.has(attemptId) && reviews[attemptId] === undefined;
+  }
+
+  async function review(
+    attemptId: string,
+    agrees: boolean,
+    note?: string,
+    nextTags?: string[],
+    { verdictChange = true }: { verdictChange?: boolean } = {}
+  ) {
     setBusy(attemptId);
     setFailed(null);
+    const wasBlind = blindFor(attemptId, verdictChange);
     const res = await tryFetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,9 +147,7 @@ export default function ReviewList({
         attemptId,
         agrees,
         note: note ?? notes[attemptId] ?? undefined,
-        // What was actually on screen when this judgement was formed, not what
-        // the toggle happens to say later.
-        blind: blind && !justJudged.has(attemptId) && reviews[attemptId] === undefined,
+        blind: wasBlind,
         ...(nextTags !== undefined ? { tags: nextTags } : {}),
       }),
     });
@@ -123,6 +157,7 @@ export default function ReviewList({
     if (res?.ok) {
       setReviews((r) => ({ ...r, [attemptId]: agrees }));
       setJustJudged((s) => new Set(s).add(attemptId));
+      if (verdictChange) setJudgedBlind((b) => ({ ...b, [attemptId]: wasBlind }));
     } else setFailed(attemptId);
     setBusy(null);
   }
@@ -133,7 +168,9 @@ export default function ReviewList({
     const next = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag];
     setTags((t) => ({ ...t, [attemptId]: next }));
     const agrees = reviews[attemptId];
-    if (agrees !== undefined) await review(attemptId, agrees, undefined, next);
+    if (agrees !== undefined) {
+      await review(attemptId, agrees, undefined, next, { verdictChange: false });
+    }
   }
 
   /** Save a written observation alongside the verdict (kept for the audit trail). */
@@ -143,7 +180,7 @@ export default function ReviewList({
       // A note only makes sense with a verdict; default to agreeing.
       await review(attemptId, true, notes[attemptId]);
     } else {
-      await review(attemptId, agrees, notes[attemptId]);
+      await review(attemptId, agrees, notes[attemptId], undefined, { verdictChange: false });
     }
     setNoteOpen(null);
   }
@@ -228,9 +265,16 @@ export default function ReviewList({
               */}
               {!show ? (
                 <p className="text-sm font-semibold text-ink-muted">
+                  {/* Both gaps are explicit rather than relying on the literal
+                      space after the tag, which was being dropped here: this
+                      rendered "read talocorrectly". A visually identical
+                      construction elsewhere in the specialist UI keeps its
+                      space, so the precise trigger is not established — writing
+                      the separator out removes the question either way, and it
+                      is the same guard already used before the word. */}
                   Play the recording, then say whether the learner read{" "}
-                  <span className="font-bold text-ink">{a.target}</span> correctly. The
-                  system&apos;s reading is hidden until you decide.
+                  <span className="font-bold text-ink">{a.target}</span>{" "}
+                  correctly. The system&apos;s reading is hidden until you decide.
                 </p>
               ) : (
                 <>

@@ -121,9 +121,14 @@ press of *"Switch to quick review (shows AI verdict first)"*, and the current mo
 at all times.
 
 `AttemptReview.blind` records the condition **per review**, so the anchored and unanchored
-populations never merge. The calibration reports agreement under each separately — the gap
-between them is a finding about anchoring, not a footnote about method. Reviews recorded
-before this existed are `blind = false`, which is the truthful value for them.
+populations never merge — and it is fixed at the moment the verdict is formed, not
+recomputed on later saves. (Adding a tag re-saves the review, and an earlier version
+recomputed the flag then, silently rewriting blind judgements as anchored ones once the
+row had revealed.) The calibration reports agreement under each condition on the page and
+in `/api/export?what=agreement-conditions` — its own table, because appending labelled rows
+to the one-row-per-threshold sweep broke four parsers the moment it was tried. The gap
+between the two conditions is a finding about anchoring, not a footnote about method.
+Reviews recorded before this existed are `blind = false`, which is the truthful value.
 
 ### What a specialist heard: observation tags
 Grouping misreadings by linguistic feature is only worth doing if the features are real, and
@@ -437,7 +442,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (379 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (388 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
@@ -446,7 +451,7 @@ npm run audit:links       # every route reachable from the navigation  (50)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
-npm run audit:calibration # calibration, blind review, tags, demo, IEP  (59)
+npm run audit:calibration # calibration, blind review, tags, demo, IEP  (68)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device

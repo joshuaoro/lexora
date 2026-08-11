@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { patternFamily } from "@/lib/stats";
 import { learnerScope, includeDemoFromParams } from "@/lib/demo";
 import DemoToggle from "@/components/specialist/DemoToggle";
+import { divergence } from "@/lib/divergence";
+import DivergencePanel from "@/components/specialist/DivergencePanel";
 
 /**
  * Every learner on one screen.
@@ -52,6 +54,10 @@ export default async function CohortPage({
   const ids = learners.map((l) => l.id);
   // Shown on the toggle so a specialist knows how much is being held back.
   const demoCount = await prisma.learnerProfile.count({ where: { isDemo: true } });
+  // Across the cohort: if four of five children read real words far better
+  // than non-words, that is a finding about the intervention rather than
+  // about any one learner.
+  const cohortDivergence = await divergence(undefined, { includeDemo });
 
   const [accGroups, errorGroups, sessionGroups, patternRows, practiceGroups] = await Promise.all([
     prisma.attempt.groupBy({
@@ -276,6 +282,8 @@ export default async function CohortPage({
           </table>
         </div>
       </section>
+      <DivergencePanel d={cohortDivergence} />
+
     </div>
   );
 }
