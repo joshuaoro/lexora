@@ -20,7 +20,7 @@ import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import pg from "pg";
-import { TABLE_ORDER } from "./db-tables";
+import { TABLE_ORDER, assertCoversSchema } from "./db-tables";
 
 async function main() {
   const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -37,6 +37,17 @@ async function main() {
 
   const client = new pg.Client({ connectionString });
   await client.connect();
+
+  // Before writing anything: does this dump still cover the whole schema?
+  const live = await client.query<{ tablename: string }>(
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
+  );
+  try {
+    assertCoversSchema(live.rows.map((r) => r.tablename));
+  } catch (err) {
+    await client.end();
+    throw err;
+  }
 
   console.log("Backing up LEXORA…");
   const data: Record<string, unknown[]> = {};

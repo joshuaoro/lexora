@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-49 commits, 8 migrations, 10 automated audit suites, 405 assertions.
+50 commits, 9 migrations, 10 automated audit suites, 414 assertions.
 
 ---
 
@@ -1390,7 +1390,62 @@ once confirmed by timestamps: server started 05:26:49, build finished 05:32:21.
 **Convention established:** restart the server before testing, always. It is
 written into the verification section of the plan template.
 
-### 8.13 Smaller fixes worth recording
+### 8.13 The database had a second door, and 43 passing tests could not see it
+
+Found on 12 August, from Supabase's own Security Advisor rather than from
+anything in this project — which is the point of the entry.
+
+**Mechanism.** Supabase exposes a PostgREST endpoint next to the Postgres one,
+and grants the `anon` role full DML on the public schema by default. Row Level
+Security is what is meant to hold that back, and it was never enabled: Prisma
+does not create policies, and nothing else did. The endpoint was live, RLS was
+off on all 11 tables, and `anon` held `SELECT, INSERT, UPDATE, DELETE` **and
+`TRUNCATE`** on every one — read every recording, or delete the study.
+
+**Why it is the sharpest example of §14's theme.** `api-audit` had 43 assertions
+proving that nobody can read or change data they do not own. Every one of them
+was true, and every one tested the application's front door. The assurance they
+provided was real and was about the wrong thing — the guarantee they seemed to
+give ("learner data is protected") was broader than the guarantee they actually
+made ("the app enforces access control"). A passing suite is evidence about
+whatever it exercises, and nothing whatever about what it does not.
+
+The documentation had crystallised the same gap into a sentence: "Row Level
+Security is not involved; every access check happens server-side and is covered
+by the audit suite." Both clauses were true. Their conjunction implied something
+false, and it had been written in a document intended for a panel.
+
+**What made it not a catastrophe** was luck with a helpful shape: exploiting it
+needs the anon key, and LEXORA has no Supabase client, so the key appears in no
+commit, no bundle and no `.env`. The margin was one shared dashboard screenshot
+wide.
+
+**Fix.** Data API disabled, plus RLS on all 11 tables as a second layer, plus two
+new assertions in `api-audit` — that the endpoint stays shut, and that the app
+can still read every table. See §10.1a.
+
+**The lesson worth keeping.** The suite was never wrong; the inference drawn from
+it was. Worth asking of any green suite: *what would still be true if this passed
+and the system were compromised anyway?*
+
+### 8.14 The backup had silently stopped covering every table
+
+Found while taking the safety backup before the work in §8.13 — the table list
+the run printed did not match the schema.
+
+`TABLE_ORDER` in `scripts/db-tables.ts` is hand-maintained and had fallen behind
+migration `20260811050000`. `ReviewErrorTag` was added to the schema and not to
+the list; `SpeechClip` had never been on it. Every backup for a day omitted both
+while printing a success line and a row count.
+
+**Nothing was lost** — `ReviewErrorTag` held 0 rows, because no specialist had
+tagged anything yet. It would have started costing real data the moment one did.
+
+The same shape as the rest: a report of success covering an absence. Fixed by
+checking the list against `pg_tables` before writing anything, so an unknown
+table aborts the run rather than yielding a partial file that looks complete.
+
+### 8.15 Smaller fixes worth recording
 
 - **Safari MIME parsing** (§4.2) — every reading from an iPad would have gone
   unscored with nothing in the UI to say why.
@@ -1417,12 +1472,11 @@ written into the verification section of the plan template.
 
 ### 9.1 The suites
 
-Ten suites, **405 checks locally, 403 in production**. Run with
-`npm run audit [url]`.
+Ten suites, **414 checks locally**. Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
-| `api-audit` | 43 | Authorization, validation, data scoping, erasure |
+| `api-audit` | 52 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
 | `logic-audit` | 22 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
 | `links-audit` | 50 | Every route reachable from the navigation, as each role |
@@ -1496,12 +1550,49 @@ shows zero overlap between consecutive sessions at every level.
 ### 10.1 Access control
 
 Every check is server-side, in this repository, and covered by `api-audit`.
-Supabase RLS is deliberately unused so that authorization is not split across two
-systems.
+Supabase Auth is deliberately unused so that authorization is not split across
+two systems.
 
 Learners can read and export **only their own** data. Specialists can read all
 learners. Specialist registration requires `SPECIALIST_CODE` and stays disabled
 until it is set.
+
+### 10.1a The second door: the Supabase Data API
+
+An earlier draft of this section said RLS was "deliberately unused". That was a
+description of the application and a mistake about the database, and the
+distinction turned out to matter more than the sentence did — see §8.14.
+
+Supabase serves a PostgREST endpoint alongside the Postgres one and grants the
+`anon` role full DML on the public schema by default. RLS is the mechanism meant
+to hold that back. It had never been enabled, because Prisma does not create
+policies and nothing else did either.
+
+Verified by probe on 12 August 2026, before the fix:
+
+| Question | Method | Answer |
+|---|---|---|
+| Is the Data API live? | `curl .../rest/v1/` | Yes — `401 No API key found`, i.e. PostgREST answering |
+| Is RLS on? | `pg_tables.rowsecurity` | `false` on all 11 tables |
+| What can `anon` do? | `information_schema.role_table_grants` | `SELECT, INSERT, UPDATE, DELETE, TRUNCATE` on every table |
+| Was the anon key ever leaked? | `git log -S`, `git grep` over all commits | No — never committed, and no Supabase client in the tree |
+
+The remedy is two layers. The Data API is disabled in the dashboard, which is
+sufficient on its own and costs nothing because LEXORA uses no PostgREST. RLS is
+then enabled on all 11 tables with no policies — deny-by-default — so that
+re-enabling the endpoint later, by a person or by a change in Supabase's
+defaults, does not reopen the hole. Prisma is unaffected: it connects as
+`postgres`, which holds `BYPASSRLS`, and that was measured rather than assumed.
+
+Writing RLS *policies* was rejected. There is no PostgREST client to grant access
+to, so a policy would have nothing to express, and a wrong policy resembles
+protection in a way a disabled endpoint does not.
+
+One property of `BYPASSRLS` is worth recording because it defeats the obvious way
+to test this: it outranks `FORCE ROW LEVEL SECURITY`. Enabling `FORCE` on a table
+does not blind a `BYPASSRLS` role — measured at 76 `PhonItem` rows both before and
+during. Rehearsing the silent-zero-rows failure means running as a role without
+the attribute; `FORCE` alone proves nothing.
 
 The auth rate limiter counts **only failed attempts**, because everyone at the
 partner institution shares one public IP and counting successes would let a class
@@ -1529,8 +1620,26 @@ Supabase's free tier takes **no automatic backups**, and reading data collected
 from children cannot be gathered again.
 
 `npm run backup` writes a single gzipped JSON dump of every table using the `pg`
-client, so no Postgres tooling has to be installed. Roughly 3 MB compressed, most
-of it pronunciation audio.
+client, so no Postgres tooling has to be installed. Roughly 10 MB compressed,
+most of it audio.
+
+**"Every table" was not true when this document first claimed it.** `TABLE_ORDER`
+in `scripts/db-tables.ts` is hand-maintained, and it fell behind migration
+`20260811050000`: `ReviewErrorTag` was added to the schema and not to the list,
+so for a day every backup omitted the specialist observation tags while printing
+a success line and a row count. `SpeechClip` had never been on the list at all.
+Discovered on 12 August while taking the safety backup before the RLS work — the
+table list printed by the run did not match the schema.
+
+Nothing was actually lost: `ReviewErrorTag` held 0 rows, because no specialist
+had tagged anything yet. The gap would have started costing real data the moment
+one did, and those tags are a person's judgement of what they heard — not
+derivable from anything else in the database.
+
+The list is now checked against `pg_tables` before a byte is written, and a table
+it does not recognise aborts the run. Hand-maintained lists that must track a
+schema do not stay correct; the fix is not to add two names but to make the
+omission impossible to ship quietly.
 
 **`--verify` performs the entire restore inside a transaction, checks every row
 count, then rolls back** — proving the file is genuinely restorable without
@@ -1607,21 +1716,59 @@ write-up.
 
 ### 13.1 Security — must be done before any real child is enrolled
 
-These are listed first because they are the only items that get **worse** with
-time rather than staying still. Right now the database holds nothing but demo
-history and the exposure is harmless. The day a real child's recording is in
-there, it stops being harmless.
+These get **worse** with time rather than staying still. Right now the database
+holds nothing but demo history and the exposure is survivable. The day a real
+child's recording is in there, it stops being survivable.
 
-1. **Rotate `SPECIALIST_CODE`.** The current value is published in this
-   repository's public git history. Anyone who reads it can self-register as a
-   specialist and see every child's records and recordings. Change it in the
-   Vercel dashboard and redeploy.
-2. **Change the specialist account password.** `specialist@lexora.ph` /
-   `lexora123` still works; §8.2 stopped it being advertised, not being valid.
-3. **Delete or rename the `learner1` / `learner2` demo accounts** before real
-   participants are enrolled.
-4. **Never accept Prisma's "reset database" prompt** against the live study
-   database.
+**Done (12 August 2026).** RLS enabled on all 11 tables, migration
+`20260812010000`; backup coverage repaired and made self-checking; two new
+assertions in `api-audit`; `npm run secrets:check` written. See §8.13–8.14.
+
+**Outstanding.** The first is a dashboard action, the rest are rotations.
+
+1. **Disable the Supabase Data API** — Settings → Data API. RLS already denies
+   the `anon` role, so this is the second layer rather than the first, but it
+   removes the endpoint instead of guarding it. Verified by
+   `npm run audit:api`, which fails while PostgREST still answers.
+
+2. **Rotate `SPECIALIST_CODE`** — Vercel → environment variables → redeploy.
+   The highest-severity of the three: it gates every child's record and
+   recording, and anyone holding it can self-register as a specialist without
+   needing an account to begin with. The published value is `READINGOWL`.
+
+3. **Change the specialist account password.** `specialist@lexora.ph` /
+   `lexora123` still works — §8.2 stopped it being advertised, not being valid.
+
+4. **Re-credential the demo learners** rather than deleting them. The security
+   requirement is only that no account whose password sits in git history
+   survives to enrolment, and re-credentialing meets it while keeping
+   `learner1`'s fabricated history — which is what makes a defense demo show
+   populated charts. Deleting would mean re-seeding later, and `prisma db seed`
+   **wipes every table first**, which is not an operation to want near the study
+   database. The `isDemo` quarantine (§6.2) is a research-integrity decision and
+   is unaffected either way. Keep `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` unset.
+
+5. **Never accept Prisma's "reset database" prompt** against the live study
+   database. Use `migrate deploy`, never `migrate dev`.
+
+**Git history is permanent, and rotation does not clean it.** The old values stay
+readable in this public repository forever; rotation invalidates them, which is
+the entire point, but it means the new values must never enter the repository at
+all — environment variables and a password manager only, with `.env.example`
+staying an example. `npm run secrets:check` is how that is confirmed rather than
+assumed: it presents each published value and requires a refusal, and it searches
+the tracked tree *and every commit* for the values now in use, because a new
+secret that gets committed is not a rotation but a slower leak.
+
+As of writing it reports three failures, which is the truthful state:
+
+```
+[1] registering a specialist with the published code is rejected   FAIL
+[2] specialist@lexora.ph cannot sign in with the published password FAIL
+[3] SPECIALIST_CODE has actually been rotated                       FAIL
+```
+
+They should all read `ok` before the first child reads into the application.
 
 ### 13.2 Study execution
 

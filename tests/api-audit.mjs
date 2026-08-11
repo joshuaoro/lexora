@@ -154,6 +154,299 @@ check(
   JSON.stringify(l)
 );
 
+/* ── 9. the database is not reachable around the app ───────────────────── */
+/**
+ * Supabase serves a PostgREST endpoint at https://<ref>.supabase.co/rest/v1/
+ * and grants `anon` full DML on the public schema by default. That is a second
+ * door into the same database, and none of sections 1–8 above can see it —
+ * every one of them tests LEXORA's own front door.
+ *
+ * Two ways to check, strongest first:
+ *
+ *   With SUPABASE_ANON_KEY set, the real property is asserted directly: present
+ *   the key the way an attacker would and confirm no learner row comes back.
+ *   The key is public by design in Supabase's model, so keeping it in .env
+ *   costs nothing and buys the only test that proves the actual guarantee.
+ *
+ *   Without it, fall back to confirming the endpoint does not answer as a live
+ *   PostgREST instance at all. Weaker — absence of a door rather than a locked
+ *   one — but it needs no extra configuration.
+ */
+section("[9] the Supabase Data API is not a second way in");
+
+const ref = (process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "").match(
+  /\/\/postgres\.([a-z0-9]+):/
+)?.[1];
+
+if (!ref) {
+  check("SKIP: no Supabase project ref in DIRECT_URL — nothing to probe", true);
+} else {
+  const restBase = `https://${ref}.supabase.co/rest/v1`;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+
+  /** Fetch that treats a dead host as a result, not an exception. */
+  const probe = async (path, headers = {}) => {
+    try {
+      const res = await fetch(`${restBase}${path}`, {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      return { status: res.status, body: await res.text().catch(() => "") };
+    } catch {
+      return { status: 0, body: "" }; // unreachable — which is the goal
+    }
+  };
+
+  if (anonKey) {
+    // The tables worth naming individually: anything holding a child's data or
+    // a credential. A single sampled table would not prove the others.
+    for (const table of ["User", "Attempt", "LearnerProfile", "AttemptReview"]) {
+      const res = await probe(`/${table}?select=*&limit=1`, {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      });
+      // RLS with no policies answers 200 with an empty array; a disabled Data
+      // API answers 404 or does not connect. Both are fine. What must never
+      // happen is a row coming back.
+      let rows = null;
+      try {
+        const parsed = JSON.parse(res.body);
+        if (Array.isArray(parsed)) rows = parsed.length;
+      } catch {
+        /* not a JSON array — no rows by definition */
+      }
+      check(
+        `anon key reads no rows from ${table}`,
+        rows === null || rows === 0,
+        `HTTP ${res.status}${rows === null ? "" : `, rows=${rows}`}`
+      );
+    }
+  } else {
+    const res = await probe("/");
+    // "No API key found" is PostgREST answering, which means the endpoint is
+    // live and only the anon key stands between it and the data.
+    const live = res.status === 200 || /No API key found/i.test(res.body);
+    check(
+      "the Data API does not answer as a live PostgREST instance",
+      !live,
+      live
+        ? `HTTP ${res.status} — disable it in Supabase → Settings → Data API, ` +
+            "or set SUPABASE_ANON_KEY in .env for the stronger row-level check"
+        : `HTTP ${res.status || "unreachable"}`
+    );
+  }
+}
+
+/* ── 10. RLS has not silently blinded the app ──────────────────────────── */
+/**
+ * The counterpart to section 9, and the more dangerous direction.
+ *
+ * RLS with no policies denies SELECT *silently* — zero rows, no error. If the
+ * app's connection role ever lost BYPASSRLS, nothing would crash; every child's
+ * data would simply appear to have vanished, and the first person to notice
+ * would be a specialist wondering where a learner's history went.
+ *
+ * Three things make this test able to catch that, and each of them is load
+ * bearing:
+ *
+ *   It reads over HTTP. `query()` here uses a raw pg client on DIRECT_URL —
+ *   the same `postgres` role Prisma uses — so a query()-only check would bypass
+ *   RLS exactly as the app does and pass while the deployment returned nothing.
+ *   Only a request to a running endpoint exercises the app's own connection,
+ *   which matters most against Vercel, where DATABASE_URL may resolve to a
+ *   different role than the DIRECT_URL this suite reads with.
+ *
+ *   It compares counts rather than asserting non-emptiness. RLS is enabled per
+ *   table and could be misapplied to one of them, so the realistic failure is a
+ *   filtered subset, which "more than zero" sails straight past.
+ *
+ *   It seeds its own rows. If the app and the database both reported zero the
+ *   check would pass having proved nothing — the same vacuous-assertion trap
+ *   that let a build fingerprint "change" to the md5 of an empty string.
+ *
+ * These have been watched failing, which is the only reason to trust them. On
+ * the first run the fixture was wrong in two different ways and the section
+ * caught both: ActivitySession reported "app sees 0, database holds 1" (the
+ * session was opened but never closed, and the export filters total > 0), and
+ * PracticeItem reported 0 against 0 and refused to pass on it (the miss carried
+ * no wordId, so recordMiss never fired). Divergence and vacuity, both surfaced
+ * before either had a chance to become a green check over nothing.
+ *
+ * Note for anyone trying to re-stage the real failure: FORCE ROW LEVEL SECURITY
+ * will not do it. A role holding BYPASSRLS bypasses row security whether or not
+ * FORCE is set — measured on this database, 76 PhonItem rows before and during
+ * FORCE. Reproducing it means pointing the app at a role without BYPASSRLS.
+ */
+section("[10] the app can still read every table through its own connection");
+
+const rls = await createTestLearner("rls");
+const rlsSession = await json("/api/sessions", {
+  cookie: rls.cookie,
+  method: "POST",
+  body: { type: "READ_ALOUD" },
+});
+
+// One correct reading and one miss. The miss is what creates a PracticeItem —
+// and only if wordId is sent, since recordMiss keys the practice list on the
+// word row rather than on the target text.
+const readings = [
+  { target: "bahay", heard: "bahay" },
+  { target: "bola", heard: "dola" },
+];
+const attemptIds = [];
+for (const r of readings) {
+  const w = await one(`SELECT id FROM "Word" WHERE text = $1`, [r.target]);
+  const res = await json("/api/attempts", {
+    cookie: rls.cookie,
+    method: "POST",
+    body: {
+      activityType: "READ_ALOUD",
+      target: r.target,
+      wordId: w?.id ?? null,
+      browserTranscript: r.heard,
+      responseMs: 1500,
+      sessionId: rlsSession.body?.id,
+    },
+  });
+  if (res.body?.attemptId ?? res.body?.id) attemptIds.push(res.body.attemptId ?? res.body.id);
+}
+
+// Close the session with its totals. The sessions export filters on total > 0,
+// so a session that was opened and never finished is legitimately invisible to
+// it — leaving it open would make the parity check below fail for a reason that
+// has nothing to do with RLS.
+if (rlsSession.body?.id) {
+  await api(`/api/sessions/${rlsSession.body.id}`, {
+    cookie: rls.cookie,
+    method: "PATCH",
+    body: { total: readings.length, correct: 1, durationMs: 3000 },
+  });
+}
+
+// A specialist verdict plus a tag, so AttemptReview and ReviewErrorTag are not
+// empty on either side of the comparison.
+if (attemptIds.length) {
+  await api("/api/reviews", {
+    cookie: specialist,
+    method: "POST",
+    body: { attemptId: attemptIds[0], agrees: true, blind: true, tags: ["vowel"] },
+  });
+}
+
+/** Assert the app and the database agree, and that neither is empty. */
+async function parity(label, appCount, sql, params = []) {
+  const dbCount = Number((await one(sql, params)).n);
+  check(
+    `${label}: app sees ${appCount}, database holds ${dbCount}`,
+    appCount === dbCount && dbCount > 0,
+    dbCount === 0 ? "nothing seeded — the check would be vacuous" : ""
+  );
+}
+
+// Attempt + Word + ActivitySession, via the learner's own export.
+const rlsCsv = await (
+  await api("/api/export?what=attempts", { cookie: rls.cookie })
+).text();
+const rlsRows = rlsCsv.trim().split("\n").length - 1;
+await parity("Attempt", rlsRows, `SELECT COUNT(*)::int n FROM "Attempt" WHERE "learnerId" = $1`, [
+  rls.learnerId,
+]);
+
+// User + LearnerProfile, via the all-learner summary the specialist exports.
+const sumCsv = await (
+  await api("/api/export?what=summary", { cookie: specialist })
+).text();
+await parity(
+  "LearnerProfile",
+  sumCsv.trim().split("\n").length - 1,
+  `SELECT COUNT(*)::int n FROM "LearnerProfile" WHERE NOT "isDemo"`
+);
+
+// ActivitySession, via the sessions export.
+const sessCsv = await (
+  await api(`/api/export?what=sessions&learnerId=${rls.learnerId}`, { cookie: specialist })
+).text();
+await parity(
+  "ActivitySession",
+  sessCsv.trim().split("\n").length - 1,
+  `SELECT COUNT(*)::int n FROM "ActivitySession" WHERE "learnerId" = $1`,
+  [rls.learnerId]
+);
+
+// AttemptReview + ReviewErrorTag, read back through the attempts export's
+// review column rather than counted directly — it is the app's own join.
+const reviewedCsv = await (
+  await api(`/api/export?what=attempts&learnerId=${rls.learnerId}`, { cookie: specialist })
+).text();
+const reviewedRows = reviewedCsv
+  .trim()
+  .split("\n")
+  .slice(1)
+  .filter((line) => /agree|dispute/i.test(line)).length;
+await parity(
+  "AttemptReview",
+  reviewedRows,
+  `SELECT COUNT(*)::int n FROM "AttemptReview" r
+     JOIN "Attempt" a ON a.id = r."attemptId" WHERE a."learnerId" = $1`,
+  [rls.learnerId]
+);
+
+// PracticeItem — the miss above should have put one word on the list. The
+// app-side number comes from the summary export's own practice columns
+// (practice_words_active + practice_words_mastered), not from a second database
+// read: comparing a query against itself would be exactly the vacuous check
+// this section exists to rule out.
+const summaryHeader = sumCsv.trim().split("\n")[0].replace(/^﻿/, "").split(",");
+const emailCol = summaryHeader.indexOf("email");
+const activeCol = summaryHeader.indexOf("practice_words_active");
+const masteredCol = summaryHeader.indexOf("practice_words_mastered");
+const ourRow = sumCsv
+  .trim()
+  .split("\n")
+  .slice(1)
+  .map((line) => line.split(","))
+  .find((cells) => cells[emailCol] === rls.email);
+
+if (!ourRow || emailCol === -1 || activeCol === -1) {
+  check("PracticeItem: summary export exposes the test learner's row", false, "row not found");
+} else {
+  await parity(
+    "PracticeItem",
+    Number(ourRow[activeCol]) + Number(ourRow[masteredCol]),
+    `SELECT COUNT(*)::int n FROM "PracticeItem" WHERE "learnerId" = $1`,
+    [rls.learnerId]
+  );
+}
+
+// Word and PhonItem have no JSON endpoint — they reach a child only through a
+// server-rendered page, and `buildItems` runs on the server before it renders.
+//
+// The start screen prints the size of the run it just built — "Start! (8
+// words)" — which is that server query's result count made visible. Asserting
+// on it is worth more than looking for a word in the markup: the words go into
+// a client component's props, and an empty run still renders a full page, so a
+// byte-length or "page loaded" check would pass with nothing behind it. If RLS
+// blinded either table the count would read 0 while the page looked normal.
+const RUN_SIZE = 8;
+for (const [slug, table] of [
+  ["read-aloud", "Word"],
+  ["rhyme", "PhonItem"],
+]) {
+  const page = await (await api(`/exercises/${slug}`, { cookie: rls.cookie })).text();
+  const built = Number(page.match(/\((\d+)\s*(?:words|salita)\)/i)?.[1] ?? -1);
+  check(
+    `${table}: the ${slug} run was built from ${RUN_SIZE} database rows`,
+    built === RUN_SIZE,
+    built === -1 ? "no item count found on the start screen" : `built ${built}`
+  );
+}
+
+// SpeechClip — a cached instruction line must still be servable.
+const clip = await api("/api/speech?lang=fil&text=Magaling!", { cookie: rls.cookie });
+check("SpeechClip is readable through /api/speech", clip.status === 200, `HTTP ${clip.status}`);
+
+await deleteTestLearner(rls.email);
+
 /* ── cleanup ───────────────────────────────────────────────────────────── */
 await deleteTestLearner(alice.email);
 await deleteTestLearner(bob.email);

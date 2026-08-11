@@ -417,8 +417,41 @@ needed — this is the step that most often trips people up:
 | `DIRECT_URL` | **Session pooler**, port `5432` | `prisma migrate`, `db seed`, `audio:generate`, and the audit suite — migrations cannot run through the transaction pooler |
 
 Supabase is used purely as managed Postgres. LEXORA keeps its own JWT-cookie auth, so
-Supabase Auth, Storage, and Row Level Security are not involved; every access check happens
-server-side and is covered by the audit suite.
+Supabase Auth and Storage are not involved; every access check happens server-side and is
+covered by the audit suite.
+
+### Closing the Data API
+
+That last sentence used to end "…and Row Level Security is not involved", which was true of
+the application and **false of the database**. Supabase serves a PostgREST endpoint at
+`https://<ref>.supabase.co/rest/v1/` and grants the `anon` role full DML on the public
+schema by default; RLS is what is supposed to hold that back, and nothing had enabled it.
+Measured before the fix: the endpoint was live, `rowsecurity` was false on all 11 tables,
+and `anon` held `SELECT, INSERT, UPDATE, DELETE` **and `TRUNCATE`** on every one. Anyone
+with the project's anon key — public by design in Supabase's model, precisely because RLS
+is meant to be the protection — could have read every recording or deleted the study, none
+of it passing through LEXORA or any check the audit suite makes.
+
+Two layers now:
+
+1. **The Data API is disabled** (Supabase → Settings → Data API). LEXORA uses no PostgREST
+   at all — no `@supabase/supabase-js`, no anon key anywhere in the tree — so nothing is
+   lost, and it stays correct for tables added later.
+2. **RLS is enabled on all 11 tables with no policies** (migration
+   `20260812010000_enable_rls_all_tables`), which is deny-by-default. Verified safe rather
+   than assumed: Prisma connects as `postgres`, which holds `BYPASSRLS`.
+
+Both are asserted in `npm run audit:api` — that the endpoint stays shut, and that the app
+can still read every table, comparing counts over HTTP against the database rather than
+trusting that the site renders. To check the endpoint by hand:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://<ref>.supabase.co/rest/v1/
+```
+
+A connection failure or `404` is what you want. `401 No API key found` means PostgREST is
+still answering. Setting `SUPABASE_ANON_KEY` in `.env` upgrades the audit to the stronger
+form: it presents the key the way an attacker would and asserts no row comes back.
 
 ## Deploying (Vercel)
 
@@ -473,7 +506,16 @@ and this repository is public — a GitHub Actions artifact would be downloadabl
 Point `-BackupDir` at a synced folder or copy to an encrypted drive for the off-site copy.
 
 The dump is a single gzipped file covering every table, written with the `pg` client so
-no Postgres tooling has to be installed. ~3 MB compressed, most of it pronunciation audio.
+no Postgres tooling has to be installed. ~10 MB compressed, most of it audio.
+
+**Coverage is enforced, not remembered.** `TABLE_ORDER` in `scripts/db-tables.ts` fell a
+migration behind once: `ReviewErrorTag` arrived on 11 August and was not added, so every
+backup for a day silently omitted the specialist observation tags — a person's judgement of
+what they heard, regenerable from nothing — while reporting success. `SpeechClip` had never
+been included either. Both are in now, and the backup checks itself against
+`pg_tables` before writing: a table the list does not know about aborts the run rather than
+producing a partial file that looks complete. A backup that quietly skips a table is worse
+than no backup, because it is only found out at the moment someone needs it.
 
 Run `--verify` after each backup: it performs the whole restore inside a transaction,
 checks every row count, then rolls back — proving the file is genuinely restorable
@@ -486,9 +528,9 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (405 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (414 checks)
 npm run audit -- <url>    # or against the deployment
-npm run audit:api         # authorization, validation, erasure  (43)
+npm run audit:api         # authorization, validation, erasure, RLS  (52)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
 npm run audit:links       # every route reachable from the navigation  (50)
@@ -500,7 +542,15 @@ npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device
 npm run audit:prod        # smoke test after a deployment
+npm run secrets:check     # the values published in git history no longer work
 ```
+
+`secrets:check` presents the credentials that are readable in this repository's public
+history — the old `SPECIALIST_CODE` and the demo password — and requires them to be
+refused. Rotation cannot remove them from history; it can only invalidate them, and this is
+how you know it did. It also searches the tracked tree **and every commit** for the value
+currently in use, because a new secret that gets committed is not a rotation but a slower
+leak. It prints no secret, and deletes the probe account it creates.
 
 The UI suite's wait for the specialist learner view timed out once, on the first full run
 against a freshly started server, and passed on every run since — including repeated full
