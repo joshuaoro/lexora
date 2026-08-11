@@ -3,10 +3,14 @@ import { ArrowLeft, Download, Users } from "lucide-react";
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { patternFamily } from "@/lib/stats";
+import { getLang } from "@/lib/lang";
+import { getDict } from "@/lib/i18n";
 import { learnerScope, includeDemoFromParams } from "@/lib/demo";
 import DemoToggle from "@/components/specialist/DemoToggle";
 import { divergence } from "@/lib/divergence";
 import DivergencePanel from "@/components/specialist/DivergencePanel";
+import { phaseComparison } from "@/lib/phases";
+import PhaseComparison from "@/components/specialist/PhaseComparison";
 
 /**
  * Every learner on one screen.
@@ -42,6 +46,8 @@ export default async function CohortPage({
 }) {
   await requireSpecialist();
   const includeDemo = includeDemoFromParams(await searchParams);
+  const lang = await getLang();
+  const t = getDict(lang).specialist;
 
   // Filtering here is enough: every query below is scoped by `learnerId in ids`,
   // so excluding a learner from this list removes them from every figure on the
@@ -57,7 +63,10 @@ export default async function CohortPage({
   // Across the cohort: if four of five children read real words far better
   // than non-words, that is a finding about the intervention rather than
   // about any one learner.
-  const cohortDivergence = await divergence(undefined, { includeDemo });
+  const [cohortDivergence, cohortPhases] = await Promise.all([
+    divergence(undefined, { includeDemo }),
+    phaseComparison(undefined, { includeDemo }),
+  ]);
 
   const [accGroups, errorGroups, sessionGroups, patternRows, practiceGroups] = await Promise.all([
     prisma.attempt.groupBy({
@@ -145,13 +154,13 @@ export default async function CohortPage({
         href="/specialist"
         className="inline-flex items-center gap-1.5 text-sm font-bold text-ink-muted hover:text-primary"
       >
-        <ArrowLeft size={16} /> All learners
+        <ArrowLeft size={16} /> {t.allLearners}
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-extrabold text-ink">
-            <Users size={26} className="text-primary" /> Cohort overview
+            <Users size={26} className="text-primary" /> {t.cohortOverview}
           </h1>
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
             All {learners.length} learners side by side, over {cohortTotal} scored readings.
@@ -164,12 +173,12 @@ export default async function CohortPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-        <DemoToggle count={demoCount} />
+        <DemoToggle count={demoCount} lang={lang} />
         <a
           href={`/api/export?what=summary${includeDemo ? "&includeDemo=true" : ""}`}
           className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark"
         >
-          <Download size={16} /> Summary CSV
+          <Download size={16} /> {t.summaryCsv}
         </a>
         </div>
       </div>
@@ -282,7 +291,9 @@ export default async function CohortPage({
           </table>
         </div>
       </section>
-      <DivergencePanel d={cohortDivergence} />
+      <PhaseComparison c={cohortPhases} scope="cohort" lang={lang} />
+
+      <DivergencePanel d={cohortDivergence} lang={lang} />
 
     </div>
   );

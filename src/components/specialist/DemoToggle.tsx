@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FlaskConical } from "lucide-react";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /**
  * "Show demo data" — off by default, and never quietly on.
@@ -17,7 +18,8 @@ import { FlaskConical } from "lucide-react";
  * a screenshot taken with demo data on carries `?demo=1` in the address bar —
  * which is exactly the sort of thing that should be hard to lose track of.
  */
-export default function DemoToggle({ count }: { count: number }) {
+export default function DemoToggle({ count, lang = "en" }: { count: number; lang?: Lang }) {
+  const t = getDict(lang).specialist;
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -49,7 +51,7 @@ export default function DemoToggle({ count }: { count: number }) {
       }
     >
       <FlaskConical size={16} />
-      {on ? `Hide demo data (${count})` : `Show demo data (${count})`}
+      {on ? t.hideDemo(count) : t.showDemo(count)}
     </button>
   );
 }

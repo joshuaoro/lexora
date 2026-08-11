@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines, Eye, EyeOff } from "lucide-react";
 import { ERROR_TAGS } from "@/lib/error-tags";
 import { tryFetch } from "@/lib/net";
+import { getDict, type Lang } from "@/lib/i18n";
 
 export type ReviewableAttempt = {
   id: string;
@@ -55,10 +56,13 @@ const ENGINE_LABELS: Record<string, string> = {
 export default function ReviewList({
   attempts,
   mode = "agreement",
+  lang = "en",
 }: {
   attempts: ReviewableAttempt[];
   mode?: "agreement" | "probe";
+  lang?: Lang;
 }) {
+  const t = getDict(lang).specialist;
   const isProbe = mode === "probe";
 
   /**
@@ -213,16 +217,16 @@ export default function ReviewList({
         <span className="flex items-center gap-2 text-sm font-extrabold text-ink">
           {blind ? (
             <>
-              <EyeOff size={16} className="text-primary" /> Blind review
+              <EyeOff size={16} className="text-primary" /> {t.blindOn}
               <span className="font-semibold text-ink-muted">
-                — the system&apos;s verdict is hidden until you decide
+                — {t.blindOnSub}
               </span>
             </>
           ) : (
             <>
-              <Eye size={16} className="text-orange" /> Quick review
+              <Eye size={16} className="text-orange" /> {t.blindOff}
               <span className="font-semibold text-orange">
-                — verdicts recorded now are marked as not blind
+                — {t.blindOffSub}
               </span>
             </>
           )}
@@ -231,7 +235,7 @@ export default function ReviewList({
           onClick={() => setBlind((b) => !b)}
           className="shrink-0 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-bold text-ink-soft transition hover:bg-cream-dark"
         >
-          {blind ? "Switch to quick review (shows AI verdict first)" : "Return to blind review"}
+          {blind ? t.blindSwitchOff : t.blindSwitchOn}
         </button>
       </div>
 
@@ -385,7 +389,7 @@ export default function ReviewList({
                 } ${isProbe ? "" : "w-9 px-0"}`}
               >
                 <ThumbsUp size={16} />
-                {isProbe && <span className="text-xs font-bold">Read it</span>}
+                {isProbe && <span className="text-xs font-bold">{t.readIt}</span>}
               </button>
               <button
                 onClick={() => review(a.id, isProbe ? a.correct === false : false)}
@@ -399,7 +403,7 @@ export default function ReviewList({
                 } ${isProbe ? "" : "w-9 px-0"}`}
               >
                 <ThumbsDown size={16} />
-                {isProbe && <span className="text-xs font-bold">Misread</span>}
+                {isProbe && <span className="text-xs font-bold">{t.misread}</span>}
               </button>
               <button
                 onClick={() => setNoteOpen(noteOpen === a.id ? null : a.id)}
@@ -458,8 +462,8 @@ export default function ReviewList({
             {readCorrectly === false && (
               <div className="w-full border-t border-line pt-2.5 pl-1">
                 <p className="text-xs font-bold text-ink-muted">
-                  What did you observe?{" "}
-                  <span className="font-semibold">optional — skip if unsure</span>
+                  {t.observePrompt}{" "}
+                  <span className="font-semibold">{t.observeOptional}</span>
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
                   {ERROR_TAGS.map((t) => {
@@ -489,7 +493,7 @@ export default function ReviewList({
             )}
             {failed === a.id && (
               <p role="alert" className="w-full pl-1 text-xs font-bold text-orange">
-                That verdict was not saved — check the connection and press it again.
+                {t.verdictNotSaved}
               </p>
             )}
           </li>

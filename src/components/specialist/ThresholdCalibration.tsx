@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Scale } from "lucide-react";
 import ReviewList, { type ReviewableAttempt } from "./ReviewList";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /**
  * Borderline readings — the ones that decide whether the scoring threshold is
@@ -22,11 +23,14 @@ export default function ThresholdCalibration({
   attempts,
   threshold,
   band,
+  lang = "en",
 }: {
   attempts: ReviewableAttempt[];
   threshold: number;
   band: number;
+  lang?: Lang;
 }) {
+  const t = getDict(lang).specialist;
   const lower = threshold - band;
 
   return (
@@ -34,7 +38,7 @@ export default function ThresholdCalibration({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-            <Scale size={20} className="text-primary" /> Borderline readings
+            <Scale size={20} className="text-primary" /> {t.borderlineTitle}
           </h2>
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
             Readings that scored between {lower.toFixed(2)} and {threshold.toFixed(2)} — just
@@ -44,7 +48,7 @@ export default function ThresholdCalibration({
         </div>
         <div className="rounded-2xl bg-primary-soft px-5 py-3 text-center">
           <p className="text-2xl font-extrabold text-primary">{threshold.toFixed(2)}</p>
-          <p className="text-xs font-bold text-ink-soft">current threshold</p>
+          <p className="text-xs font-bold text-ink-soft">{t.borderlineThreshold}</p>
         </div>
       </div>
 

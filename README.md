@@ -170,6 +170,41 @@ judgement)"* and are phrased as things to look at, never as instructions: an app
 does not diagnose should not be writing "recommended intervention". Carries the disclaimer
 inline and refuses outright for a demo learner.
 
+### Baseline to endline
+**Specialist → learner** and **Cohort**, or `/api/export?what=phase-comparison`.
+
+The study is a pre/post design, and until now the phase tag went into a CSV column
+and nowhere else — every figure the app computed was aggregated over all time, so a
+progress-tracking application could not show progress. `src/lib/phases.ts` splits
+accuracy, decoding time and probe accuracy by the phase a specialist tagged in
+**Study timeline**.
+
+The probe split is the one that matters. Real-word accuracy rising over eight weeks is
+ambiguous: the child may have learned to decode, or learned those 254 words. Non-word
+accuracy rising is not ambiguous, because a made-up word cannot have been memorised in
+advance. Baseline probe against endline probe is the closest this study comes to asking
+its own question directly.
+
+- **Descriptives only — no significance testing.** Five participants cannot support a
+  p-value, and one rendered in a web page would be quoted long after the caveat was
+  forgotten. Whether a change is distinguishable from chance is a question for the
+  analysis, with the exported data and a test chosen for the design.
+- **Minimums:** 10 readings per phase, and 8 reviewed probe readings per phase — one
+  full run. Counts sit beside every figure; a caution appears below 20.
+- **Readings not linked to a session are reported, not hidden.** A session is created
+  when an activity starts, and if that request does not land the readings still save —
+  they simply have no phase to be attributed to. They are complete records, counted in
+  every other figure, and excluded from this comparison alone. The wording is
+  deliberately neutral and is asserted in the audit: they are never called errors,
+  failures or invalid data, because nothing about them went wrong.
+
+### Deferred ideas
+[`docs/deferred-ideas.md`](docs/deferred-ideas.md) records what was considered and
+deliberately set aside, with the reason and what would have to change to revisit it —
+per-learner calibration, phonological clustering from accumulated tags, select-to-speak,
+offline sync, Whisper fine-tuning, in-app significance testing. Written for the Future
+Work section, and as a record for anyone continuing the project. It is not a backlog.
+
 ### Demo accounts are quarantined
 `prisma/seed.ts` gives the demo learners a fortnight of **fabricated** history: `mutate()`
 invents misreadings by swapping `b↔d`, `p→b`, `m↔n`, `u→o`, `e→i` — very nearly the textbook
@@ -442,7 +477,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (388 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (405 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure  (43)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
@@ -451,7 +486,7 @@ npm run audit:links       # every route reachable from the navigation  (50)
 npm run audit:stale       # a learner or specialist erased mid-session  (21)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
-npm run audit:calibration # calibration, blind review, tags, demo, IEP  (68)
+npm run audit:calibration # calibration, blind review, tags, demo, IEP, pre/post  (85)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device

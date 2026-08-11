@@ -756,5 +756,260 @@ if (scAttempt) {
   );
 }
 
+/* ── 14. baseline against endline ──────────────────────────────────────── */
+section("[14] the pre/post comparison the study is built on");
+
+/**
+ * A learner with a tagged baseline, a tagged endline, and one reading that
+ * belongs to neither.
+ *
+ * The probe side is the point: real-word accuracy rising is ambiguous because
+ * the bank can be learned by sight, and non-word accuracy rising is not. This
+ * fixture makes both improve so the table has something to show, and deliberately
+ * leaves one reading unattached to a session so the untagged path is exercised
+ * rather than assumed.
+ */
+const phaseLearner = await createTestLearner("phases");
+const phaseWords = await query(
+  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 12`
+);
+const phaseProbes = await query(`SELECT id, text FROM "Word" WHERE "isPseudo" ORDER BY text LIMIT 8`);
+
+async function taggedSession(type, phase) {
+  const started = await json("/api/sessions", {
+    cookie: phaseLearner.cookie,
+    method: "POST",
+    body: { type },
+  });
+  const id = started.body?.id;
+  if (id) {
+    await api(`/api/sessions/${id}/phase`, {
+      cookie: specialist,
+      method: "PATCH",
+      body: { phase },
+    });
+  }
+  return id;
+}
+
+/**
+ * `saidCorrect` is the specialist's own verdict, not the stored `agrees`.
+ *
+ * The column records agreement with the machine, so the two are inverses
+ * whenever the machine said "incorrect" — which it does for every "zzzz"
+ * reading here. Writing the intended verdict and converting once is the only
+ * way to keep a fixture legible; passing `agrees` directly inverted the probe
+ * result and read as a bug in the code rather than in the test.
+ */
+async function readInto(sessionId, word, activityType, heard, saidCorrect) {
+  const posted = await api("/api/attempts", {
+    cookie: phaseLearner.cookie,
+    method: "POST",
+    body: {
+      ...(sessionId ? { sessionId } : {}),
+      activityType,
+      wordId: word.id,
+      target: word.text,
+      browserTranscript: heard,
+      responseMs: activityType === "PSEUDO_PROBE" ? 3000 : 4000,
+    },
+  });
+  const { id } = await posted.json().catch(() => ({}));
+  if (id && saidCorrect !== undefined) {
+    // Every reading here is transcribed "zzzz", so the machine's verdict is
+    // always "incorrect": agreeing with it means the child misread.
+    await json("/api/reviews", {
+      cookie: specialist,
+      method: "POST",
+      body: { attemptId: id, agrees: !saidCorrect, blind: true },
+    });
+  }
+  return Boolean(id);
+}
+
+// Baseline: 12 real words, 4 of 12 correct. Probe: 8 read, 2 judged correct.
+const baseRead = await taggedSession("READ_ALOUD", "BASELINE");
+for (let i = 0; i < 12; i++) {
+  await readInto(baseRead, phaseWords[i], "READ_ALOUD", i < 4 ? phaseWords[i].text : "zzzz");
+}
+const baseProbe = await taggedSession("PSEUDO_PROBE", "BASELINE");
+for (let i = 0; i < 8; i++) {
+  await readInto(baseProbe, phaseProbes[i], "PSEUDO_PROBE", "zzzz", i < 2);
+}
+
+// Endline: 12 real words, 11 correct. Probe: 8 read, 6 judged correct.
+const endRead = await taggedSession("READ_ALOUD", "ENDLINE");
+for (let i = 0; i < 12; i++) {
+  await readInto(endRead, phaseWords[i], "READ_ALOUD", i < 11 ? phaseWords[i].text : "zzzz");
+}
+const endProbe = await taggedSession("PSEUDO_PROBE", "ENDLINE");
+for (let i = 0; i < 8; i++) {
+  await readInto(endProbe, phaseProbes[i], "PSEUDO_PROBE", "zzzz", i < 6);
+}
+
+// One reading with no session at all — complete data, simply no phase.
+await readInto(null, phaseWords[0], "READ_ALOUD", phaseWords[0].text);
+
+const phaseCsv = (
+  await (
+    await api(`/api/export?what=phase-comparison&learnerId=${phaseLearner.learnerId}`, {
+      cookie: specialist,
+    })
+  ).text()
+)
+  .replace(/^﻿/, "")
+  .trim()
+  .split("\r\n");
+const phaseCols = phaseCsv[0].split(",");
+const asRow = (line) => Object.fromEntries(phaseCols.map((c, i) => [c, line.split(",")[i]]));
+const base = asRow(phaseCsv[1]);
+const end = asRow(phaseCsv[2]);
+
+check("the phase export is one row per compared phase", phaseCsv.length === 3, `${phaseCsv.length - 1} rows`);
+check("baseline first, endline second", base.phase === "BASELINE" && end.phase === "ENDLINE");
+check(
+  "word accuracy is split by phase",
+  base.accuracy_pct === "33" && end.accuracy_pct === "92",
+  `${base.accuracy_pct}% → ${end.accuracy_pct}%`
+);
+check(
+  "and so is the probe — the comparison the study turns on",
+  base.probe_accuracy_pct === "25" && end.probe_accuracy_pct === "75",
+  `${base.probe_accuracy_pct}% → ${end.probe_accuracy_pct}%`
+);
+check(
+  "the unattached reading is counted, not absorbed into a phase",
+  +base.untagged_readings === 1 && +end.untagged_readings === 1,
+  `untagged=${base.untagged_readings}`
+);
+check(
+  "and it is not silently added to either phase's total",
+  +base.readings === 12 && +end.readings === 12,
+  `${base.readings} / ${end.readings}`
+);
+
+const phaseBrowser = await chromium.launch({
+  channel: process.env.AUDIT_BROWSER ?? "msedge",
+  headless: true,
+});
+const phaseView = await phaseBrowser.newPage();
+await phaseView.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await phaseView.fill("#email", "specialist@lexora.ph");
+await phaseView.fill("#password", PASSWORD);
+await phaseView.click("button[type=submit]");
+await phaseView.waitForURL("**/specialist", { timeout: 30000 });
+await phaseView.goto(`${BASE}/specialist/learner/${phaseLearner.learnerId}`, {
+  waitUntil: "networkidle",
+});
+const phaseText = await phaseView.locator("main").innerText();
+await phaseBrowser.close();
+
+check("the panel draws the comparison", /Baseline to endline/.test(phaseText), "shown");
+check(
+  "it reports no p-value, and says why",
+  !/p\s*[=<]\s*0?\.\d/.test(phaseText) && /distinguishable from chance/i.test(phaseText),
+  "descriptives only"
+);
+
+/**
+ * The wording, asserted rather than intended.
+ *
+ * These readings are complete — score, transcript, timing all recorded — and
+ * are counted in every other figure. Calling them errors or failures would tell
+ * a specialist their child's session went wrong when nothing did. Copy that is
+ * not checked drifts, so the neutral phrasing is a test.
+ */
+check(
+  "unattached readings are described as not linked to a session",
+  /not linked to\s+a session/i.test(phaseText),
+  phaseText.match(/\d+ reading[^.]*not linked to\s+a session/i)?.[0]?.slice(0, 60) ?? "phrase missing"
+);
+// Scoped to the sentence itself, anchored on its own opening. Slicing from
+// "not linked to" *to the end of the page* swept in everything below —
+// including the report's own "Word-level error patterns" heading — so the check
+// was judging text it was never meant to read.
+const untaggedSentence =
+  phaseText.match(
+    /\d+ readings? (?:is|are) not linked to a session[\s\S]{0,400}?on this page\./i
+  )?.[0] ?? "";
+const forbidden = untaggedSentence.match(/\b(error|errors|failure|failures|invalid|bad)\b/gi);
+check(
+  "and never as errors, failures or invalid data",
+  untaggedSentence !== "" && forbidden === null,
+  untaggedSentence === ""
+    ? "sentence not found"
+    : forbidden
+      ? `found: ${forbidden.join(", ")}`
+      : "neutral"
+);
+
+/* ── 15. the language toggle reaches the whole workspace ───────────────── */
+section("[15] Filipino covers the specialist workspace, not just its pages");
+
+/**
+ * The toggle used to change the pages and leave the components in English,
+ * which reads as a broken control on exactly the screens the reading
+ * specialists score for Interaction Capability. Type-checking guarantees no
+ * dictionary key is missing; only a render proves the components use them.
+ */
+const filBrowser = await chromium.launch({
+  channel: process.env.AUDIT_BROWSER ?? "msedge",
+  headless: true,
+});
+const filCtx = await filBrowser.newContext();
+const filPage = await filCtx.newPage();
+await filPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await filPage.fill("#email", "specialist@lexora.ph");
+await filPage.fill("#password", PASSWORD);
+await filPage.click("button[type=submit]");
+await filPage.waitForURL("**/specialist", { timeout: 30000 });
+await filPage.getByRole("button", { name: "Filipino" }).first().click();
+await filPage.waitForTimeout(500);
+
+// Deterministic: LIMIT 1 without ORDER BY picked a different learner run to
+// run, and one of them has no reviewable readings, so the review list rendered
+// its empty state and the check failed on nothing being wrong.
+const anyLearner = await one(
+  `SELECT lp.id FROM "LearnerProfile" lp
+     JOIN "Attempt" a ON a."learnerId" = lp.id
+    WHERE a."activityType" IN ('READ_ALOUD','PRACTICE') AND NOT a."isRetry"
+    GROUP BY lp.id ORDER BY COUNT(a.id) DESC LIMIT 1`
+);
+await filPage.goto(`${BASE}/specialist/learner/${anyLearner.id}?demo=1`, {
+  waitUntil: "networkidle",
+});
+const filLearnerText = await filPage.locator("main").innerText();
+await filPage.goto(`${BASE}/specialist/cohort?demo=1`, { waitUntil: "networkidle" });
+const filCohortText = await filPage.locator("main").innerText();
+await filBrowser.close();
+
+// One representative string per newly translated component.
+for (const [component, fil, en] of [
+  ["SessionPhases", "Timeline ng pag-aaral", "Study timeline"],
+  ["ThresholdCalibration", "Mga borderline na pagbasa", "Borderline readings"],
+  ["DivergencePanel", "Pagdedekowd ba o pagkabisado", "Decoding or memorisation"],
+  ["PhaseComparison", "Baseline hanggang endline", "Baseline to endline"],
+  // Not "Blind review": that phrase is deliberately identical in both
+  // languages, so asserting on it would pass whatever the toggle did.
+  ["ReviewList", "nakatago ang hatol ng sistema", "the system's verdict is hidden"],
+]) {
+  check(
+    `${component} follows the toggle`,
+    filLearnerText.includes(fil) && (en === null || !filLearnerText.includes(en)),
+    filLearnerText.includes(fil) ? "in Filipino" : `still English: ${en}`
+  );
+}
+check(
+  "DemoToggle follows the toggle",
+  /Itago ang demo data|Ipakita ang demo data/.test(filCohortText),
+  "in Filipino"
+);
+check(
+  "and the cohort page itself does too",
+  filCohortText.includes("Pangkalahatang tanaw ng cohort") &&
+    !filCohortText.includes("Cohort overview"),
+  "in Filipino"
+);
+
 report("Calibration audit");
 await endSuite();

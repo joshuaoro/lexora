@@ -277,6 +277,86 @@ const en = {
       "Made-up words cannot be read from memory, so these separate decoding from sight-word recall — the difference between a learner who has learned to decode and one who has learned this word bank. Score them by ear. The recogniser is transcribing words that exist in no language, and how often it gets them right is one of the things this study is measuring, so its verdict is shown for comparison rather than for approval.",
     probeChip: (scored: number, pending: number) =>
       `read correctly (${scored} scored${pending > 0 ? `, ${pending} to review` : ""})`,
+
+    /* ── Study timeline ─────────────────────────────────────────────── */
+    timelineTitle: "Study timeline",
+    timelineSub:
+      "Mark which sessions form the baseline and which form the endline. The tag is exported as study_phase, so the pre/post comparison uses sessions you chose rather than a cut-off inferred from dates.",
+    timelineEmpty:
+      "No completed sessions yet. They appear here once the learner finishes an activity.",
+    phaseSaveFailed: "Could not save that tag.",
+    phaseSaveOffline: "No internet connection — the tag was not saved.",
+    phaseItems: (n: number) => `${n} items`,
+
+    /* ── Borderline readings ────────────────────────────────────────── */
+    borderlineTitle: "Borderline readings",
+    borderlineSub: (lower: string, threshold: string) =>
+      `Readings that scored between ${lower} and ${threshold} — just below the line for being accepted. Play each one. If the child actually read the word correctly, the system is being too strict.`,
+    borderlineThreshold: "current threshold",
+    borderlineEmpty:
+      "No borderline readings yet. They appear once the learner has recorded readings that fall just short of the threshold — those are the ones worth listening to.",
+    borderlineCount: (n: number) => `${n} reading${n === 1 ? "" : "s"} to check`,
+    borderlineFeeds: "Every verdict you record here becomes a labelled example.",
+    borderlineFeedsLink: "Threshold calibration",
+    borderlineFeedsRest:
+      "fits the acceptance line to those judgements once enough have been collected across all learners. These borderline readings are the most valuable to review, because they are the only ones whose verdict changes as the line moves.",
+
+    /* ── Self-correction ────────────────────────────────────────────── */
+    selfCorrectionTitle: "Self-correction",
+
+    /* ── Blind review ───────────────────────────────────────────────── */
+    blindOn: "Blind review",
+    blindOnSub: "the system's verdict is hidden until you decide",
+    blindOff: "Quick review",
+    blindOffSub: "verdicts recorded now are marked as not blind",
+    blindSwitchOff: "Switch to quick review (shows AI verdict first)",
+    blindSwitchOn: "Return to blind review",
+    blindPromptBefore: "Play the recording, then say whether the learner read",
+    blindPromptAfter: "correctly. The system's reading is hidden until you decide.",
+    observePrompt: "What did you observe?",
+    observeOptional: "optional — skip if unsure",
+    heardLabel: "Heard",
+    heardNothing: "(nothing)",
+    browserHeard: "Browser heard",
+    verdictNotSaved: "That verdict was not saved — check the connection and press it again.",
+    readIt: "Read it",
+    misread: "Misread",
+    noReadings:
+      "No oral readings recorded yet. Readings appear here after the learner does Read-aloud or Practice exercises.",
+    noProbeReadings:
+      "No probe readings yet. They appear here after the learner runs the Silly words activity.",
+
+    /* ── Decoding vs recall ─────────────────────────────────────────── */
+    divergenceTitle: "Decoding or memorisation?",
+    divergenceRealWords: "Real words",
+    divergenceRealSub: "From the word bank — can be recognised on sight",
+    divergenceProbe: "Probe non-words",
+    divergenceProbeSub: "Made up — can only be decoded",
+
+    /* ── Baseline to endline ────────────────────────────────────────── */
+    phaseTitle: "Baseline to endline",
+    phaseSubCohort:
+      "Across every learner, comparing the sessions tagged as the baseline with those tagged as the endline.",
+    phaseSubLearner:
+      "Comparing the sessions tagged as this learner's baseline with those tagged as the endline.",
+    phaseTagHint: "Tag sessions in Study timeline below; only tagged sessions can appear here.",
+    phaseMeasure: "Measure",
+    phaseChange: "Change",
+    phaseAccuracy: "Word accuracy",
+    phaseDecodeTime: "Time per correct word",
+    phaseProbe: "Non-word probe",
+
+    /* ── Word bank ──────────────────────────────────────────────────── */
+    wordBankTitle: "Word bank",
+    addWord: "Add word",
+    acceptedSpellings: "Accepted spellings",
+    pronunciation: "Pronunciation",
+
+    /* ── Cohort ─────────────────────────────────────────────────────── */
+    cohortMinutes: "Minutes",
+    cohortCompleted: "Completed",
+    showDemo: (n: number) => `Show demo data (${n})`,
+    hideDemo: (n: number) => `Hide demo data (${n})`,
   },
   reports: {
     title: "My reading report",
@@ -653,6 +733,79 @@ const fil: Dict = {
       "Hindi puwedeng basahin sa memorya ang mga imbentong salita, kaya inihihiwalay nito ang pagdedekowd sa pagkilala ng salitang kabisado — ang pagkakaiba ng mag-aaral na natutong magdekowd at ng natutong kabisaduhin ang word bank na ito. Suriin ito sa pamamagitan ng pakikinig. Nagta-transcribe ang recogniser ng mga salitang wala sa kahit anong wika, at bahagi ng sinusukat ng pag-aaral na ito kung gaano ito kadalas tumama — kaya ipinapakita ang hatol nito para paghambingan, hindi para sang-ayunan.",
     probeChip: (scored, pending) =>
       `tamang nabasa (${scored} nasuri${pending > 0 ? `, ${pending} pang susuriin` : ""})`,
+
+    timelineTitle: "Timeline ng pag-aaral",
+    timelineSub:
+      "Markahan kung aling mga session ang baseline at alin ang endline. Kasama ang tag sa export bilang study_phase, kaya ang paghahambing na pre/post ay gumagamit ng mga session na pinili mo, hindi ng hinuha mula sa petsa.",
+    timelineEmpty:
+      "Wala pang natapos na session. Lilitaw sila rito kapag may natapos nang aktibidad ang mag-aaral.",
+    phaseSaveFailed: "Hindi na-save ang tag na iyon.",
+    phaseSaveOffline: "Walang koneksyon — hindi na-save ang tag.",
+    phaseItems: (n) => `${n} aytem`,
+
+    borderlineTitle: "Mga borderline na pagbasa",
+    borderlineSub: (lower, threshold) =>
+      `Mga pagbasang nakakuha ng ${lower} hanggang ${threshold} — bahagyang kulang para tanggapin. Pakinggan ang bawat isa. Kung tama namang nabasa ng bata ang salita, masyadong mahigpit ang sistema.`,
+    borderlineThreshold: "kasalukuyang threshold",
+    borderlineEmpty:
+      "Wala pang borderline na pagbasa. Lilitaw ang mga ito kapag may naitalang pagbasang bahagyang kulang sa threshold — iyon ang sulit pakinggan.",
+    borderlineCount: (n) => `${n} pagbasa ang susuriin`,
+    borderlineFeeds: "Bawat hatol na itinatala mo rito ay nagiging labelled na halimbawa.",
+    borderlineFeedsLink: "Pag-calibrate ng threshold",
+    borderlineFeedsRest:
+      "ang mag-aakma ng linya ng pagtanggap sa mga hatol na iyon kapag sapat na ang naipon mula sa lahat ng mag-aaral. Ang mga borderline na pagbasa ang pinakamahalagang suriin, dahil sila lang ang nagbabago ng hatol habang gumagalaw ang linya.",
+
+    selfCorrectionTitle: "Kusang pagtatama",
+
+    blindOn: "Blind review",
+    blindOnSub: "nakatago ang hatol ng sistema hanggang magdesisyon ka",
+    blindOff: "Mabilisang review",
+    blindOffSub: "ang mga hatol ngayon ay markadong hindi blind",
+    blindSwitchOff: "Lumipat sa mabilisang review (makikita muna ang hatol ng AI)",
+    blindSwitchOn: "Bumalik sa blind review",
+    blindPromptBefore: "Pakinggan ang recording, tapos sabihin kung tama bang nabasa ng mag-aaral ang",
+    blindPromptAfter: "— nakatago ang pagbasa ng sistema hanggang magdesisyon ka.",
+    observePrompt: "Ano ang napansin mo?",
+    observeOptional: "opsyonal — laktawan kung hindi sigurado",
+    heardLabel: "Narinig",
+    heardNothing: "(wala)",
+    browserHeard: "Narinig ng browser",
+    verdictNotSaved: "Hindi na-save ang hatol na iyon — tingnan ang koneksyon at pindutin ulit.",
+    readIt: "Nabasa",
+    misread: "Namali",
+    noReadings:
+      "Wala pang naitalang pagbasa nang malakas. Lilitaw sila rito matapos ang Basahin nang malakas o Praktis.",
+    noProbeReadings:
+      "Wala pang probe na pagbasa. Lilitaw sila rito matapos gawin ng mag-aaral ang Mga salitang imbento.",
+
+    divergenceTitle: "Pagdedekowd ba o pagkabisado?",
+    divergenceRealWords: "Tunay na salita",
+    divergenceRealSub: "Mula sa word bank — puwedeng makilala agad",
+    divergenceProbe: "Mga salitang imbento",
+    divergenceProbeSub: "Imbento — kailangang tunugin",
+
+    phaseTitle: "Baseline hanggang endline",
+    phaseSubCohort:
+      "Sa lahat ng mag-aaral, inihahambing ang mga session na naka-tag na baseline sa mga naka-tag na endline.",
+    phaseSubLearner:
+      "Inihahambing ang mga session na naka-tag bilang baseline ng mag-aaral na ito sa mga naka-tag na endline.",
+    phaseTagHint:
+      "I-tag ang mga session sa Timeline ng pag-aaral sa ibaba; naka-tag na session lang ang lilitaw dito.",
+    phaseMeasure: "Sukatan",
+    phaseChange: "Pagbabago",
+    phaseAccuracy: "Accuracy sa salita",
+    phaseDecodeTime: "Oras kada tamang salita",
+    phaseProbe: "Probe na salitang imbento",
+
+    wordBankTitle: "Word bank",
+    addWord: "Magdagdag ng salita",
+    acceptedSpellings: "Tinatanggap na baybay",
+    pronunciation: "Bigkas",
+
+    cohortMinutes: "Minuto",
+    cohortCompleted: "Natapos",
+    showDemo: (n) => `Ipakita ang demo data (${n})`,
+    hideDemo: (n) => `Itago ang demo data (${n})`,
   },
   reports: {
     title: "Ulat ng pagbasa ko",

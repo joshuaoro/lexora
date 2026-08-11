@@ -5,6 +5,7 @@ import {
   MIN_PROBE_REVIEWS,
   THIN_SAMPLE,
 } from "@/lib/divergence";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /**
  * Decoding against recall, drawn side by side.
@@ -47,11 +48,12 @@ function Bar({
   );
 }
 
-export default function DivergencePanel({ d }: { d: Divergence }) {
+export default function DivergencePanel({ d, lang = "en" }: { d: Divergence; lang?: Lang }) {
+  const t = getDict(lang).specialist;
   return (
     <section className="no-print mt-5 rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
       <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-        <GitCompareArrows size={20} className="text-primary" /> Decoding or memorisation?
+        <GitCompareArrows size={20} className="text-primary" /> {t.divergenceTitle}
       </h2>
       <p className="mt-1 max-w-3xl text-sm font-semibold text-ink-muted">
         Real words can be read from memory; made-up words cannot. A learner who reads real
@@ -79,16 +81,16 @@ export default function DivergencePanel({ d }: { d: Divergence }) {
         <>
           <div className="mt-5 space-y-4">
             <Bar
-              label="Real words"
+              label={t.divergenceRealWords}
               side={d.real}
               tone="bg-primary"
-              caption="From the word bank — can be recognised on sight"
+              caption={t.divergenceRealSub}
             />
             <Bar
-              label="Probe non-words"
+              label={t.divergenceProbe}
               side={d.pseudo}
               tone="bg-peach-deep"
-              caption="Made up — can only be decoded"
+              caption={t.divergenceProbeSub}
             />
           </div>
 

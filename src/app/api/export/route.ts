@@ -5,6 +5,7 @@ import { patternFamily as patternFamilyFor, PLAUSIBLE, median } from "@/lib/stat
 import { calibrationReport } from "@/lib/calibration";
 import { learnerScope, viaLearnerScope, includeDemoFrom } from "@/lib/demo";
 import { buildIepDraft } from "@/lib/iep";
+import { phaseComparison } from "@/lib/phases";
 
 /**
  * CSV export of learner data for statistical treatment.
@@ -451,6 +452,60 @@ export async function GET(req: Request) {
         rows
       ),
       exportName("calibration", null)
+    );
+  }
+
+  /**
+   * Baseline against endline — the study's pre/post table.
+   *
+   * One row per phase, and only the two that are compared. Descriptives only:
+   * the change between them is arithmetic anyone can redo from these numbers,
+   * and whether it is distinguishable from chance belongs in the analysis with
+   * a test chosen for the design.
+   *
+   * `untagged_readings` is carried on both rows so it cannot be lost when
+   * someone filters to one phase. Those readings are complete — score,
+   * transcript, timing — and are counted in every other export. They simply
+   * have no session to take a phase from, so they are outside this table only.
+   */
+  if (what === "phase-comparison") {
+    if (session.role !== "SPECIALIST") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    const c = await phaseComparison(learnerId, { includeDemo });
+    const row = (m: typeof c.baseline) => [
+      m.phase,
+      m.readings,
+      m.correct,
+      m.accuracyPct ?? "",
+      m.medianDecodeMs ?? "",
+      m.probeReviewed,
+      m.probeCorrect,
+      m.probePct ?? "",
+      c.untaggedReadings,
+    ];
+
+    return csvResponse(
+      toCsv(
+        [
+          "phase",
+          "readings", "correct", "accuracy_pct",
+          // Median milliseconds for a correct reading. Falling is the
+          // improvement: in a transparent orthography such as Filipino, speed
+          // separates dyslexic from typical readers more reliably than accuracy.
+          "median_decode_ms",
+          // Probe items are scored by a specialist by ear, never by the
+          // recogniser. A rise here is the least ambiguous evidence of decoding
+          // gain, because a made-up word cannot have been memorised.
+          "probe_reviewed", "probe_correct", "probe_accuracy_pct",
+          // Readings with no session, and therefore no phase. Not errors: they
+          // are complete records counted everywhere else, and excluded from
+          // this table alone.
+          "untagged_readings",
+        ],
+        [row(c.baseline), row(c.endline)]
+      ),
+      exportName("phase-comparison", scopedTo)
     );
   }
 

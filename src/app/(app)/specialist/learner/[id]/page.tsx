@@ -18,6 +18,8 @@ import { getDict } from "@/lib/i18n";
 import { retentionDays } from "@/lib/retention-policy";
 import { divergence } from "@/lib/divergence";
 import DivergencePanel from "@/components/specialist/DivergencePanel";
+import { phaseComparison } from "@/lib/phases";
+import PhaseComparison from "@/components/specialist/PhaseComparison";
 
 /** How far below the threshold still counts as a borderline reading. */
 const BORDERLINE_BAND = 0.15;
@@ -32,7 +34,10 @@ export default async function LearnerDetailPage({
   const lang = await getLang();
   const t = getDict(lang).specialist;
 
-  const learnerDivergence = await divergence(id);
+  const [learnerDivergence, learnerPhases] = await Promise.all([
+    divergence(id),
+    phaseComparison(id),
+  ]);
 
   const profile = await prisma.learnerProfile.findUnique({
     where: { id },
@@ -378,7 +383,7 @@ export default async function LearnerDetailPage({
           </div>
         </div>
         <div className="mt-4">
-          <ReviewList attempts={reviewable} />
+          <ReviewList attempts={reviewable} lang={lang} />
         </div>
       </section>
 
@@ -403,21 +408,24 @@ export default async function LearnerDetailPage({
           </div>
         </div>
         <div className="mt-4">
-          <ReviewList attempts={probeAttempts} mode="probe" />
+          <ReviewList attempts={probeAttempts} mode="probe" lang={lang} />
         </div>
       </section>
 
-      <DivergencePanel d={learnerDivergence} />
+      <DivergencePanel d={learnerDivergence} lang={lang} />
 
       <ThresholdCalibration
         attempts={borderlineAttempts}
         threshold={activeScoreThreshold()}
         band={BORDERLINE_BAND}
+        lang={lang}
       />
 
       <SelfCorrection pairs={corrections} />
 
-      <SessionPhases sessions={phaseSessions} />
+      <PhaseComparison c={learnerPhases} scope="learner" lang={lang} />
+
+      <SessionPhases sessions={phaseSessions} lang={lang} />
 
       {/* Full progress report */}
       <div className="mt-5">

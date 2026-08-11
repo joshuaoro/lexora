@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarRange } from "lucide-react";
 import { tryFetch } from "@/lib/net";
+import { getDict, type Lang } from "@/lib/i18n";
 
 export type PhaseSession = {
   id: string;
@@ -39,7 +40,14 @@ const TONE: Record<string, string> = {
  * so the analysis rests on a decision the researcher can defend rather than on
  * an arbitrary cut-off.
  */
-export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }) {
+export default function SessionPhases({
+  sessions,
+  lang = "en",
+}: {
+  sessions: PhaseSession[];
+  lang?: Lang;
+}) {
+  const t = getDict(lang).specialist;
   const [rows, setRows] = useState(sessions);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +68,7 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
       // misclick rather than a failed save — and this is the tag the pre/post
       // comparison is built on, so a silently lost one is expensive.
       setRows(previous);
-      setError(res ? "Could not save that tag." : "No internet connection — the tag was not saved.");
+      setError(res ? t.phaseSaveFailed : t.phaseSaveOffline);
     }
     setBusy(null);
   }
@@ -72,7 +80,7 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-            <CalendarRange size={20} className="text-primary" /> Study timeline
+            <CalendarRange size={20} className="text-primary" /> {t.timelineTitle}
           </h2>
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
             Mark which sessions form the baseline and which form the endline. The tag is included
@@ -98,7 +106,7 @@ export default function SessionPhases({ sessions }: { sessions: PhaseSession[] }
 
       {rows.length === 0 ? (
         <p className="mt-4 text-sm text-ink-soft">
-          No completed sessions yet. They appear here once the learner finishes an activity.
+          {t.timelineEmpty}
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-line">
