@@ -7,17 +7,13 @@
  */
 import bcrypt from "bcryptjs";
 import {
-  BASE, PASSWORD, api, json, login, check, section, report, query, one,
-  createTestLearner, deleteTestLearner, endSuite,
+  BASE, PASSWORD, api, json, check, section, report, query, one,
+  requireSpecialistLogin, createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`API audit against ${BASE}`);
 
-const specialist = await login("specialist@lexora.ph");
-if (!specialist) {
-  console.error("Could not sign in as specialist@lexora.ph — is the database seeded?");
-  process.exit(1);
-}
+const specialist = await requireSpecialistLogin();
 
 const alice = await createTestLearner("api-a");
 const bob = await createTestLearner("api-b");
@@ -223,20 +219,91 @@ if (!ref) {
       );
     }
   } else {
+    // Without the key this question cannot be answered, and the earlier attempt
+    // to answer it anyway was wrong in the worst direction.
+    //
+    // It treated `401 No API key found` as proof the endpoint was live. That
+    // response comes from Supabase's *gateway*, not from PostgREST — the
+    // headers say so plainly (`sb-error-code: UNAUTHORIZED_MISSING_API_KEY`,
+    // `sb-gateway-version: 1`), and the gateway rejects a keyless request to
+    // /rest/v1/* before routing it anywhere. So the 401 is returned whether the
+    // Data API is enabled or disabled, and the check could only ever fail. It
+    // stayed red through a correct fix and sent someone back to a dashboard
+    // toggle they had already flipped.
+    //
+    // A check that cannot pass is worse than no check: it trains its reader to
+    // ignore a failing suite. Skipping honestly, and saying what would make it
+    // answerable, is the truthful option.
     const res = await probe("/");
-    // "No API key found" is PostgREST answering, which means the endpoint is
-    // live and only the anon key stands between it and the data.
-    const live = res.status === 200 || /No API key found/i.test(res.body);
+    const gateway = /sb-error-code|No API key found/i.test(res.body);
     check(
-      "the Data API does not answer as a live PostgREST instance",
-      !live,
-      live
-        ? `HTTP ${res.status} — disable it in Supabase → Settings → Data API, ` +
-            "or set SUPABASE_ANON_KEY in .env for the stronger row-level check"
-        : `HTTP ${res.status || "unreachable"}`
+      `SKIP: cannot tell whether the Data API is enabled without SUPABASE_ANON_KEY` +
+        ` (keyless probe returned HTTP ${res.status || "unreachable"}` +
+        `${gateway ? ", from the gateway, which answers the same either way" : ""})`,
+      true,
+      "set SUPABASE_ANON_KEY in .env — it is public by design — to assert the real " +
+        "property: that presenting it returns no rows"
     );
   }
 }
+
+/* ── 9b. the Data API's roles hold nothing in the schema ───────────────── */
+/**
+ * RLS (migration 20260812010000) stops `anon` reading rows. This asserts the
+ * second, independent barrier added by 20260812150000: that `anon` and
+ * `authenticated` hold no table grants at all.
+ *
+ * Two reasons it is worth its own check rather than trusting the migration.
+ *
+ * Supabase grants these roles everything in `public` by default, and
+ * `ALTER DEFAULT PRIVILEGES` only covers objects created by the role that ran
+ * it. A table created by some other path — the dashboard's table editor, a
+ * restored dump — arrives granted again, and nothing else would notice.
+ *
+ * And it keeps the two barriers genuinely independent. If this drifts back,
+ * `anon` is one `DISABLE ROW LEVEL SECURITY` away from the whole database rather
+ * than two mistakes away, which is the entire point of having added it.
+ *
+ * Note what is deliberately *not* asserted: `anon` still holds USAGE on schema
+ * public, because Supabase grants that to PUBLIC rather than to the role, and
+ * revoking it from PUBLIC would hit every role on the instance. With zero table
+ * grants there is nothing inside the schema to reach, so the residual is
+ * recorded rather than chased.
+ */
+section("[9b] anon and authenticated hold no grants on the schema");
+
+const grants = await query(
+  `SELECT grantee, COUNT(*)::int AS n
+     FROM information_schema.role_table_grants
+    WHERE table_schema = 'public' AND grantee IN ('anon','authenticated')
+    GROUP BY grantee`
+);
+const grantCount = (who) => Number(grants.find((g) => g.grantee === who)?.n ?? 0);
+
+for (const who of ["anon", "authenticated"]) {
+  check(
+    `${who} has no table grants in public`,
+    grantCount(who) === 0,
+    grantCount(who) === 0
+      ? ""
+      : `${grantCount(who)} grants — the Data API roles can reach tables again; ` +
+        "re-apply the REVOKE from migration 20260812150000"
+  );
+}
+
+// service_role keeps its grants: the Supabase dashboard's own table editor uses
+// it, and it is not what the anon key reaches.
+check(
+  "service_role still has its grants (the dashboard needs them)",
+  Number(
+    (
+      await one(
+        `SELECT COUNT(*)::int AS n FROM information_schema.role_table_grants
+          WHERE table_schema = 'public' AND grantee = 'service_role'`
+      )
+    ).n
+  ) > 0
+);
 
 /* ── 10. RLS has not silently blinded the app ──────────────────────────── */
 /**

@@ -535,9 +535,9 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (417 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (423 checks)
 npm run audit -- <url>    # or against the deployment
-npm run audit:api         # authorization, validation, erasure, RLS  (55)
+npm run audit:api         # authorization, validation, erasure, RLS  (61)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
 npm run audit:links       # every route reachable from the navigation  (50)
@@ -564,19 +564,37 @@ leak. It prints no secret, and deletes the probe account it creates.
 ```bash
 npm run password:set -- specialist@lexora.ph --generate           # 5-word passphrase
 npm run password:set -- learner1@lexora.ph --generate --random    # 24-char random
-NEW_PASSWORD="…" npm run password:set -- learner3@lexora.ph       # supply your own
 ```
 
-The password is deliberately **not** accepted as an argument — it would land in shell
-history, which is the same mistake as committing it, one shell away. Either the script
-generates it, or it arrives through `NEW_PASSWORD`.
+To choose the value yourself, pass it in the environment. **The syntax differs by shell**
+— the POSIX form is a parse error in PowerShell, which is the shell on the study laptop:
+
+```powershell
+# PowerShell
+$env:NEW_PASSWORD = "…"; npm run password:set -- learner3@lexora.ph; Remove-Item Env:NEW_PASSWORD
+```
+```bash
+# bash / zsh
+NEW_PASSWORD="…" npm run password:set -- learner3@lexora.ph
+```
+
+`Remove-Item` is not optional in PowerShell: `$env:` persists for the rest of the session,
+so without it the password stays in the environment of every command you run afterwards.
+
+**What passing it in the environment does and does not buy you.** It keeps the password
+out of the process arguments, where any other process on the machine can read it. It does
+**not** keep it out of your shell history — PowerShell's PSReadLine appends every line you
+type to a plaintext file (`ConsoleHost_history.txt`), and bash records the whole command
+line too. If a password has already been typed that way, treat it as exposed and rotate
+again; editing a history file is not a remedy you can verify. `--generate` is the only
+route that types nothing.
 
 It refuses a value below the minimum for that account's role (12 for a specialist, the
 app's own 6 for a learner), and refuses any value it can find in the repository's git
 history. Generated passwords are printed once, with their entropy, and are not stored
 anywhere. The default passphrase is drawn from the word bank and is sized against online
 guessing behind the login limiter — not against offline cracking of a stolen hash; use
-`--random` or `NEW_PASSWORD` if that is the threat you have in mind.
+`--random`, or supply a stronger one yourself, if that is the threat you have in mind.
 
 This is also the **only** way to help a participant who has forgotten their password.
 Deleting the account is not an alternative: `LearnerProfile` cascades, so every reading,
@@ -606,6 +624,15 @@ treating it as a regression.
 The suites need the target running and seeded, and `DIRECT_URL` set so they can assert
 against the database. They create and delete their own `@lexora.test` accounts, and sweep
 any left behind by a run that failed partway.
+
+**Never run two suites at once — not even a single suite alongside `npm run audit`, and
+not local alongside production.** They share one database and each sweeps *every*
+`@lexora.test` account, so a second run deletes the first run's learners mid-flight.
+Attempts cascade with the learner, so the symptom is not a clean error: it is an assertion
+failing on data that existed a moment earlier, which reads exactly like a regression in the
+feature under test. This has already produced one false "recording is not reachable"
+failure that reproduced nowhere and vanished on a clean re-run. If a suite fails oddly,
+check nothing else was running before believing it.
 
 Two conventions worth keeping if you extend them. **Wait on conditions, never on a fixed
 sleep** — a sleep tuned on localhost expires before the deployment has responded, and an

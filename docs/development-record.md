@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-51 commits, 9 migrations, 10 automated audit suites, 417 assertions.
+53 commits, 10 migrations, 10 automated audit suites, 423 assertions.
 
 ---
 
@@ -1472,11 +1472,11 @@ table aborts the run rather than yielding a partial file that looks complete.
 
 ### 9.1 The suites
 
-Ten suites, **417 checks locally**. Run with `npm run audit [url]`.
+Ten suites, **423 checks locally**. Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
-| `api-audit` | 55 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
+| `api-audit` | 61 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
 | `logic-audit` | 22 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
 | `links-audit` | 50 | Every route reachable from the navigation, as each role |
@@ -1593,6 +1593,40 @@ to test this: it outranks `FORCE ROW LEVEL SECURITY`. Enabling `FORCE` on a tabl
 does not blind a `BYPASSRLS` role — measured at 76 `PhonItem` rows both before and
 during. Rehearsing the silent-zero-rows failure means running as a role without
 the attribute; `FORCE` alone proves nothing.
+
+**A third layer, added 12 August** (`20260812150000_revoke_anon_grants`). The
+dashboard toggle stayed open longer than expected, so the grants underneath it
+were removed instead: `anon` and `authenticated` had 77 table grants each, which
+RLS emptied but did not revoke. Two things that closed.
+
+The first is schema disclosure — PostgREST builds its OpenAPI description from
+what the requesting role can see, so the grants let an anonymous request
+enumerate table and column names even with every row denied. The second matters
+more: while the grants existed, RLS was the *only* barrier, and a single table
+created without it, or one `DISABLE ROW LEVEL SECURITY`, would have handed
+`anon` the database. Revoking makes the two independent — a future mistake now
+has to undo a grant *and* a policy.
+
+`ALTER DEFAULT PRIVILEGES` is the part that makes it durable: without it the next
+migration to create a table would grant `anon` afresh, and the revoke would
+quietly stop being true. Verified after applying — `anon` and `authenticated` at
+0 table grants, `service_role` still at 77 (the dashboard's own editor uses it),
+and the app reading all 203 attempts unchanged.
+
+**One line of that migration did nothing, and the comment inside it overstates
+what it achieved.** `REVOKE USAGE ON SCHEMA public FROM anon` is a no-op: the
+privilege is held by `PUBLIC` (`=U` in `nspacl`), not by the role, so `anon`
+still has `USAGE`. Removing it would mean revoking from `PUBLIC`, which reaches
+every role on the instance for a benefit that is already covered — with zero
+table grants there is nothing inside the schema to name. The migration was left
+unedited because Prisma checksums applied migrations and rewriting one breaks
+every later `migrate deploy`; the correction lives here and in the assertion
+instead. `api-audit` §9b now asserts the grant counts directly, which is the
+durable form: a comment cannot notice when it stops being true.
+
+Residual, recorded rather than chased: the `supabase_admin` default privileges
+still name `anon`, but those apply only to objects that role creates, not to
+LEXORA's tables.
 
 The auth rate limiter counts **only failed attempts**, because everyone at the
 partner institution shares one public IP and counting successes would let a class

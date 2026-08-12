@@ -93,6 +93,33 @@ if (!SPECIALIST_CODE) {
 
 /* ── 4. exports ────────────────────────────────────────────────────────── */
 section("[4] CSV exports");
+
+// Close a session for this run's own learner first.
+//
+// The exports exclude demo accounts by default — that is the isDemo quarantine
+// working — and on a database that holds nothing but demo history, every
+// session with total > 0 belongs to a demo learner. The sessions export was
+// therefore correctly returning zero rows, and the check read it as a broken
+// export. Measured at the time: 40 sessions with total > 0, all 40 on demo
+// learners, 0 on anyone else.
+//
+// The summary and attempts exports passed only because the steps above happen
+// to create a learner and post readings. Sessions needed the same: a suite that
+// asserts on rows it did not create is asserting on the seed data, and stops
+// meaning anything the moment the seed changes.
+const smokeSession = await json("/api/sessions", {
+  cookie: learner.cookie,
+  method: "POST",
+  body: { type: "READ_ALOUD" },
+});
+if (smokeSession.body?.id) {
+  await api(`/api/sessions/${smokeSession.body.id}`, {
+    cookie: learner.cookie,
+    method: "PATCH",
+    body: { total: 2, correct: 1, durationMs: 4000 },
+  });
+}
+
 for (const what of ["summary", "attempts", "sessions"]) {
   const res = await api(`/api/export?what=${what}`, { cookie: specialist });
   const rows = (await res.text()).trim().split("\n").length - 1;

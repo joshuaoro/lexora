@@ -17,17 +17,13 @@ import { chromium } from "playwright-core";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
-  BASE, passwordFor, api, json, login, check, section, report, one, query,
-  createTestLearner, endSuite,
+  BASE, passwordFor, api, json, check, section, report, one, query,
+  requireSpecialistLogin, createTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`Calibration audit against ${BASE}`);
 
-const specialist = await login("specialist@lexora.ph");
-if (!specialist) {
-  console.error("Could not sign in as specialist@lexora.ph — is the database seeded?");
-  process.exit(1);
-}
+const specialist = await requireSpecialistLogin();
 
 /* ── 1. the arithmetic, against values computed by hand ────────────────── */
 section("[1] metric arithmetic (scripts/check-calibration.ts)");

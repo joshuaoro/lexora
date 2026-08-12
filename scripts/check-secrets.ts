@@ -147,27 +147,45 @@ async function checkDemoPassword() {
   );
 }
 
-/* ── 3. the values now in use are nowhere in the repository ─────────────── */
+/* ── 3. this machine's own .env is not still on a published value ───────── */
 
+/**
+ * Checks the **local** environment, which is a different question from checks
+ * 1 and 2 above.
+ *
+ * Those two ask the deployment whether it still accepts a published credential.
+ * This one asks what is sitting in the `.env` on this machine — and the two can
+ * disagree, which is precisely what happened: the deployment was rotated while
+ * `.env` kept `READINGOWL`, and the summary line read as though nothing had been
+ * rotated at all.
+ *
+ * The drift is not cosmetic. `npm run dev` and `npm start` read this file and
+ * write to the *same* database the deployment uses, so a local instance running
+ * on the old code accepts the publicly-known access code and creates real
+ * specialist accounts in the live study database. Naming the two scopes apart is
+ * the only way that shows up.
+ */
 function checkNotCommitted() {
-  console.log("\n[3] the values now in use appear nowhere in the repository");
+  console.log("\n[3] this machine's .env (separate from the deployment above)");
 
   const current = process.env.SPECIALIST_CODE;
 
   if (!current) {
-    check(
-      "SPECIALIST_CODE is set locally so it can be checked",
-      false,
-      "not set — run with the study .env, or this check cannot say anything"
+    console.log(
+      "  --   SPECIALIST_CODE not set locally — nothing to check here. Note that\n" +
+        "       specialist registration is disabled entirely when it is unset."
     );
     return;
   }
 
   if (current === LEAKED_SPECIALIST_CODE) {
     check(
-      "SPECIALIST_CODE has actually been rotated",
+      "the SPECIALIST_CODE in this .env is not the published one",
       false,
-      "still the value that is published in git history"
+      "it is still READINGOWL. The deployment may already be rotated — checks 1 and 2 " +
+        "above answer that — but `npm run dev`/`npm start` read this file and write to " +
+        "the SAME database, so running locally reopens the door. Copy the rotated value " +
+        "from Vercel into .env."
     );
     return;
   }
@@ -210,6 +228,69 @@ function checkNotCommitted() {
   );
 }
 
+/* ── 4. does this .env agree with the deployment? ───────────────────────── */
+
+/**
+ * Drift between the local access code and the deployed one.
+ *
+ * Rotating in Vercel and forgetting `.env` leaves no visible symptom: the
+ * deployment is correct, the local app still starts, and the two disagree
+ * silently. It is only dangerous because both write to the same database — a
+ * local instance holding the old published code will happily mint a real
+ * specialist account in the live study data.
+ *
+ * Detected by trying the *local* code against the deployment. A 403 means the
+ * deployment does not recognise it, so the two have drifted. A success means
+ * they match — and the account that proves it is deleted immediately.
+ */
+async function checkEnvMatchesDeployment() {
+  console.log("\n[4] this machine's .env agrees with the deployment");
+
+  const local = process.env.SPECIALIST_CODE;
+  if (!local) {
+    console.log("  --   no local SPECIALIST_CODE to compare");
+    return;
+  }
+  if (local === LEAKED_SPECIALIST_CODE) {
+    console.log("  --   local code is the published one; check 3 covers that");
+    return;
+  }
+
+  const email = `envdrift-check-${Date.now()}@lexora.test`;
+  const status = await post("/api/auth/register", {
+    name: "EnvDriftCheck",
+    email,
+    password: "a-long-enough-password",
+    role: "SPECIALIST",
+    code: local,
+  });
+
+  if (status === 0) {
+    check("could reach the deployment", false, `no response from ${BASE}`);
+    return;
+  }
+
+  const matched = status === 200 || status === 201;
+  check(
+    "the local SPECIALIST_CODE is the one the deployment accepts",
+    matched,
+    matched
+      ? "in step"
+      : `the deployment refused it (HTTP ${status}) — .env and Vercel hold different ` +
+        "values. Copy the deployed one into .env, or local runs will behave differently " +
+        "from production against the same database."
+  );
+
+  if (matched) {
+    const removed = await deleteAccount(email);
+    check(
+      "the account this check created was removed again",
+      removed,
+      removed ? "cleaned up" : `COULD NOT DELETE — remove ${email} by hand`
+    );
+  }
+}
+
 /* ── run ────────────────────────────────────────────────────────────────── */
 
 async function main() {
@@ -218,6 +299,7 @@ async function main() {
   await checkSpecialistCode();
   await checkDemoPassword();
   checkNotCommitted();
+  await checkEnvMatchesDeployment();
 
   console.log(
     failures === 0

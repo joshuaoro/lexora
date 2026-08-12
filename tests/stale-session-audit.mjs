@@ -182,10 +182,22 @@ async function main() {
     await sctx.close();
   } else {
     // SPECIALIST_CODE is deliberately private; without it this half cannot run.
+    //
+    // A 403 with the code *set* means something different, and the old message
+    // sent the reader to fix a variable that was already correct: the server
+    // under test reads .env once at boot, so one started before the code was
+    // rotated still holds the previous value and rejects the new one. Say so,
+    // because "set SPECIALIST_CODE" is unfollowable advice when it is set.
+    const codeSet = Boolean(process.env.SPECIALIST_CODE);
     check(
-      "specialist half skipped (set SPECIALIST_CODE in .env to include it)",
+      codeSet
+        ? "specialist half skipped — the code is set here but the server rejected it"
+        : "specialist half skipped (set SPECIALIST_CODE in .env to include it)",
       true,
-      `registration returned HTTP ${reg.status}`
+      codeSet
+        ? `HTTP ${reg.status}. The server was probably started before .env changed — ` +
+          "restart it. If it persists, .env and the deployment disagree (npm run secrets:check)."
+        : `registration returned HTTP ${reg.status}`
     );
   }
 

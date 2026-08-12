@@ -4,17 +4,13 @@
  * specialist–system agreement metric.
  */
 import {
-  BASE, json, login, check, section, report, query, one,
-  createTestLearner, deleteTestLearner, endSuite,
+  BASE, json, check, section, report, query, one,
+  requireSpecialistLogin, createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`Logic audit against ${BASE}`);
 
-const specialist = await login("specialist@lexora.ph");
-if (!specialist) {
-  console.error("Could not sign in as specialist@lexora.ph — is the database seeded?");
-  process.exit(1);
-}
+const specialist = await requireSpecialistLogin();
 
 const learner = await createTestLearner("logic");
 const profile = () => one(`SELECT level, stage FROM "LearnerProfile" WHERE id = $1`, [learner.learnerId]);

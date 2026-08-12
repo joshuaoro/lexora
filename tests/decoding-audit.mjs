@@ -10,17 +10,13 @@
  */
 import { chromium } from "playwright-core";
 import {
-  BASE, passwordFor, api, json, login, check, section, report, query, one,
-  createTestLearner, endSuite,
+  BASE, passwordFor, api, json, check, section, report, query, one,
+  requireSpecialistLogin, createTestLearner, endSuite,
 } from "./helpers.mjs";
 
 console.log(`Decoding audit against ${BASE}`);
 
-const specialist = await login("specialist@lexora.ph");
-if (!specialist) {
-  console.error("Could not sign in as specialist@lexora.ph — is the database seeded?");
-  process.exit(1);
-}
+const specialist = await requireSpecialistLogin();
 
 /* ── 1. the probe bank itself ──────────────────────────────────────────── */
 section("[1] the probe bank is separate, silent, and genuinely made up");

@@ -48,21 +48,28 @@ lets the study report agreement rather than assert accuracy.*
 
 ## 2. Accounts and signing in
 
-### Current demo accounts
+### Current accounts
 
-All three share one password. **These are published in the repository's git history**,
-so they are for demonstration only and must be rotated before a real child is enrolled
-(§7.1).
+**Rotation is partly done, so the accounts no longer share one password.** Check this
+table against reality with `npm run secrets:check` rather than trusting it — it is a
+snapshot, and the whole point of rotating is that written-down passwords go stale.
 
 | Email | Password | Role | State |
 |---|---|---|---|
-| `specialist@lexora.ph` | `lexora123` | Specialist — "Teacher Maria Santos" | Reviews everything |
-| `learner1@lexora.ph` | `lexora123` | Learner — "Juan" | **Level 4, stage 6, 135 readings, 23 sessions** — the account with history |
-| `learner2@lexora.ph` | `lexora123` | Learner — "Ana" | Level 1, stage 1, 68 readings, 19 sessions |
+| `specialist@lexora.ph` | **rotated** — password manager | Specialist — "Teacher Maria Santos" | Reviews everything |
+| `joshyadmin@lexora.ph` | **rotated** — password manager | Specialist — "joshy" | Researcher's own account |
+| `learner1@lexora.ph` | `lexora123` ⚠ | Learner — "Juan" | **Level 4, stage 6, 135 readings, 23 sessions** — the account with history |
+| `learner2@lexora.ph` | `lexora123` ⚠ | Learner — "Ana" | Level 1, stage 1, 68 readings, 19 sessions |
 
-> **After you rotate** (§7.1) these passwords change. Do not write the new ones into
-> this file or any other file in the repository — that is how the current ones became
-> public. Password manager only.
+> ⚠ **The two demo learners still accept the password published in git history.** They
+> hold only fabricated data, so this is a demo-account exposure rather than a
+> participant's — but it is a hard gate before the first real child. Rotate with
+> `npm run password:set -- learner1@lexora.ph --generate --random` (§7.1).
+
+> **Never write a rotated password into this file, or any file in the repository.** That
+> is exactly how `lexora123` and `READINGOWL` became public. Password manager only. The
+> audit suite reads the specialist password from `AUDIT_SPECIALIST_PASSWORD` in `.env`,
+> which is gitignored.
 
 ### Registering a new account
 
@@ -412,32 +419,45 @@ characteristics they are scoring.
 
 ### 7.1 Before the first child — non-negotiable
 
-The demo credentials are published in this repository's public git history. Until these
-are done, the study database is one search away from anybody.
+Some of this is done. `npm run secrets:check` is the authority on which — the list below
+goes stale, that command does not.
+
+**Status at last check (12 August 2026, 23:40):** one item left.
 
 ```bash
-# 1. Disable the Supabase Data API
-#    Dashboard → Settings → Data API → off.
-#    Verify (expect a connection failure or 404, NOT "401 No API key found"):
-curl -s -o /dev/null -w "%{http_code}\n" https://<your-ref>.supabase.co/rest/v1/
-
-# 2. Rotate the specialist access code
-#    Vercel → Settings → Environment Variables → SPECIALIST_CODE → redeploy.
-#    Highest severity: it lets anyone create a specialist account.
-
-# 3. Rotate the specialist password
-npm run password:set -- specialist@lexora.ph --generate
-#    Then put the printed value in AUDIT_SPECIALIST_PASSWORD in .env,
-#    or all ten audit suites will fail at their opening sign-in.
-
-# 4. Re-credential the demo learners
+# ☐ 1. Re-credential the demo learners — STILL OPEN, and the last gate
+#    Both learner1 and learner2 still accept the published lexora123.
 npm run password:set -- learner1@lexora.ph --generate --random
 npm run password:set -- learner2@lexora.ph --generate --random
+#    Then set AUDIT_DEMO_PASSWORD in .env, or the a11y, perf and links suites
+#    (which sign in as learner1) will fail at their opening sign-in.
+
+# ✅ 2. Specialist access code and password — ROTATED
+#    Both the deployment and the local .env, verified in step with each other.
+#    The specialist password lives in AUDIT_SPECIALIST_PASSWORD in .env so the
+#    audit suite can sign in; without it all ten suites abort at startup.
+
+# ✅ 3. Supabase Data API — CLOSED, and verified with the anon key
+#    Presenting the anon key the way an attacker would returns no rows from any
+#    table. Asserted permanently in audit:api [9]; set SUPABASE_ANON_KEY in .env
+#    (it is public by design) or that check can only skip — a keyless probe
+#    cannot tell an enabled Data API from a disabled one, because the 401 comes
+#    from Supabase's gateway either way.
+
+# ✅ 4. anon/authenticated grants — REVOKED (migration 20260812150000)
+#    A second barrier independent of RLS. Asserted in audit:api [9b].
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 417 checks
+npm run audit                  # 423 checks
+npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
+
+**One caveat about the local server.** It reads `.env` once at boot, so after any
+rotation you must restart it — a server started beforehand keeps the old value in
+memory and will still accept it. That is not theoretical: it happened here, and the
+symptom was a test skipping with "set SPECIALIST_CODE in .env" while the code was
+already set.
 
 **Store the new values in a password manager. Never in a file in this repository** —
 that is exactly how the current ones became public.
@@ -568,7 +588,9 @@ you deliberately want them, and never for analysis.
 | **A correct reading marked wrong** | ASR returned an alternative spelling | Word bank → **Accepted spellings** → add it. Compared exactly, so it cannot mask a real error |
 | **"We couldn't hear that clearly"** | Neither engine could transcribe | The attempt is deliberately **not saved**. Try again |
 | **Session shows 0/8 on Silly words** | Correct — probe sessions are scored by a specialist afterwards | Displays as "8 read" |
-| **All ten audit suites fail at sign-in** | Specialist password rotated without setting `AUDIT_SPECIALIST_PASSWORD` | Set it in `.env` |
+| **All ten audit suites fail at sign-in** | Specialist password rotated without setting `AUDIT_SPECIALIST_PASSWORD` | Set it in `.env`. The suite now tells you this directly and says **not** to reseed — reseeding wipes every table |
+| **a11y / perf / links suites fail at sign-in** | Demo learner password rotated without setting `AUDIT_DEMO_PASSWORD` | Set it in `.env`; those three sign in as `learner1@lexora.ph` |
+| **Local app behaves differently from production** | `.env` and Vercel hold different `SPECIALIST_CODE` values | `npm run secrets:check` [4] detects the drift; copy the deployed value into `.env` |
 | **Child stays signed in after a password change** | Sessions are stateless JWTs, valid 7 days | Expected. Rotate `AUTH_SECRET` to force everyone out |
 | **A tablet has no Filipino voice** | Normal | The app plays its own recordings |
 
@@ -631,7 +653,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 417 checks
+npm run audit                  # all 10 suites, 423 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values

@@ -3,7 +3,10 @@
  *
  *   npm run password:set -- specialist@lexora.ph --generate
  *   npm run password:set -- learner1@lexora.ph --generate --random
- *   NEW_PASSWORD="…" npm run password:set -- learner3@lexora.ph
+ *
+ *   # to choose the value yourself — syntax differs by shell:
+ *   $env:NEW_PASSWORD = "…"; npm run password:set -- <email>; Remove-Item Env:NEW_PASSWORD
+ *   NEW_PASSWORD="…" npm run password:set -- <email>          # bash / zsh
  *
  * Why this exists
  * ---------------
@@ -21,8 +24,15 @@
  * recording and specialist verdict would go with it. Five children aged 7–12
  * over eight weeks will forget a password. This is the recovery path.
  *
- * The password is never accepted as a command-line argument. It would land in
- * shell history, which is the same mistake as committing it, one shell away.
+ * The password is never accepted as a command-line argument, because arguments
+ * are visible in the process list to every other process on the machine.
+ *
+ * Be clear about what that does *not* buy, since an earlier version of this
+ * comment overstated it: passing the value through the environment does not keep
+ * it out of your shell history. PowerShell's PSReadLine appends every typed line
+ * to a plaintext file, and bash records the command line too — so
+ * `$env:NEW_PASSWORD = "…"` is written to disk just as an argument would be.
+ * `--generate` is the only route here that types nothing at all.
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
@@ -130,8 +140,13 @@ async function main() {
       generated = useRandom ? randomPassword() : passphrase();
     } else if (!supplied) {
       console.error(
-        "No password given. Pass --generate, or set NEW_PASSWORD in the environment.\n" +
-          "It is deliberately not accepted as an argument: that would put it in shell history."
+        "No password given. Either:\n" +
+          "  --generate                 the script picks one and prints it once\n" +
+          "  NEW_PASSWORD in the env    you choose it\n\n" +
+          "PowerShell:  $env:NEW_PASSWORD = \"…\"; npm run password:set -- <email>; Remove-Item Env:NEW_PASSWORD\n" +
+          "bash/zsh:    NEW_PASSWORD=\"…\" npm run password:set -- <email>\n\n" +
+          "It is not accepted as an argument, where the process list would expose it.\n" +
+          "Note the environment does not hide it from your shell history — only --generate does."
       );
       process.exitCode = 1;
       return;

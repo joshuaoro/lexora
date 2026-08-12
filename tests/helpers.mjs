@@ -94,6 +94,56 @@ export async function json(path, opts) {
 }
 
 /** Sign in and return the cookie header, or null when the credentials fail. */
+/**
+ * Sign in as the specialist, or explain accurately why it failed and stop.
+ *
+ * Every suite starts here, and the message this prints is the first thing anyone
+ * sees when the suite breaks — so it has to name the real cause. It used to say
+ * "is the database seeded?", which was true when the only way to fail was an
+ * empty database. Once the seeded password was rotated off the published
+ * `lexora123`, that message sent the reader to reseed a database that was
+ * perfectly fine — and reseeding wipes every table, so the advice was not merely
+ * unhelpful but destructive.
+ *
+ * The fix is to tell the difference. If the account exists, the password is
+ * wrong; if it does not, the database really is unseeded.
+ */
+export async function requireSpecialistLogin() {
+  const cookie = await login("specialist@lexora.ph");
+  if (cookie) return cookie;
+
+  // Distinguish "wrong password" from "no such account" — a login route answers
+  // 401 to both, on purpose, so ask the database instead.
+  let exists = null;
+  try {
+    exists = Boolean(await one(`SELECT id FROM "User" WHERE email = 'specialist@lexora.ph'`));
+  } catch {
+    /* no DIRECT_URL, or unreachable — fall through to the generic advice */
+  }
+
+  console.error("\nCould not sign in as specialist@lexora.ph.\n");
+  if (exists === true) {
+    console.error(
+      "The account exists, so the password is what does not match.\n" +
+        (process.env.AUDIT_SPECIALIST_PASSWORD
+          ? "AUDIT_SPECIALIST_PASSWORD is set but is not this account's password.\n"
+          : "AUDIT_SPECIALIST_PASSWORD is not set, so the suite tried the default `lexora123`.\n" +
+            "If the password has been rotated with `npm run password:set`, put the new\n" +
+            "value in AUDIT_SPECIALIST_PASSWORD in .env.\n") +
+        "\nDo NOT reseed. `prisma db seed` wipes every table, including study data."
+    );
+  } else if (exists === false) {
+    console.error("No such account in the database — this one really does need seeding.");
+  } else {
+    console.error(
+      "Could not reach the database to tell whether the account exists.\n" +
+        "Check DIRECT_URL, then AUDIT_SPECIALIST_PASSWORD."
+    );
+  }
+  await closeDb().catch(() => {});
+  process.exit(1);
+}
+
 export async function login(email, password = passwordFor(email)) {
   const res = await api("/api/auth/login", { method: "POST", body: { email, password } });
   if (!res.ok) return null;
