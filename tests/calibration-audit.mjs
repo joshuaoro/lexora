@@ -17,7 +17,7 @@ import { chromium } from "playwright-core";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
-  BASE, PASSWORD, api, json, login, check, section, report, one, query,
+  BASE, passwordFor, api, json, login, check, section, report, one, query,
   createTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -390,7 +390,7 @@ const blindBrowser = await chromium.launch({
 const blindView = await blindBrowser.newPage();
 await blindView.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await blindView.fill("#email", "specialist@lexora.ph");
-await blindView.fill("#password", PASSWORD);
+await blindView.fill("#password", passwordFor("specialist@lexora.ph"));
 await blindView.click("button[type=submit]");
 await blindView.waitForURL("**/specialist", { timeout: 30000 });
 await blindView.goto(`${BASE}/specialist/learner/${anchorLearner.learnerId}`, {
@@ -477,7 +477,7 @@ const provBrowser = await chromium.launch({
 const provPage = await provBrowser.newPage();
 await provPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await provPage.fill("#email", "specialist@lexora.ph");
-await provPage.fill("#password", PASSWORD);
+await provPage.fill("#password", passwordFor("specialist@lexora.ph"));
 await provPage.click("button[type=submit]");
 await provPage.waitForURL("**/specialist", { timeout: 30000 });
 await provPage.goto(`${BASE}/specialist/learner/${anchorLearner.learnerId}`, {
@@ -690,7 +690,7 @@ const divBrowser = await chromium.launch({
 const divPage = await divBrowser.newPage();
 await divPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await divPage.fill("#email", "specialist@lexora.ph");
-await divPage.fill("#password", PASSWORD);
+await divPage.fill("#password", passwordFor("specialist@lexora.ph"));
 await divPage.click("button[type=submit]");
 await divPage.waitForURL("**/specialist", { timeout: 30000 });
 await divPage.goto(`${BASE}/specialist/learner/${divLearner.learnerId}`, {
@@ -895,7 +895,7 @@ const phaseBrowser = await chromium.launch({
 const phaseView = await phaseBrowser.newPage();
 await phaseView.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await phaseView.fill("#email", "specialist@lexora.ph");
-await phaseView.fill("#password", PASSWORD);
+await phaseView.fill("#password", passwordFor("specialist@lexora.ph"));
 await phaseView.click("button[type=submit]");
 await phaseView.waitForURL("**/specialist", { timeout: 30000 });
 await phaseView.goto(`${BASE}/specialist/learner/${phaseLearner.learnerId}`, {
@@ -960,7 +960,7 @@ const filCtx = await filBrowser.newContext();
 const filPage = await filCtx.newPage();
 await filPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await filPage.fill("#email", "specialist@lexora.ph");
-await filPage.fill("#password", PASSWORD);
+await filPage.fill("#password", passwordFor("specialist@lexora.ph"));
 await filPage.click("button[type=submit]");
 await filPage.waitForURL("**/specialist", { timeout: 30000 });
 await filPage.getByRole("button", { name: "Filipino" }).first().click();

@@ -26,8 +26,8 @@
  * value involved.
  */
 import "dotenv/config";
-import { execFileSync } from "node:child_process";
 import pg from "pg";
+import { appearsInRepo } from "./git-history";
 
 const BASE = process.argv[2] ?? process.env.AUDIT_BASE_URL ?? "http://localhost:3000";
 
@@ -149,53 +149,6 @@ async function checkDemoPassword() {
 
 /* ── 3. the values now in use are nowhere in the repository ─────────────── */
 
-/**
- * Run git and return its stdout, treating "found nothing" as a result.
- *
- * `git grep` exits 1 when it matches nothing, which execFileSync raises as an
- * exception. Letting that propagate past the *first* search would skip the
- * second one entirely and report a value as clean because it was absent from
- * the working tree — while it sat in history, which is the only case this check
- * exists for. So exit 1 is translated to an empty string here, per call, and
- * anything else still throws.
- */
-function git(args: string[]): string {
-  try {
-    return execFileSync("git", args, {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-      maxBuffer: 32 * 1024 * 1024,
-    }).trim();
-  } catch (err) {
-    if ((err as { status?: number }).status === 1) return ""; // matched nothing
-    throw err;
-  }
-}
-
-/**
- * Search the working tree and then the full history for a value.
- *
- * The history pass is the one that matters: a secret deleted in the latest
- * commit is still readable in the one before it, and a repository that has been
- * cloned or forked keeps it forever.
- *
- * All three outcomes were checked against known values rather than assumed: a
- * string still in the checkout returns "tree", a string deleted by d60d070
- * returns "history", and an invented one returns null. The history branch in
- * particular was reachable only after the exit-1 handling above was moved into
- * `git()` — before that, a value absent from the working tree short-circuited
- * the whole function and reported clean, which is the one answer this check must
- * never give wrongly.
- */
-function appearsInRepo(value: string): "tree" | "history" | null {
-  if (git(["grep", "-I", "-l", "-F", value])) return "tree";
-
-  const revs = git(["rev-list", "--all"]).split("\n").filter(Boolean);
-  if (revs.length === 0) return null;
-
-  return git(["grep", "-I", "-l", "-F", value, ...revs]) ? "history" : null;
-}
-
 function checkNotCommitted() {
   console.log("\n[3] the values now in use appear nowhere in the repository");
 
@@ -226,6 +179,32 @@ function checkNotCommitted() {
     where === "tree"
       ? "found in a tracked file — remove it and rotate again, it is now public"
       : where === "history"
+        ? "found in an earlier commit — rotate again, this value is already published"
+        : ""
+  );
+
+  // The specialist password is stored only as a bcrypt hash, so the only copy
+  // this script can inspect is the one the audit suite signs in with. Checking
+  // it closes the same loop: a rotated password pasted into a committed file is
+  // no better rotated than the one it replaced.
+  const auditPassword = process.env.AUDIT_SPECIALIST_PASSWORD;
+  if (!auditPassword) {
+    console.log(
+      "  --   AUDIT_SPECIALIST_PASSWORD not set, so the specialist password could not be checked"
+    );
+    return;
+  }
+  if (auditPassword === LEAKED_PASSWORD) {
+    check("the specialist password has actually been rotated", false, "still the published value");
+    return;
+  }
+  const pwWhere = appearsInRepo(auditPassword);
+  check(
+    "the current specialist password is not committed anywhere",
+    pwWhere === null,
+    pwWhere === "tree"
+      ? "found in a tracked file — rotate again, it is now public"
+      : pwWhere === "history"
         ? "found in an earlier commit — rotate again, this value is already published"
         : ""
   );

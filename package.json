@@ -29,6 +29,7 @@
     "words:sync": "tsx scripts/sync-word-bank.ts",
     "calibration:check": "tsx scripts/check-calibration.ts",
     "secrets:check": "tsx scripts/check-secrets.ts",
+    "password:set": "tsx scripts/set-password.ts",
     "words:rotation": "tsx scripts/check-rotation.ts"
   },
   "dependencies": {

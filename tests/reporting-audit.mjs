@@ -28,7 +28,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE,
-  PASSWORD,
+  passwordFor,
   api,
   check,
   section,
@@ -189,7 +189,7 @@ async function main() {
 
   const login = await api("/api/auth/login", {
     method: "POST",
-    body: { email: "specialist@lexora.ph", password: PASSWORD },
+    body: { email: "specialist@lexora.ph", password: passwordFor("specialist@lexora.ph") },
   });
 
   if (login.ok) {

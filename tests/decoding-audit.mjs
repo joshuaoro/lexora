@@ -10,7 +10,7 @@
  */
 import { chromium } from "playwright-core";
 import {
-  BASE, PASSWORD, api, json, login, check, section, report, query, one,
+  BASE, passwordFor, api, json, login, check, section, report, query, one,
   createTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -357,7 +357,7 @@ p.on("console", (m) => m.type() === "error" && pageErrors.push(m.text()));
 const child = await createTestLearner("probe-ui");
 await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await p.fill("#email", child.email);
-await p.fill("#password", PASSWORD);
+await p.fill("#password", passwordFor(child.email));
 await p.click("button[type=submit]");
 await p.waitForURL("**/dashboard", { timeout: 30000 });
 
@@ -441,7 +441,7 @@ const spCtx = await browser.newContext({ viewport: { width: 1500, height: 1000 }
 const spPage = await spCtx.newPage();
 await spPage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await spPage.fill("#email", "specialist@lexora.ph");
-await spPage.fill("#password", PASSWORD);
+await spPage.fill("#password", passwordFor("specialist@lexora.ph"));
 await spPage.click("button[type=submit]");
 await spPage.waitForURL("**/specialist", { timeout: 30000 });
 await spPage.goto(`${BASE}/specialist/learner/${child.learnerId}`, { waitUntil: "networkidle" });

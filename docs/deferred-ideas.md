@@ -110,6 +110,18 @@ obstacle during the study rather than an anticipated one.
 
 ---
 
+### A password-reset button in the specialist workspace
+`npm run password:set` changes any account's password and is the recovery path
+when a participant forgets theirs. A specialist could reasonably expect to do
+that from the learner page instead of asking the researcher.
+
+**Why not now:** it is new application surface during a feature freeze, and new
+surface on the highest-privilege screen in the app — a control that rewrites
+another account's credentials wants more care than a CLI run by one person on
+one machine. The CLI covers five participants at one site adequately. **Revisit
+when:** the tool is used beyond a single site, or by someone who does not have a
+terminal.
+
 ## Small, deferred only for the freeze
 
 - **Bulk phase tagging.** Tagging sessions one at a time is fine for five

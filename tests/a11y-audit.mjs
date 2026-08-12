@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { chromium } from "playwright-core";
-import { BASE, PASSWORD, check, section, report, closeDb } from "./helpers.mjs";
+import { BASE, passwordFor, check, section, report, closeDb } from "./helpers.mjs";
 
 const require = createRequire(import.meta.url);
 const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -57,7 +57,7 @@ for (const path of ["/", "/login", "/register", "/privacy"]) {
 section("[2] learner pages");
 await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await page.fill("#email", "learner1@lexora.ph");
-await page.fill("#password", PASSWORD);
+await page.fill("#password", passwordFor("learner1@lexora.ph"));
 await page.click("button[type=submit]");
 await page.waitForURL("**/dashboard", { timeout: 30000 });
 
@@ -81,7 +81,7 @@ const sctx = await browser.newContext({ viewport: { width: 1500, height: 1000 } 
 const spage = await sctx.newPage();
 await spage.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await spage.fill("#email", "specialist@lexora.ph");
-await spage.fill("#password", PASSWORD);
+await spage.fill("#password", passwordFor("specialist@lexora.ph"));
 await spage.click("button[type=submit]");
 await spage.waitForURL("**/specialist", { timeout: 30000 });
 
@@ -149,7 +149,7 @@ const reduced = await browser.newContext({
 const rp = await reduced.newPage();
 await rp.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await rp.fill("#email", "learner1@lexora.ph");
-await rp.fill("#password", PASSWORD);
+await rp.fill("#password", passwordFor("learner1@lexora.ph"));
 await rp.click("button[type=submit]");
 await rp.waitForURL("**/dashboard", { timeout: 30000 });
 // The reset uses the usual 0.01ms rather than 0s so that transitionend and

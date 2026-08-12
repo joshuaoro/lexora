@@ -9,7 +9,43 @@ import "dotenv/config";
 import pg from "pg";
 
 export const BASE = process.env.AUDIT_BASE_URL ?? process.argv[2] ?? "http://localhost:3000";
+
+/**
+ * The password for throwaway accounts this suite creates and deletes.
+ *
+ * A fixed value is right here: these are `@lexora.test` rows that exist for the
+ * length of one run and are swept on the way out. It is deliberately *not* used
+ * for the seeded accounts any more — see below.
+ */
 export const PASSWORD = "lexora123";
+
+/**
+ * The seeded accounts' passwords, once they have been rotated.
+ *
+ * `lexora123` is published in this repository's git history, so the seeded
+ * accounts have to move off it before any real child is enrolled. The moment
+ * they do, every suite that signs in as one of them stops working — and fails at
+ * its opening login with "Could not sign in — is the database seeded?", which
+ * points at entirely the wrong cause and would cost an evening.
+ *
+ * Set AUDIT_SPECIALIST_PASSWORD (and AUDIT_DEMO_PASSWORD, if the demo learners
+ * are rotated too) alongside the rotation and nothing else has to change.
+ */
+export const SPECIALIST_PASSWORD = process.env.AUDIT_SPECIALIST_PASSWORD ?? PASSWORD;
+export const DEMO_PASSWORD = process.env.AUDIT_DEMO_PASSWORD ?? PASSWORD;
+
+/**
+ * Which password belongs to an account, worked out from its address.
+ *
+ * Resolving it here rather than at each call site is what keeps this from
+ * rotting: a suite that signs someone in passes the email it already has, and a
+ * new call site is correct without anyone remembering this distinction exists.
+ */
+export function passwordFor(email) {
+  if (email === "specialist@lexora.ph") return SPECIALIST_PASSWORD;
+  if (email?.endsWith("@lexora.ph")) return DEMO_PASSWORD; // learner1, learner2
+  return PASSWORD; // @lexora.test, created by this suite
+}
 
 /* ── result collection ─────────────────────────────────────────────────── */
 
@@ -58,7 +94,7 @@ export async function json(path, opts) {
 }
 
 /** Sign in and return the cookie header, or null when the credentials fail. */
-export async function login(email, password = PASSWORD) {
+export async function login(email, password = passwordFor(email)) {
   const res = await api("/api/auth/login", { method: "POST", body: { email, password } });
   if (!res.ok) return null;
   return res.headers

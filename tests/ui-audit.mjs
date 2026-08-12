@@ -8,7 +8,7 @@
  */
 import { chromium } from "playwright-core";
 import {
-  BASE, PASSWORD, check, section, report, one, query,
+  BASE, passwordFor, check, section, report, one, query,
   createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -30,7 +30,7 @@ function watch(page, label) {
 async function signIn(page, email, landing) {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
+  await page.fill("#password", passwordFor(email));
   await page.click("button[type=submit]");
   await page.waitForURL(`**${landing}`, { timeout: 30000 });
 }

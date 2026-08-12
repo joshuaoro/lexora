@@ -9,7 +9,7 @@
  *   npm run audit:perf -- https://your-app.vercel.app
  */
 import { chromium } from "playwright-core";
-import { BASE, PASSWORD, check, section, report, closeDb } from "./helpers.mjs";
+import { BASE, passwordFor, check, section, report, closeDb } from "./helpers.mjs";
 
 // Table 5 minimum: dual-core 2.0 GHz, 5 Mbps. 4x CPU throttling approximates a
 // low-end dual-core against a modern development machine.
@@ -33,7 +33,7 @@ const page = await ctx.newPage();
 /* sign in on an unthrottled connection so the measurements are of the pages */
 await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await page.fill("#email", "learner1@lexora.ph");
-await page.fill("#password", PASSWORD);
+await page.fill("#password", passwordFor("learner1@lexora.ph"));
 await page.click("button[type=submit]");
 await page.waitForURL("**/dashboard", { timeout: 30000 });
 

@@ -198,6 +198,13 @@ its own question directly.
   deliberately neutral and is asserted in the audit: they are never called errors,
   failures or invalid data, because nothing about them went wrong.
 
+### Operating manual
+[`docs/user-manual.md`](docs/user-manual.md) is the how-to: every screen and what it
+does, the demo accounts, a pre-flight checklist and a timed script for demonstrating to
+a panel and to the reading specialists, and the full protocol for real data gathering —
+enrolment, baseline tagging, weekly review, endline, export. Start there if the question
+is "how do I use this" rather than "how does this work".
+
 ### Development record
 [`docs/development-record.md`](docs/development-record.md) is the long-form account of how
 the application came to be this way: the six study constraints every design decision traces
@@ -528,9 +535,9 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (414 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (417 checks)
 npm run audit -- <url>    # or against the deployment
-npm run audit:api         # authorization, validation, erasure, RLS  (52)
+npm run audit:api         # authorization, validation, erasure, RLS  (55)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
 npm run audit:links       # every route reachable from the navigation  (50)
@@ -551,6 +558,44 @@ refused. Rotation cannot remove them from history; it can only invalidate them, 
 how you know it did. It also searches the tracked tree **and every commit** for the value
 currently in use, because a new secret that gets committed is not a rotation but a slower
 leak. It prints no secret, and deletes the probe account it creates.
+
+### Rotating credentials
+
+```bash
+npm run password:set -- specialist@lexora.ph --generate           # 5-word passphrase
+npm run password:set -- learner1@lexora.ph --generate --random    # 24-char random
+NEW_PASSWORD="…" npm run password:set -- learner3@lexora.ph       # supply your own
+```
+
+The password is deliberately **not** accepted as an argument — it would land in shell
+history, which is the same mistake as committing it, one shell away. Either the script
+generates it, or it arrives through `NEW_PASSWORD`.
+
+It refuses a value below the minimum for that account's role (12 for a specialist, the
+app's own 6 for a learner), and refuses any value it can find in the repository's git
+history. Generated passwords are printed once, with their entropy, and are not stored
+anywhere. The default passphrase is drawn from the word bank and is sized against online
+guessing behind the login limiter — not against offline cracking of a stolen hash; use
+`--random` or `NEW_PASSWORD` if that is the threat you have in mind.
+
+This is also the **only** way to help a participant who has forgotten their password.
+Deleting the account is not an alternative: `LearnerProfile` cascades, so every reading,
+recording and specialist verdict would go with it.
+
+**Two consequences worth knowing before you run it.**
+
+*Active sessions are not ended.* This script updates the password hash in the database. It
+does **not** invalidate active sessions. LEXORA's session cookie is a stateless JWT valid
+for 7 days, so anyone already signed in stays signed in until it expires or they sign out;
+the new password is required at their next sign-in. This is expected, not a fault — it is
+asserted in `audit:api` §11 so it does not get rediscovered as a bug. To end every session
+at once, which only matters if you are rotating because of a suspected compromise, rotate
+`AUTH_SECRET` in Vercel and redeploy: that invalidates every issued cookie.
+
+*The audit suite needs to be told.* Every suite signs in as `specialist@lexora.ph`. Once
+that password is rotated, set `AUDIT_SPECIALIST_PASSWORD` — see `.env.example` —
+or all ten suites fail at their opening sign-in with a message about the database not being
+seeded, which points at entirely the wrong cause.
 
 The UI suite's wait for the specialist learner view timed out once, on the first full run
 against a freshly started server, and passed on every run since — including repeated full

@@ -6,7 +6,7 @@
  *   npm run audit:links -- https://your-app.vercel.app
  */
 import { chromium } from "playwright-core";
-import { BASE, PASSWORD, check, section, report, closeDb, one, query } from "./helpers.mjs";
+import { BASE, passwordFor, check, section, report, closeDb, one, query } from "./helpers.mjs";
 
 console.log(`Link audit against ${BASE}`);
 
@@ -32,7 +32,7 @@ async function crawl(label, email, landing, seeds) {
   if (email) {
     await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
     await page.fill("#email", email);
-    await page.fill("#password", PASSWORD);
+    await page.fill("#password", passwordFor(email));
     await page.click("button[type=submit]");
     await page.waitForURL(`**${landing}`, { timeout: 30000 });
   }

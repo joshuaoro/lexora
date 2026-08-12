@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-50 commits, 9 migrations, 10 automated audit suites, 414 assertions.
+51 commits, 9 migrations, 10 automated audit suites, 417 assertions.
 
 ---
 
@@ -1472,11 +1472,11 @@ table aborts the run rather than yielding a partial file that looks complete.
 
 ### 9.1 The suites
 
-Ten suites, **414 checks locally**. Run with `npm run audit [url]`.
+Ten suites, **417 checks locally**. Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
-| `api-audit` | 52 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
+| `api-audit` | 55 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
 | `logic-audit` | 22 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
 | `links-audit` | 50 | Every route reachable from the navigation, as each role |
@@ -1721,8 +1721,29 @@ holds nothing but demo history and the exposure is survivable. The day a real
 child's recording is in there, it stops being survivable.
 
 **Done (12 August 2026).** RLS enabled on all 11 tables, migration
-`20260812010000`; backup coverage repaired and made self-checking; two new
-assertions in `api-audit`; `npm run secrets:check` written. See §8.13–8.14.
+`20260812010000`; backup coverage repaired and made self-checking; three new
+assertions in `api-audit`; `npm run secrets:check` and `npm run password:set`
+written. See §8.13–8.14.
+
+**A gap found while acting on item 3 below.** LEXORA had no way to change a
+password at all — no UI, no API route, no script. `bcrypt.hash` runs once at
+registration and nothing ever updated the column again. Beyond making these
+rotations impossible, that left **no recovery path for a participant who forgets
+their password**: the only available action was deleting the account, which
+cascades and would take every reading, recording and specialist verdict with it.
+Five children over eight weeks will forget a password.
+`scripts/set-password.ts` closes both. It refuses any value it can find in git
+history, enforces 12 characters for a specialist against the app's 6 for a
+learner, never accepts the password as an argument (shell history), and verifies
+the change against the stored hash before reporting success.
+
+**Active sessions survive a rotation, by design.** The session is a stateless JWT
+signed with `AUTH_SECRET`, so no request asks the database whether the password
+has changed; an issued cookie stays valid for its remaining 7 days
+(`MAX_AGE`, `src/lib/auth.ts`). This is fine here and no mechanism was built, but
+it is written down — and asserted in `api-audit` §11 — because it would otherwise
+be reported as the rotation having silently failed. If every session ever needs
+ending at once, rotating `AUTH_SECRET` invalidates every issued cookie.
 
 **Outstanding.** The first is a dashboard action, the rest are rotations.
 
@@ -1739,7 +1760,24 @@ assertions in `api-audit`; `npm run secrets:check` written. See §8.13–8.14.
 3. **Change the specialist account password.** `specialist@lexora.ph` /
    `lexora123` still works — §8.2 stopped it being advertised, not being valid.
 
-4. **Re-credential the demo learners** rather than deleting them. The security
+   ```bash
+   npm run password:set -- specialist@lexora.ph --generate
+   ```
+
+   Then set `AUDIT_SPECIALIST_PASSWORD` in `.env` to the value it prints, or all
+   ten audit suites fail at their opening sign-in.
+
+4. **Re-credential the demo learners** rather than deleting them.
+
+   ```bash
+   npm run password:set -- learner1@lexora.ph --generate --random
+   npm run password:set -- learner2@lexora.ph --generate --random
+   ```
+
+   `--random` because nobody types these by hand; the specialist account gets a
+   passphrase instead, since three specialists sign in with it on a tablet at the
+   start of every session and an unmemorable password on a shared device becomes
+   a sticky note beside it. The security
    requirement is only that no account whose password sits in git history
    survives to enrolment, and re-credentialing meets it while keeping
    `learner1`'s fabricated history — which is what makes a defense demo show

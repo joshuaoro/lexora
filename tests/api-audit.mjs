@@ -5,8 +5,9 @@
  * nobody can read or change data they do not own. Run against localhost or a
  * deployed URL:  npm run audit:api -- https://your-app.vercel.app
  */
+import bcrypt from "bcryptjs";
 import {
-  BASE, api, json, login, check, section, report, query, one,
+  BASE, PASSWORD, api, json, login, check, section, report, query, one,
   createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -446,6 +447,65 @@ const clip = await api("/api/speech?lang=fil&text=Magaling!", { cookie: rls.cook
 check("SpeechClip is readable through /api/speech", clip.status === 200, `HTTP ${clip.status}`);
 
 await deleteTestLearner(rls.email);
+
+/* ── 11. a password change does not end a session already open ─────────── */
+/**
+ * Documenting behaviour, not requiring it.
+ *
+ * LEXORA's session is a stateless JWT signed with AUTH_SECRET, so no request
+ * consults the database to ask whether the password has since changed. Rotating
+ * a password therefore does not sign anybody out: the cookie stays valid for the
+ * remainder of its 7-day life (MAX_AGE in src/lib/auth.ts) and the new password
+ * is demanded only at the next sign-in.
+ *
+ * That is fine for this study and no mechanism is wanted. It is asserted because
+ * it will otherwise be reported as a fault — rotate a password, watch a child's
+ * tablet stay signed in, conclude the rotation silently failed. Better to have
+ * it written down somewhere that runs.
+ *
+ * If session invalidation is ever added, this check should be **deleted**, not
+ * repaired. It describes how things are, not how they must be. (The lever, if
+ * every session ever needs ending at once: rotate AUTH_SECRET, which makes
+ * jwtVerify fail against every issued cookie.)
+ *
+ * It rotates a throwaway @lexora.test account and never specialist@lexora.ph.
+ * Rotating the specialist here would generate a password, discard it, and leave
+ * AUDIT_SPECIALIST_PASSWORD matching nothing — and since this suite runs first
+ * in tests/run-all.mjs, the nine after it would each die at their opening
+ * sign-in. The damage would outlive the run: the account that reads every
+ * child's record would be locked out with nobody holding its password.
+ */
+section("[11] a password change leaves an open session open (documented behaviour)");
+
+const rotating = await createTestLearner("pwrot");
+const oldPassword = PASSWORD;
+const newPassword = `rotated-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+await query(`UPDATE "User" SET password = $1 WHERE email = $2`, [
+  await bcrypt.hash(newPassword, 10),
+  rotating.email,
+]);
+
+const stillWorks = await api("/api/settings", { cookie: rotating.cookie });
+check(
+  "the cookie issued before the change still works",
+  stillWorks.status === 200,
+  `HTTP ${stillWorks.status} — expected 200; sessions are stateless JWTs, see the note above`
+);
+
+const oldRejected = await api("/api/auth/login", {
+  method: "POST",
+  body: { email: rotating.email, password: oldPassword },
+});
+check("but the old password no longer signs in", oldRejected.status === 401, `HTTP ${oldRejected.status}`);
+
+const newAccepted = await api("/api/auth/login", {
+  method: "POST",
+  body: { email: rotating.email, password: newPassword },
+});
+check("and the new one does", newAccepted.status === 200, `HTTP ${newAccepted.status}`);
+
+await deleteTestLearner(rotating.email);
 
 /* ── cleanup ───────────────────────────────────────────────────────────── */
 await deleteTestLearner(alice.email);
