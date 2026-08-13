@@ -198,6 +198,13 @@ its own question directly.
   deliberately neutral and is asserted in the audit: they are never called errors,
   failures or invalid data, because nothing about them went wrong.
 
+### Data gathering and analysis guide
+[`docs/data-guide.md`](docs/data-guide.md) is the Chapter 3 and Chapter 4 companion:
+every column of every export and what it means, the four filters that silently corrupt
+an analysis if missed, the week-by-week collection protocol, the two evaluation
+instruments that still have to be written, and how to analyse each measure — including
+why a five-participant design reports per-participant change rather than p-values.
+
 ### Operating manual
 [`docs/user-manual.md`](docs/user-manual.md) is the how-to: every screen and what it
 does, the demo accounts, a pre-flight checklist and a timed script for demonstrating to
