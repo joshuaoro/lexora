@@ -198,6 +198,14 @@ its own question directly.
   deliberately neutral and is asserted in the audit: they are never called errors,
   failures or invalid data, because nothing about them went wrong.
 
+### Study instruments
+[`docs/instruments/`](docs/instruments/) holds the four documents the application cannot
+produce: parental consent and child assent forms (English and Filipino), the ISO/IEC
+25010:2023 questionnaire for the reading specialists, and the children's three-point
+pictorial scale. Drafts — every factual claim in the consent form is checked against what
+the code actually does, but they need adviser and ethics-committee review, and probably a
+Cebuano translation, before they reach a family.
+
 ### Data gathering and analysis guide
 [`docs/data-guide.md`](docs/data-guide.md) is the Chapter 3 and Chapter 4 companion:
 every column of every export and what it means, the four filters that silently corrupt

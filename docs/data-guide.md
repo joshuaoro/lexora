@@ -14,7 +14,7 @@ figure comes from the code, the file is named so a future change is traceable.
 - [1. What data exists at all](#1-what-data-exists-at-all)
 - [2. Data dictionary — every column](#2-data-dictionary--every-column)
 - [3. The gathering protocol](#3-the-gathering-protocol)
-- [4. The two instruments you still have to build](#4-the-two-instruments-you-still-have-to-build)
+- [4. The evaluation instruments](#4-the-two-instruments-you-still-have-to-build)
 - [5. Analysis, measure by measure](#5-analysis-measure-by-measure)
 - [6. Tables for Chapter 4](#6-tables-for-chapter-4)
 - [7. Limitations](#7-limitations)
@@ -67,11 +67,11 @@ The app will never produce these. They do not exist yet.
 
 | Data | Instrument | Status |
 |---|---|---|
-| ISO/IEC 25010:2023 ratings, 3 specialists | 5-point Likert questionnaire | **Not written** — see §4 |
-| Children's acceptance, 5 participants | 3-point pictorial scale | **Not written** — see §4 |
-| Consent (parents) and assent (children) | Forms | Not done |
-| Participant characteristics: age, sex, grade, prior diagnosis | Intake sheet | Not done |
-| Session notes: interruptions, mood, technical problems | Field log | Not done |
+| ISO/IEC 25010:2023 ratings, 3 specialists | 5-point Likert questionnaire | **Drafted** — [`instruments/03`](instruments/03-iso-25010-questionnaire.md), needs ethics review |
+| Children's acceptance, 5 participants | 3-point pictorial scale | **Drafted** — [`instruments/04`](instruments/04-pictorial-scale.md), needs ethics review |
+| Consent (parents) and assent (children) | Forms | **Drafted** — [`instruments/01`](instruments/01-consent-parent.md), [`02`](instruments/02-assent-child.md), need ethics review |
+| Participant characteristics: age, sex, grade, prior diagnosis | Intake sheet | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
+| Session notes: interruptions, mood, technical problems | Field log | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
 
 That last one is easy to skip and hard to reconstruct. When a child's accuracy
 drops 30 points in one session, the field log is the only thing that will ever
@@ -323,9 +323,9 @@ rather than generated fresh each run.
 
 ---
 
-## 4. The two instruments you still have to build
+## 4. The evaluation instruments
 
-Neither exists. Objective 6 has no instrument behind it until these are written.
+**Both now exist as drafts** in [`instruments/`](instruments/) — [ISO 25010 questionnaire](instruments/03-iso-25010-questionnaire.md) and [pictorial scale](instruments/04-pictorial-scale.md), alongside the [parental consent](instruments/01-consent-parent.md) and [child assent](instruments/02-assent-child.md) forms. They require adviser and ethics-committee review before use. The sections below are the reasoning behind their design.
 
 ### 4.1 ISO/IEC 25010:2023 questionnaire — 3 reading specialists
 
