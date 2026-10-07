@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-14 migrations, 10 automated audit suites, 440 assertions (as of 7 October 2026).
+14 migrations, 10 automated audit suites, 442 assertions (as of 7 October 2026).
 
 ---
 
@@ -1652,7 +1652,7 @@ for *problema* is a cluster simplification. Both are on the consultation agenda
 
 ### 9.1 The suites
 
-Ten suites, **440 checks locally** (7 October 2026). Run with `npm run audit [url]`.
+Ten suites, **442 checks** (7 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
@@ -1660,9 +1660,9 @@ Ten suites, **440 checks locally** (7 October 2026). Run with `npm run audit [ur
 | `logic-audit` | 23 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
 | `links-audit` | 51 | Every route reachable from the navigation, as each role |
-| `stale-session-audit` | 24 | A learner or specialist erased mid-session |
+| `stale-session-audit` | 25 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
-| `decoding-audit` | 71 | Probe walls, latency guard, stress caveat, exports, Filipino |
+| `decoding-audit` | 72 | Probe walls, latency guard, stress caveat, exports, Filipino |
 | `calibration-audit` | 89 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress |
 | `a11y-audit` | 19 | WCAG 2.1 AA via axe-core, keyboard, reduced motion |

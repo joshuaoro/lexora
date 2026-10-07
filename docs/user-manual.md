@@ -468,7 +468,7 @@ npm run password:set -- learner2@lexora.ph --generate --random
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 440 checks
+npm run audit                  # 442 checks
 npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
 
@@ -675,7 +675,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 440 checks
+npm run audit                  # all 10 suites, 442 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values

@@ -373,7 +373,7 @@ three opinions. Present both.
 | Performance Efficiency | Yes | `audit:perf` — FCP < 3 s, LCP < 4 s, JS < 400 KB on the study's own minimum spec (dual-core 2.0 GHz, 5 Mbps) |
 | Compatibility | Yes | Chrome, Edge, Safari iOS 14.3+; `/diagnostics` per device |
 | **Interaction Capability** | **Yes — the main one** | `audit:a11y` — WCAG 2.1 AA, 19 checks, every route as every role |
-| Reliability | Yes | 440 checks; stale-session and dropped-connection handling |
+| Reliability | Yes | 442 checks; stale-session and dropped-connection handling |
 | Security | Partly | `audit:api` authorization, RLS on 11 tables, `secrets:check` |
 | Safety | Yes | Non-diagnostic disclaimers; IEP refuses prescriptive language |
 | Maintainability | **No** | Test suite, typed codebase, documented decisions |
