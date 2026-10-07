@@ -13,12 +13,18 @@ used LEXORA throughout the study.**
 > carries a standard's name on it. A questionnaire citing the 2011 list under a
 > 2023 heading is the first thing a panel will catch.
 >
-> **2. Two characteristics are deliberately not rated here.** Maintainability and
-> Flexibility are developer-facing. A reading specialist rating "modularity"
-> produces a number with nothing behind it, and if a panel asks what they based
-> it on there is no answer. Those two are evidenced objectively instead — see
-> §Objective evidence below. **This is a defensible choice, but you must be able
-> to explain it**, so do not quietly drop them without saying why in Chapter 3.
+> **2. All nine characteristics are rated, as the proposal names them.** Two of
+> them — Maintainability and Flexibility — are usually judged by developers, so
+> their items (sections H and I) ask only about what a specialist saw during the
+> study: updating content, understanding an error, using it on different
+> devices and connections. A specialist rating "modularity" would produce a
+> number with nothing behind it; a specialist rating "I could add a word without
+> a developer" is reporting their own experience. The objective evidence at the
+> end supports these two in particular.
+>
+> **3. Content validation.** The proposal has the questionnaire "reviewed by the
+> research adviser and by subject matter experts" before it is administered.
+> Record who reviewed it, when, and what changed.
 >
 > Delete this box before printing.
 
@@ -33,6 +39,10 @@ Please rate each statement from **1 to 5**:
 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|
 | Strongly Disagree | Disagree | Neutral | Agree | Strongly Agree |
+
+If a statement describes something you did not do or see during the study,
+leave it blank rather than guessing — a blank is counted as no response, not as
+a 3.
 
 Answer based on your **actual use of the application during the study**, not on
 how you imagine it might work for someone else. There are no right answers, and a
@@ -57,7 +67,8 @@ Evaluator: `____________________`  Role: `____________________`  Date: `________
 | A3 | The system's judgement of whether a word was read correctly usually agrees with mine. | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A4 | The progress reports contain the information I need to plan instruction. | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A5 | The word difficulty levels are appropriate for the learners I work with. | ☐ | ☐ | ☐ | ☐ | ☐ |
-| A6 | The made-up-word probe tells me something I could not learn from the real words alone. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| A6 | The listening activities (blend, count the syllables, rhyme, first sound) practise the phonological-awareness skills I teach. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| A7 | The practice word list matches the words the learner actually finds hard. | ☐ | ☐ | ☐ | ☐ | ☐ |
 
 **Comments — especially anything the application could not do that you needed:**
 
@@ -174,6 +185,37 @@ diagnosed difficulty.*
 
 ---
 
+## H. Maintainability
+
+*Could the application be kept up to date and understood when something went
+wrong? Rate only what you saw during the study.*
+
+| # | Statement | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| H1 | I could change the word bank — add a word, accept a spelling, re-record a pronunciation — without a developer. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| H2 | When something went wrong, the message on screen told me what had happened and what to do. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| H3 | Changes the researchers made during the study did not interrupt sessions or lose a child's work. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| H4 | The reports and exports made it easy to check what the application had recorded. | ☐ | ☐ | ☐ | ☐ | ☐ |
+
+**Comments:** `____________________________________________________________`
+
+---
+
+## I. Flexibility
+
+*Did it adapt to the devices, connections and settings at the centre?*
+
+| # | Statement | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| I1 | It adjusted properly to every screen we used — tablet, laptop or phone. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| I2 | Nothing had to be installed; it opened in a web browser on each device. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| I3 | It kept working when several children used it at the same time. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| I4 | It worked on the internet connections available at the centre. | ☐ | ☐ | ☐ | ☐ | ☐ |
+
+**Comments:** `____________________________________________________________`
+
+---
+
 ## Overall
 
 | # | Statement | 1 | 2 | 3 | 4 | 5 |
@@ -197,23 +239,33 @@ Signature: `_______________________` Date: `__________`
 
 Detail in [`../data-guide.md`](../data-guide.md) §4.1 and §5.
 
-**Per characteristic:** the mean of its items across the three evaluators, and the
-**range**. Report the range, not the standard deviation — with three raters an SD
-implies a precision that is not there.
+The proposal's Statistical Treatment: the weighted mean, interpreted with
+Table 1.
 
-**Interpretation bands:**
+**Per item:** WM = Σ(f × w) / n — f the number of evaluators choosing a scale
+point, w that point's weight (1–5), n the evaluators who answered the item.
 
-| Mean | Interpretation |
-|---|---|
-| 4.21 – 5.00 | Excellent / Strongly Agree |
-| 3.41 – 4.20 | Very Good / Agree |
-| 2.61 – 3.40 | Good / Neutral |
-| 1.81 – 2.60 | Fair / Disagree |
-| 1.00 – 1.80 | Poor / Strongly Disagree |
+**Per characteristic:** the weighted mean over all of its items' responses
+(every answered rating under that heading, pooled), interpreted the same way.
 
-**Do not compute Cronbach's α or an ICC.** Three raters cannot support either.
-If you want to say something about consistency, report the range or percent exact
-agreement, and say that is what you are reporting.
+**Table 1 — descriptive ratings, exactly as the proposal states them:**
+
+| Scale | Range | Descriptive rating |
+|---|---|---|
+| 5 | 4.21 – 5.00 | Strongly Agree |
+| 4 | 3.41 – 4.20 | Agree |
+| 3 | 2.61 – 3.40 | Neutral |
+| 2 | 1.81 – 2.60 | Disagree |
+| 1 | 1.00 – 1.80 | Strongly Disagree |
+
+**Report the lowest and highest rating beside each weighted mean.** With three
+evaluators, 4.00 can be three 4s or a 5, a 5 and a 2, and the comments box is
+where the difference is explained. The proposal treats the weighted mean "as a
+descriptive summary of the evaluators' assessment and not as an estimate of a
+population parameter" — say the same in Chapter 4.
+
+**Do not compute Cronbach's α, an ICC or any inferential test.** Three raters
+cannot support them, and the proposal's treatment is descriptive only.
 
 ## Objective evidence — pair this with the ratings
 
@@ -228,13 +280,13 @@ challenge than either alone.
 | Performance Efficiency | FCP < 3 s, LCP < 4 s, JS < 400 KB, measured on the study's minimum spec (dual-core 2.0 GHz, 5 Mbps) | `npm run audit:perf` |
 | Compatibility | Chrome, Edge, Safari iOS 14.3+; per-device check | `/diagnostics` |
 | **Interaction Capability** | **WCAG 2.1 AA, 19 checks, every route as every role, zero serious or critical violations** | `npm run audit:a11y` |
-| Reliability | 442 checks passing; stale-session and dropped-connection handling verified | `npm run audit` |
+| Reliability | Every automated check passing; stale-session and dropped-connection handling verified | `npm run audit` |
 | Security | Authorization checks, RLS on 11 tables, credential verification | `npm run audit:api`, `npm run secrets:check` |
 | Safety | Non-diagnostic disclaimers; IEP refuses prescriptive language; every panel states its minimum sample | Code and UI |
-| **Maintainability** | **Not rated by specialists** — 442 automated checks, typed codebase, decisions documented | `docs/development-record.md` |
-| **Flexibility** | **Not rated by specialists** — responsive across phone/tablet/desktop; single-command deploy | — |
+| Maintainability | Automated suites run on every change; typed codebase; every decision documented; word bank editable by specialists | `npm run audit`, `docs/development-record.md` |
+| Flexibility | Responsive across phone, tablet and desktop; no installation; Chrome, Edge and Safari tested, Firefox's recording format checked (`npm run asr:check`) | `npm run audit:a11y`, `/diagnostics` |
 
-In Chapter 4, give Table 8 a column for each: the specialists' mean, and the
-objective evidence. Where they agree, say so. **Where they disagree, that is the
+In Chapter 4, give the ISO table a column for each: the specialists' weighted
+mean with its Table 1 rating, and the objective evidence. Where they agree, say so. **Where they disagree, that is the
 interesting finding** — a characteristic that measures well but rates poorly is
 usually telling you the measurement is testing the wrong thing.

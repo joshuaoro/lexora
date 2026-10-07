@@ -1,20 +1,23 @@
 # Children's Acceptance — Three-Point Pictorial Scale
 
-**For the five child participants, aged 7–12. Administered at close-out. Read
-aloud.**
+**For the five child participants, aged 7–12. Administered at close-out, read
+aloud, with assistance.** This is the user-acceptance instrument named in the
+proposal (Evaluation Instruments; Table 2): it asks about the application's
+**usability, ease of use and accessibility** — never about reading ability.
 
-> **To the researchers — two design constraints that matter more than the
-> wording, and one that is easy to get wrong.**
+> **To the researchers — before printing.**
 >
-> **Someone who did not run the sessions must administer this.** Acquiescence
-> bias in 7–12-year-olds toward a familiar adult is the main threat to this
-> instrument. A child who has spent eight weeks with you will tell you they liked
-> it. If that is unavoidable, say so in your limitations — do not pretend the
-> problem away.
+> **Who administers it.** The proposal: "administered with assistance by the
+> researchers in the presence of a reading specialist, teacher, or guardian".
+> Of the researchers, choose the one the child has sat with *least*.
+> Acquiescence bias in 7–12-year-olds toward a familiar adult is the main
+> threat to this instrument — a child who has spent weeks with you will tell
+> you they liked it — so name who administered it in the limitations.
 >
-> **Report per child, not as a cohort mean.** The mean of five judgements on a
-> three-point scale carries almost no information and implies precision that is
-> not there. Five rows is more honest and tells you more.
+> **Nothing here asks whether the child read better.** The study does not
+> measure gains in reading (Delimitation), and an earlier draft's item "Do you
+> think you got better at reading?" asked for exactly that. It has been
+> replaced by an accessibility item.
 >
 > Requires adviser and ethics-committee review. Probably needs Cebuano. See
 > [`README.md`](README.md). Delete this box before printing.
@@ -37,7 +40,8 @@ task, which is the one thing this instrument must not be.
 1. **Not in the room where sessions happened**, if you can manage it. A different
    room helps the child separate "what do I think" from "what does my teacher
    want to hear".
-2. Sit beside the child, not across a desk.
+2. Sit beside the child, not across a desk. The specialist, teacher or guardian
+   sits nearby but does not prompt.
 3. Say: *"Tapos na ang laro. Gusto ko lang malaman kung ano sa tingin mo. Walang
    tama o mali dito — kung ano lang talaga ang naramdaman mo."*
 4. **Teach the scale first**, with a practice item that has nothing to do with
@@ -64,18 +68,20 @@ into a leading question.
 ## Recording sheet
 
 Child code: `______`   Date: `__________`   Administered by: `______________`
+Present: ☐ reading specialist ☐ teacher ☐ guardian — `______________`
 
 **Practice items** (not scored) — did the child use the scale correctly? ☐ Yes ☐ No
 
-| # | Item — read aloud in Filipino or Cebuano | ☹️ 1 | 😐 2 | 😊 3 | "Bakit?" |
-|---|---|---|---|---|---|
-| 1 | **Masaya ka ba kapag ginagamit mo ang LEXORA?** <br>*Were you happy using LEXORA?* | ☐ | ☐ | ☐ | |
-| 2 | **Madali bang gamitin?** <br>*Was it easy to use?* | ☐ | ☐ | ☐ | |
-| 3 | **Malinaw bang basahin ang mga salita sa screen?** <br>*Were the words on screen easy to see?* | ☐ | ☐ | ☐ | |
-| 4 | **Naiintindihan mo ba ang sinasabi ng boses?** <br>*Could you understand the voice?* | ☐ | ☐ | ☐ | |
-| 5 | **Alam mo ba kung ano ang gagawin sa bawat laro?** <br>*Did you know what to do in each activity?* | ☐ | ☐ | ☐ | |
-| 6 | **Sa tingin mo, gumaling ka ba sa pagbasa?** <br>*Do you think you got better at reading?* | ☐ | ☐ | ☐ | |
-| 7 | **Gusto mo bang gamitin ulit ito?** <br>*Would you like to use it again?* | ☐ | ☐ | ☐ | |
+| # | Item — read aloud in Filipino or Cebuano | Construct | ☹️ 1 | 😐 2 | 😊 3 | "Bakit?" |
+|---|---|---|---|---|---|---|
+| 1 | **Madali bang gamitin ang LEXORA?** <br>*Was LEXORA easy to use?* | Ease of use | ☐ | ☐ | ☐ | |
+| 2 | **Alam mo ba kung ano ang gagawin sa bawat laro?** <br>*Did you know what to do in each activity?* | Usability | ☐ | ☐ | ☐ | |
+| 3 | **Madali bang magsalita sa mikropono?** <br>*Was it easy to read words into the microphone?* | Ease of use | ☐ | ☐ | ☐ | |
+| 4 | **Malinaw bang makita ang mga salita sa screen?** <br>*Were the words on screen easy to see?* | Accessibility | ☐ | ☐ | ☐ | |
+| 5 | **Naiintindihan mo ba ang sinasabi ng boses?** <br>*Could you understand the voice?* | Accessibility | ☐ | ☐ | ☐ | |
+| 6 | **Nakatulong ba sa iyo na marinig ang mga salita?** <br>*Did hearing the words help you?* | Accessibility | ☐ | ☐ | ☐ | |
+| 7 | **Masaya ka ba kapag ginagamit mo ang LEXORA?** <br>*Were you happy using LEXORA?* | Acceptance | ☐ | ☐ | ☐ | |
+| 8 | **Gusto mo bang gamitin ulit ito?** <br>*Would you like to use it again?* | Acceptance | ☐ | ☐ | ☐ | |
 
 **Anything the child said unprompted:**
 
@@ -90,17 +96,15 @@ pleasing you? Note anything that would help interpret the row later:
 
 ## Notes on individual items
 
-**Item 3 (words easy to see)** is the one that speaks to Objective 1 — the
-dyslexia-friendly display customisation. If a child rates it low, find out which
-screen: the answer is actionable.
+**Items 4–6 (accessibility)** speak to Objective 1 — the dyslexia-friendly
+display and text-to-speech. If a child rates one low, find out which screen or
+which voice: the answer is actionable for the next iteration (SDLC Phase 6).
 
-**Item 6 (do you think you got better)** is a *perception*, not an outcome. Do not
-report it beside the accuracy figures as though it were evidence of improvement,
-and do not treat a mismatch as the child being wrong. A child who improved on the
-probe but felt they had not is a finding about confidence, which matters for a
-population that has usually been told it is bad at reading.
+**Item 3 (the microphone)** is where speech recognition meets the child. A low
+rating here with a "Bakit?" about being misheard is a usability finding about
+the recogniser, not about the child.
 
-**Item 7 (use it again)** is the closest thing to an acceptance measure, and the
+**Item 8 (use it again)** is the closest thing to an acceptance measure, and the
 most vulnerable to wanting to please. Weigh it against what the "Bakit?" column
 says.
 
@@ -110,20 +114,45 @@ says.
 
 ☹️ = 1  ·  😐 = 2  ·  😊 = 3
 
-**Report per child.** Table 9 in Chapter 4: items down the side, five children
-across, the face in each cell.
+The proposal's Statistical Treatment: responses "tallied per item and expressed
+as frequency counts and percentages". Its Table 2 then interprets each item's
+mean.
 
-**Per item**, report the **modal** response and the count of each face — "four of
-five chose 😊" — rather than a mean.
+**Per item — the primary figure.** The frequency of each face and its
+percentage of the children who answered (with five children, each is 20%):
 
-**Do not** compute a cohort mean across items, a total "acceptance score", or any
-inferential test. Five children, three points, and a known bias toward agreement:
-the honest presentation is the raw grid plus the quotes.
+| Item | ☹️ f (%) | 😐 f (%) | 😊 f (%) | n | Mean | Table 2 rating |
+|---|---|---|---|---|---|---|
+| 1 | | | | | | |
+
+**Mean per item** = Σ(f × w) / n, where w is the face's value (1–3) and n the
+number of children who answered that item. Interpret it with Table 2:
+
+| Mean | Descriptive rating |
+|---|---|
+| 2.34 – 3.00 | Easy to Use |
+| 1.67 – 2.33 | Moderately Easy to Use |
+| 1.00 – 1.66 | Difficult to Use |
+
+**Always print the frequencies beside the mean.** A mean of five answers hides
+the spread: 2.2 can be five neutral faces or two sad and three happy, and those
+are different findings.
+
+**A note on Table 2's wording.** Its ratings describe ease of use. Items 7 and 8
+ask about enjoyment and wanting to return, so for those two read "Easy to Use" as
+the favourable end of the scale and say so in the text — or ask the adviser
+whether Table 2's labels should be generalised.
+
+**Per child** — the grid of faces, items down the side and the five children
+across — is a useful appendix. It shows a child who answered everything with
+the same face, which the per-item figures cannot.
+
+**Do not** add the items into a total "acceptance score" or apply any
+inferential test; the proposal's treatment is descriptive only.
 
 **Report the practice-item result too.** If a child did not demonstrate they
-understood the scale, their row needs that caveat attached, and it should not be
-quietly dropped.
+understood the scale, their answers need that caveat attached, and they should
+not be quietly dropped.
 
-**State who administered it**, and if it was someone the children knew from the
-sessions, name that as a limitation. See [`../data-guide.md`](../data-guide.md)
-§7.
+**State who administered it and who was present.** See
+[`../data-guide.md`](../data-guide.md) §5.6 and §7.

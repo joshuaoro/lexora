@@ -26,15 +26,16 @@ findings apply to.
 | | |
 |---|---|
 | Child's name | `_________________________` |
-| LEXORA account email | `_________________________` |
+| LEXORA account — name `L_`, sign-in `l_@participant.lexora` | `_________________________` |
 | LEXORA learner ID (the last part of the learner page's address, `/specialist/learner/…`) | `_________________________` |
 
-> **Keep the code-to-name mapping on paper, or in one file held separately from
-> the study data — never in the repository, the database, or a synced folder.**
-> Everything else in the study refers to `L1`…`L5` and nothing else. That
-> separation is what makes the pseudonymisation real rather than nominal. The
-> exports carry the learner ID and the display name; before sharing them, replace
-> both with the code from this sheet (see the data guide, §2.3).
+> **The child's name is never typed into LEXORA.** Register the account under the
+> participant code — name `L1`, sign-in `l1@participant.lexora` — so the database
+> holds the study's records "under a coded learner identifier", as the proposal's
+> ethics section commits. This sheet is the only place the code meets the name:
+> keep it on paper, or in one file held separately from the study data — never in
+> the repository, the database, or a synced folder. The exports then carry the
+> code already; check before sharing them anyway (data guide, §2.3).
 
 ### Characteristics — these go into Table 1
 
@@ -90,22 +91,25 @@ Completed by: `______________________` Date: `__________`
 ---
 ---
 
-# 2. Session field log
+# 2. Session field log — the structured observation
 
 **One row per session, per child.** Two minutes at the end of each session.
 
-This is the cheapest data in the whole study and the only one that cannot be
-reconstructed. When a child's accuracy drops thirty points in one afternoon, this
-is the only thing that will ever tell you the aircon was being repaired, or that
-they had come straight from a school test.
+This is the proposal's "observation during system testing, in which the
+researchers will document usability issues, technical errors, user
+interactions, and any points of confusion" — and the source, with the
+specialist interviews, of the qualitative analysis (data guide §5.7). It is also
+the cheapest data in the study and the only kind that cannot be reconstructed:
+when a child's accuracy drops thirty points in one afternoon, this is the only
+thing that will ever tell you the aircon was being repaired.
 
-| Date | Child | Activities done | Mins | Anything unusual | Recorder |
-|---|---|---|---|---|---|
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| Date | Child code | Activities done | Mins | Usability issue or point of confusion | Technical error | How the child interacted / anything unusual | Recorder |
+|---|---|---|---|---|---|---|---|
+| | | | | | | | |
+| | | | | | | | |
+| | | | | | | | |
+| | | | | | | | |
+| | | | | | | | |
 
 ### What counts as "anything unusual"
 
@@ -140,8 +144,8 @@ defensible options, and the choice must be stated in Chapter 3 rather than made
 quietly per-session:
 
 1. **Keep everything**, and use the log to explain anomalies in the discussion.
-   Usually the better choice — real intervention data contains bad days, and
-   removing them makes the result look cleaner than the reality it describes.
+   Usually the better choice — real usage data contains bad days, and removing
+   them makes the result look cleaner than the reality it describes.
 2. **Pre-specify an exclusion rule** before looking at the results — for example,
    sessions ended early for technical failure — and apply it uniformly.
 

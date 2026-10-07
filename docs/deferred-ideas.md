@@ -42,12 +42,24 @@ high enough to state a denominator anyone would accept.
 `src/lib/phases.ts` reports baseline against endline as descriptives. It stops
 there.
 
-**Why not now:** five participants cannot support a p-value, and one rendered on
-a web page would be quoted long after the caveat was forgotten. The test also
-depends on the design — paired, non-parametric, corrected for multiple measures
-— which is a decision for the analysis, not a default in an app. **Revisit
-when:** never, in this form. A future version with a larger cohort should still
-export to a statistics package rather than compute inline.
+**Why not:** the proposal rules it out twice — the study "does not measure gains
+in reading proficiency", and its treatment is "descriptive … only. No inferential
+statistical tests will be applied." Five participants could not support a
+p-value anyway, and one rendered on a web page would be quoted long after the
+caveat was forgotten. **Revisit when:** a later study sets out to measure gains,
+with a design built for it; even then, export to a statistics package rather
+than compute inline.
+
+### Phoneme-level manipulation
+The proposal's item bank runs up to "phoneme-level manipulation" — say *bata*
+without /b/; change /b/ to /m/. LEXORA stops at phoneme isolation (*First
+sound*).
+
+**Why not now:** the task must play single sounds, and the neural voice reads a
+lone letter by its name ("bi"), the opposite of Marungko's sounds-before-names
+principle. **Revisit when:** a specialist records the ~20 sounds (consultation
+brief, decision 12); the word-audio recorder already stores a specialist's voice
+in preference to the synthesized one.
 
 ---
 

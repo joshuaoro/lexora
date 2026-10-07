@@ -9,8 +9,8 @@
 
 ## English
 
-**Study title:** Design and Development of an AI-Assisted Reading and Progress
-Tracking Web Application for Persons with Dyslexia
+**Study title:** LEXORA: Development of an AI-Assisted Reading and Progress Tracking
+Web Application for Persons with Dyslexia Using the Marungko Approach
 
 **Researchers:** `[names]`, `[degree programme]`, `[institution]`
 **Adviser:** `[name]` · **Contact:** `[email / mobile]`
@@ -43,8 +43,10 @@ centre hours and are not extra homework.
 
 ### 3. What information we collect
 
-- **Account details** — your child's first name or a nickname, an email address
-  for signing in, and a password stored in scrambled form that nobody can read.
+- **Account details** — a code such as `L1` used in place of your child's name, a
+  sign-in address made from that code (not a real email), and a password stored in
+  scrambled form that nobody can read. Your child's name is never entered into
+  LEXORA; it stays on this paper form.
 - **Reading activity** — which words were shown, what the computer heard, whether
   each reading was correct, the kind of mistake, and how long each word took.
 - **Voice recordings** — a short audio clip of your child reading each word
@@ -65,16 +67,18 @@ work, and checking it is a main purpose of this study.
 
 **Where they go.** To score a reading, the clip is sent to a company called
 **Groq**, which runs speech-recognition software and sends back a text version of
-what was said. The recordings are **not used to train or improve any
-artificial-intelligence model** — not ours, and not theirs.
+what was said. The clip is sent **without your child's name or code**. The
+recordings are **not used to train or improve any artificial-intelligence
+model** — not ours, and not theirs.
 
 **Who can hear them.** The reading specialists at The Reading Owl and the
 researchers. Nobody else.
 
-**How long we keep them.** Recordings are deleted automatically after
-**180 days**. A specialist can delete them sooner, and normally does as soon as
-the checking is finished. When a recording is deleted, the scores and notes stay
-— **no result changes**, we simply can no longer listen back.
+**How long we keep them.** Only while LEXORA is being evaluated. **When the
+evaluation ends, every recording is permanently deleted** — from the application
+and from every backup copy — and no recording is ever kept longer than
+**180 days**. When a recording is deleted, the scores and notes stay — **no result
+changes**, we simply can no longer listen back.
 
 ### 5. Who can see your child's information
 
@@ -94,14 +98,17 @@ We do not expect this to harm your child. The realistic risks are small:
   session if the child is distressed.
 - **Privacy.** Any information kept on a computer carries some risk. What we do
   about it: access needs an account and a password, the data is stored in a
-  protected database, recordings are deleted after 180 days, and reports use
-  codes rather than names.
+  protected database, your child's records are kept under a code, recordings are
+  permanently deleted when the evaluation ends, and reports use codes rather than
+  names.
 
 ### 7. Benefits
 
-Your child may improve at reading single words, and their specialist gets a
-clearer picture of which sounds and word shapes are difficult. We cannot promise
-improvement. Findings may help other children with dyslexia in the future.
+Your child gets word-level reading practice matched to their level, with tools
+that make words easier to see and to hear, and their specialist gets an organised
+record of which sounds and word shapes are difficult. This study does not measure
+whether reading improves, and we do not promise that it will. Findings may help
+other children with dyslexia in the future.
 
 ### 8. LEXORA does not diagnose
 
@@ -151,7 +158,8 @@ Please tick each box you agree with.
 - ☐ I understand what my child will be asked to do.
 - ☐ **I understand that my child's voice will be recorded**, that the recordings
   will be sent to a speech-recognition service for transcription, and that they
-  will be deleted after 180 days.
+  will be permanently deleted when the evaluation ends (and never kept longer than
+  180 days).
 - ☐ I understand that taking part is voluntary and that we may withdraw at any
   time without affecting the services my child receives.
 - ☐ I understand that my child will be identified only by a code in anything
@@ -175,8 +183,8 @@ Signature: `_______________________________`  Date: `____________`
 
 ## Filipino
 
-**Pamagat ng pag-aaral:** Disenyo at Pagbuo ng LEXORA, isang Web Application na
-Tumutulong sa Pagbasa at Sumusubaybay sa Progreso para sa mga May Dyslexia
+**Pamagat ng pag-aaral:** LEXORA: Pagbuo ng isang Web Application na Tumutulong sa
+Pagbasa at Sumusubaybay sa Progreso para sa mga May Dyslexia Gamit ang Marungko Approach
 
 **Mga mananaliksik:** `[pangalan]`, `[kurso]`, `[paaralan]`
 **Tagapayo:** `[pangalan]` · **Contact:** `[email / cellphone]`
@@ -211,8 +219,10 @@ oras ng sentro at hindi ito dagdag na takdang-aralin.
 
 ### 3. Anong impormasyon ang kinokolekta namin
 
-- **Detalye ng account** — palayaw o unang pangalan ng bata, email para
-  makapag-sign in, at password na naka-scramble at hindi mababasa ninuman.
+- **Detalye ng account** — code gaya ng `L1` na ginagamit sa halip na pangalan
+  ng bata, sign-in address na mula sa code na iyon (hindi tunay na email), at
+  password na naka-scramble at hindi mababasa ninuman. Hindi kailanman inilalagay
+  sa LEXORA ang pangalan ng bata; nananatili ito sa papel na ito.
 - **Aktibidad sa pagbasa** — anong salita ang lumabas, ano ang narinig ng
   computer, tama ba ang pagbasa, anong uri ng mali, at gaano katagal bawat salita.
 - **Voice recording** — maikling audio ng pagbasa ng bata sa bawat salita.
@@ -232,18 +242,19 @@ ito ang isa sa pangunahing layunin ng pag-aaral.
 
 **Saan ito napupunta.** Para masuri ang pagbasa, ipinapadala ang audio sa
 kompanyang **Groq**, na nagpapatakbo ng speech-recognition software at nagbabalik
-ng nakasulat na bersyon ng sinabi. **Hindi ginagamit ang mga recording para
-sanayin o pagandahin ang kahit anong artificial intelligence** — hindi sa amin,
-at hindi sa kanila.
+ng nakasulat na bersyon ng sinabi. Ipinapadala ang audio **nang walang pangalan o
+code ng inyong anak**. **Hindi ginagamit ang mga recording para sanayin o
+pagandahin ang kahit anong artificial intelligence** — hindi sa amin, at hindi sa
+kanila.
 
 **Sino ang makakarinig.** Ang mga reading specialist ng The Reading Owl at ang mga
 mananaliksik. Wala nang iba.
 
-**Gaano katagal itinatago.** Awtomatikong binubura ang recording pagkatapos ng
-**180 araw**. Puwede itong burahin ng specialist nang mas maaga, at karaniwang
-ginagawa ito kapag tapos na ang pagsusuri. Kapag nabura ang recording, nananatili
-ang mga iskor at tala — **walang nagbabagong resulta**, hindi na lang namin
-mapapakinggan muli.
+**Gaano katagal itinatago.** Habang sinusuri lang ang LEXORA. **Pagkatapos ng
+pagsusuri, permanenteng binubura ang bawat recording** — sa application at sa
+bawat backup na kopya — at walang recording na itinatago nang lampas sa
+**180 araw**. Kapag nabura ang recording, nananatili ang mga iskor at tala —
+**walang nagbabagong resulta**, hindi na lang namin mapapakinggan muli.
 
 ### 5. Sino ang makakakita ng impormasyon ng inyong anak
 
@@ -262,15 +273,18 @@ Hindi namin inaasahang makakasama ito sa inyong anak. Maliit lang ang panganib:
   specialist ang session kung nababalisa ang bata.
 - **Pribasiya.** May kaunting panganib sa anumang impormasyong nasa computer. Ang
   ginagawa namin: kailangan ng account at password, protektado ang database,
-  binubura ang recording pagkatapos ng 180 araw, at code ang ginagamit sa mga
-  ulat sa halip na pangalan.
+  naka-code ang rekord ng inyong anak, permanenteng binubura ang recording
+  pagkatapos ng pagsusuri, at code ang ginagamit sa mga ulat sa halip na
+  pangalan.
 
 ### 7. Mga benepisyo
 
-Posibleng gumaling ang inyong anak sa pagbasa ng iisang salita, at magkakaroon ang
-specialist ng mas malinaw na larawan kung anong tunog at hugis ng salita ang
-mahirap. **Hindi namin ito maipapangako.** Maaaring makatulong ang natuklasan sa
-ibang batang may dyslexia sa hinaharap.
+Makakakuha ang inyong anak ng pagsasanay sa pagbasa ng salita na angkop sa
+kanyang antas, kasama ang mga kasangkapang nagpapadali sa pagtingin at pakikinig
+sa salita, at magkakaroon ang specialist ng maayos na talaan kung anong tunog at
+hugis ng salita ang mahirap. **Hindi sinusukat ng pag-aaral na ito kung gagaling
+ang pagbasa, at hindi namin ito ipinapangako.** Maaaring makatulong ang
+natuklasan sa ibang batang may dyslexia sa hinaharap.
 
 ### 8. Hindi nagdi-diagnose ang LEXORA
 
@@ -319,8 +333,8 @@ Lagyan ng tsek ang bawat kahon na sinasang-ayunan ninyo.
 - ☐ Nagkaroon ako ng pagkakataong magtanong at nasagot ang mga ito.
 - ☐ Naiintindihan ko kung ano ang gagawin ng aking anak.
 - ☐ **Naiintindihan ko na ire-record ang boses ng aking anak**, na ipapadala ang
-  recording sa isang speech-recognition service, at buburahin ito pagkatapos ng
-  180 araw.
+  recording sa isang speech-recognition service, at permanente itong buburahin
+  pagkatapos ng pagsusuri (at hindi kailanman lalampas sa 180 araw).
 - ☐ Naiintindihan ko na boluntaryo ito at puwede kaming umatras anumang oras nang
   walang epekto sa serbisyong natatanggap ng aking anak.
 - ☐ Naiintindihan ko na code lang ang gagamit para sa aking anak sa anumang

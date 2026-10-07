@@ -26,8 +26,8 @@ LEXORA does two things, and deliberately nothing else:
 
 1. **A child practises word-level reading** — phonological awareness and single-word
    decoding, in Filipino, sequenced by the Marungko Approach.
-2. **A reading specialist watches what happened** — accuracy, decoding speed, error
-   patterns, and their own verdict on recordings the child made.
+2. **A reading specialist watches what happened** — accuracy, error patterns, time per
+   word, and their own verdict on recordings the child made.
 
 Everything else in the app exists to keep those two honest. Connected text, fluency
 (WCPM), spelling and comprehension are **out of scope by design**, not missing.
@@ -120,13 +120,16 @@ on; a percentage is not). A speaker button reads the greeting aloud.
 
 ### Exercises `/exercises`
 
-Seven activities. Each draws **8 items** per run, matched to the learner's level and
-Marungko stage.
+Eight activities. Each draws **8 items** per run, matched to the learner's level and
+Marungko stage. The four listening activities — blend, syllables, rhyme, first sound —
+are the proposal's phonological-awareness tasks (blending, segmentation, rhyming, sound
+isolation).
 
 | Activity | Slug | What the child does |
 |---|---|---|
 | **Read aloud** | `read-aloud` | Sees a word, presses the mic, reads it. **This is the one that records audio and produces the scored data.** |
-| **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options |
+| **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options (word recognition) |
+| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta* — and picks the word they make (blending). The whole word plays only as feedback |
 | **Count the syllables** | `syllables` | Taps how many *pantig* a word has |
 | **Rhyme time** | `rhyme` | Picks the word that rhymes |
 | **First sound** | `first-sound` | Picks the word starting with the same sound |
@@ -222,27 +225,34 @@ and Print. Then, top to bottom:
 
 1. **Intervention controls** — override the adaptive level (1–5), and pin a word to the
    practice list. Probe non-words are not offered: the practice list teaches, and a
-   taught non-word stops measuring decoding.
-2. **Scoring reliability check (Review list)** — the core research instrument; covered
+   taught non-word stops measuring decoding. Each practice word shows how often the
+   system scored it misread (×n) and, once you have reviewed those readings, how many you
+   **confirmed** and **overturned** — the evidence for verifying the list (Objective 3).
+2. **Skill progression** — the proposal's map at the child's current level: phonological
+   awareness (the listening activities, ≥ 8 answers, 80%) and then single-word decoding
+   (≥ 8 readings, 85%, not slowing). Both must be met to move up. If a child's level has
+   stopped moving, this says which criterion is holding it.
+3. **Scoring reliability check (Review list)** — the core research instrument; covered
    below. The agreement percentage beside it is over **first readings of real words
    only**, the same readings the calibration uses.
-3. **Decoding probe** — the child's non-word readings, which **you score by ear**. The
+4. **Decoding probe** — the child's non-word readings, which **you score by ear**. The
    transcript is shown as unreliable on purpose: the recogniser writes a non-word as the
    nearest real word. The percentage is your count over the items you have scored;
    unscored items are listed as outstanding, never counted as wrong.
-4. **Decoding vs recall (Divergence)** — real-word accuracy beside non-word accuracy,
+5. **Decoding vs recall (Divergence)** — real-word accuracy beside non-word accuracy,
    both from your verdicts.
-5. **Borderline readings (Threshold calibration)** — readings that scored just below the
+6. **Borderline readings (Threshold calibration)** — readings that scored just below the
    acceptance line, with audio, so you can hear whether the line is set right.
-6. **Re-reads after hearing the word** — a missed word, and the child's second go at it
+7. **Re-reads after hearing the word** — a missed word, and the child's second go at it
    after LEXORA said it. Kept apart from accuracy. Not self-correction: that is unprompted,
    and you record it with the "Self-corrected" observation on a review.
-7. **Baseline → endline (Phase comparison)** — whether the child improved.
-8. **Study timeline** — tag each session `BASELINE`, `REGULAR` or `ENDLINE`. **Tagging
-   is what makes pre/post comparison possible.** It is retroactive: you can tag sessions
-   after the fact.
-9. **Full report** — everything the learner sees in their own report.
-10. **Data controls** — clear recordings, or erase the participant entirely.
+8. **Start and end of testing (Phase comparison)** — what the app recorded in sessions
+   tagged as the first and the last of testing. A record for planning, **not** a measure
+   of improvement: the study does not measure reading gains.
+9. **Study timeline** — optionally tag sessions `BASELINE`, `REGULAR` or `ENDLINE`. It is
+   retroactive: you can tag sessions after the fact.
+10. **Full report** — everything the learner sees in their own report.
+11. **Data controls** — clear recordings, or erase the participant entirely.
 
 Dates and times on every screen are Philippine time (Asia/Manila), whatever machine
 serves the page.
@@ -283,8 +293,9 @@ The acceptance threshold (0.95) swept from 0.50 to 1.00 against every specialist
 reporting accuracy, sensitivity, specificity, precision, **Cohen's κ**, **MCC** and
 **Youden's J**, with a plateau and a bootstrap interval.
 
-**It recommends; it never changes the threshold.** Changing it mid-study would mean the
-baseline and endline were scored by different rules.
+**It recommends; it never changes the threshold.** The proposal refines the threshold from
+the disagreements, so adopt a recommendation once, when validation ends — changing it
+repeatedly during testing means readings were scored by different rules.
 
 ### Word bank `/specialist/words`
 
@@ -425,9 +436,11 @@ Spend the time on:
    they actually hear; that is real feedback worth writing down.
 4. **The word bank** — show them **🎤 Record**, because a specialist's own voice takes
    priority over the synthesized clip. This is usually the feature they most want.
-5. **Study timeline tagging** — show it and explain that a baseline nobody tagged cannot
-   be recovered later.
-6. **Language toggle** — switch the whole workspace to Filipino.
+5. **What they will verify** — the *Skill progression* panel and the practice-list
+   evidence (confirmed · overturned). Instrument 06 asks them to judge both, so they
+   should see them before testing begins.
+6. **Language toggle** — switch the specialist workspace to Filipino, word bank and
+   calibration included. Specialists rate the Filipino interface (instrument 03, D10), so let them judge it.
 
 Have them do it on a real tablet, not your laptop. Interaction Capability is one of the
 characteristics they are scoring.
@@ -493,8 +506,11 @@ expected. To end every session at once, rotate `AUTH_SECRET` in Vercel and redep
    use `learner1` / `learner2`** — those are demo accounts and are excluded from every
    aggregate figure by design, so real data in them would be invisible to the cohort
    view, calibration, divergence and phase comparison.
-2. Use a name the specialists recognise but that is not more identifying than the consent
-   allows. First name or an initial is usually right.
+2. **Register under the participant code, never the child's name.** Name `L1`, email
+   `l1@participant.lexora` (an address that receives no mail and identifies no one). The
+   proposal stores every record "under a coded learner identifier"; the name lives only on
+   the paper intake sheet. Do not use `@lexora.test` — the audit suites delete those
+   accounts.
 3. Set each password with `npm run password:set -- <email> --generate`, and keep the list
    somewhere the specialists can reach and nobody else can.
 4. On the specialist page, set each child's **starting level** to match the specialist's
@@ -503,18 +519,12 @@ expected. To end every session at once, rotate `AUTH_SECRET` in Vercel and redep
 5. Run `/diagnostics` on every tablet that will be used.
 6. **Take a backup** before the first session: `npm run backup`.
 
-### 7.3 The baseline — the one that cannot be recovered
+### 7.3 The first sessions
 
-**Do this first, and tag it immediately.**
-
-1. Each child completes a Read aloud run (8 words) and, if the specialist agrees, a
-   Silly words run (8 non-words).
-2. **Immediately afterwards**, on each learner page → **Study timeline**, tag those
-   sessions **`BASELINE`**.
-
-A baseline you forgot to tag cannot be reconstructed afterwards except by guessing from
-timestamps, which is exactly what the tagging exists to avoid. The pre/post comparison —
-the thing the whole study turns on — can only use sessions someone marked.
+Nothing special is required: the study does not measure reading gains, so there is no
+baseline test to protect. If the specialists want the first sessions labelled for their
+own planning, tag them `BASELINE` in **Study timeline** — it is optional and can be done
+later.
 
 ### 7.4 Each session
 
@@ -525,15 +535,19 @@ the thing the whole study turns on — can only use sessions someone marked.
 
 **During**
 
-- The child signs in as themselves.
-- Read aloud is the activity that produces scored data. The others support it.
+- The child signs in under their code.
+- **One listening activity and one Read aloud run.** Read aloud produces the scored data
+  for Objective 2, and the listening activities are the phonological-awareness half of the
+  skill-progression map — a child who only reads aloud never moves up a level.
 - Leaving an activity partway is fine — the words already read are saved, and the app
   says so.
 - A dropped connection is handled: the child is told plainly and can resume.
 
 **After**
 
-- Sessions default to `REGULAR`. Leave them unless this is a baseline or endline run.
+- **Field log** ([instrument 05](instruments/05-intake-and-field-log.md)) — the
+  proposal's structured observation: usability issues, technical errors, how the child
+  interacted, any point of confusion. Two minutes.
 - `npm run backup` — before and after every testing session. Reading data from children
   cannot be gathered again.
 
@@ -543,35 +557,49 @@ the thing the whole study turns on — can only use sessions someone marked.
    Review **blind** — do not switch to quick review unless you have a reason, and note it
    if you do.
 2. Aim for **30 reviewed readings across the cohort** as early as you can; that is the
-   threshold at which the calibration page starts recommending an operating point.
+   threshold at which the calibration page starts recommending an operating point — the
+   proposal's "refine … the feedback thresholds". Adopt a change once, when validation
+   ends, not repeatedly during testing.
 3. **Add observation chips** where you are confident. Coverage is reported alongside every
    distribution, so partial tagging is honest — but more coverage makes the error profile
    worth more.
-4. Run **Silly words once per child per phase**. It rests 7 days between runs.
+4. *Optional:* **Silly words**, if the specialists want it. It rests 7 days between runs.
 5. Check the **Divergence** panel once each child has 10 reviewed real words and 8
    reviewed probe words. A gap of 25+ points in favour of real words suggests the child is
    recognising the bank rather than decoding it — which calls for a different
    intervention, and is worth acting on during the study rather than discovering at the
    end.
 
-### 7.6 The endline
+### 7.6 Near the end of testing — the specialists' verification
 
-1. Mirror the baseline: a Read aloud run and a Silly words run per child.
-2. **Tag those sessions `ENDLINE` immediately.**
-3. Review the endline recordings, blind, as usual.
-4. Open **Baseline → endline** on each learner page and on the cohort page.
+[Instrument 06](instruments/06-objective-verification.md), per child:
 
-**Read the probe row first.** Real-word accuracy rising over eight weeks is ambiguous —
-the child may have learned to decode, or learned those 254 words. Non-word accuracy
-rising is not ambiguous, because a made-up word cannot have been memorised. That row is
-the closest this study comes to asking its own question directly.
+1. **Part C first, and blind** — the specialist writes down their own assessment of the
+   child's decoding level *before* opening the learner page (Objective 4).
+2. **Part B** — the practice list, word by word, against the words the child most often
+   misreads, using the *confirmed · overturned* evidence beside each word (Objective 3).
 
-The panel reports **descriptives only, deliberately**. Whether a change is
-distinguishable from chance is a question for your statistical analysis, using the
-exported data and a test chosen for the design — five participants cannot support a
-p-value computed in a web page.
+### 7.7 Close-out
 
-### 7.7 Exporting for analysis
+**The evaluation**, after validation:
+
+1. ISO/IEC 25010 questionnaire to the three specialists ([instrument 03](instruments/03-iso-25010-questionnaire.md)),
+   with instrument 06 Parts A and D.
+2. Pictorial scale to the five children ([instrument 04](instruments/04-pictorial-scale.md)),
+   read aloud by a researcher with a specialist, teacher or guardian present.
+3. Interviews with the specialists.
+
+**Then the data, in this order:**
+
+1. Download every export (§7.8). They contain no audio.
+2. Record the version: `git rev-parse --short HEAD`.
+3. **Delete every recording** — on each learner page, *Clear recordings*. The proposal
+   commits that audio is kept only for the evaluation phase and then permanently deleted.
+4. **Take one new backup, then delete every older backup and every copy of one** — on
+   this laptop, on drives, in cloud folders. Each was written while the recordings
+   existed, and holds them; `npm run backup` prints how many.
+
+### 7.8 Exporting for analysis
 
 From the specialist dashboard, or directly:
 
@@ -592,7 +620,8 @@ All are UTF-8 with BOM, so they open cleanly in Excel and SPSS.
 - **`is_retry = 1`** — a second reading taken after the correct pronunciation was played.
   **Filter these out.** Every figure inside the app already does. They are reported
   separately as `retries` / `retry_success_pct`.
-- **`study_phase`** — `BASELINE`, `REGULAR` or `ENDLINE`. This is your pre/post split.
+- **`study_phase`** — `BASELINE`, `REGULAR` or `ENDLINE`: an optional label on the record,
+  not a pre/post split. The study does not measure reading gains.
 
 Demo accounts are excluded from every export by default. Add `&includeDemo=true` only if
 you deliberately want them, and never for analysis.
@@ -649,9 +678,10 @@ being closed.
 every reading, recording and verdict goes. It requires typing the learner's name to
 confirm. It cannot be undone except from a backup.
 
-**Recordings delete themselves** after 180 days (`RECORDING_RETENTION_DAYS`). Only the
-audio goes; transcripts, scores, error types and reviews survive, so **no reported figure
-changes**. `/privacy` states whatever window is configured.
+**Recordings delete themselves** after 180 days (`RECORDING_RETENTION_DAYS`), and **all
+of them are deleted at close-out** (§7.7), backups included. Only the audio goes;
+transcripts, scores, error types and reviews survive, so **no reported figure changes**.
+`/privacy` states whatever window is configured.
 
 ---
 
@@ -679,6 +709,7 @@ npm run audit                  # all 10 suites, 442 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values
+npm run asr:check              # every supported browser's recording format
 
 # Database
 npx prisma migrate deploy      # apply migrations — NEVER migrate dev
@@ -691,3 +722,5 @@ npx prisma migrate deploy      # apply migrations — NEVER migrate dev
 | [`README.md`](../README.md) | Setup, deployment, technical reference |
 | [`docs/development-record.md`](development-record.md) | Why every design decision was made — for the Methodology and Validation chapters |
 | [`docs/deferred-ideas.md`](deferred-ideas.md) | What was deliberately not built — for Future Work |
+| [`docs/data-guide.md`](data-guide.md) | Every export column, the protocol, the analysis by objective |
+| [`docs/proposal-alignment.md`](proposal-alignment.md) | Where the application and the capstone proposal differ, and what to do |

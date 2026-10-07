@@ -1,6 +1,10 @@
 # LEXORA
 
-**Design and Development of an AI-Assisted Reading and Progress Tracking Web Application for Persons with Dyslexia**
+**Development of an AI-Assisted Reading and Progress Tracking Web Application for Persons with Dyslexia Using the Marungko Approach**
+
+A capstone project of Holy Cross of Davao College, with The Reading Owl, Davao City. The
+proposal is the authority on what this application is for; where the two differ,
+[`docs/proposal-alignment.md`](docs/proposal-alignment.md) says how and what to do about it.
 
 LEXORA is a web-based reading support and progress-tracking application focused on two foundational, word-level reading skills: **phonological awareness** and **single-word decoding**. Reading materials are Filipino (Tagalog) words sequenced by the **Marungko Approach** and organized by Structured Literacy principles.
 
@@ -10,18 +14,25 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 
 ## Features → study objectives
 
-| # | Objective | Where it lives |
-|---|-----------|----------------|
-| 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus |
-| 2 | Pre-trained ASR scoring of word-level oral reading + specialist agreement check, with the acceptance threshold calibrated against those specialist verdicts | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, agreement % is computed) |
-| 3 | AI-assisted reading assessment: immediate pronunciation feedback + personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read so the last time a child says a missed word they say it right; **Practice list** (auto-populated on misreads) |
-| 4 | Adaptive word-level exercises driven by recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`); promotion also requires that decoding is not slowing, since accuracy alone is the weaker marker in a transparent orthography; specialists can override per learner |
-| 5 | Progress-tracking and analytics dashboard (accuracy, error patterns, completed activities) | **Dashboard**, **Reports** (printable, leading with accuracy *and* typical time per word), **Specialist** learner views, **Cohort overview** (all learners side by side, accuracy per syllable pattern). Reader time counts towards "minutes practiced"; Reader sessions are listed as words heard rather than a score, since nothing is scored there. An activity left partway still counts its minutes but is not an activity *completed* |
-| 6 | ISO/IEC 25010 + user-acceptance evaluation | The app is the artifact under evaluation; reports are printable for instrument administration |
+| # | Objective (the proposal's) | Where it lives | How it is determined |
+|---|-----------|----------------|---|
+| 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus | Specialists rate each feature against the access needs they identified — [instrument 06](docs/instruments/06-objective-verification.md) Part A, weighted mean |
+| 2 | Accuracy of the pre-trained ASR in detecting word-level reading errors, against a reading specialist's scoring of the same recordings | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio, specialist agrees/disputes, blind by default) | **Percentage of agreement**, computed by the app; discrepancies refine the acceptance threshold |
+| 3 | Immediate pronunciation feedback + a personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read; **Practice list** (auto-populated on misreads), each word showing the misreads its specialist confirmed or overturned | A specialist verifies the list against the child's frequent misreads — instrument 06 Part B, percentage |
+| 4 | Adaptive word-level exercises whose difficulty follows recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`) following the proposal's **skill-progression map** — phonological awareness, then single-word decoding — shown per learner in the **Skill progression** panel; specialists can override | A specialist's blind assessment of decoding level against the assigned level — instrument 06 Part C, percentage |
+| 5 | Progress-tracking dashboard: reading accuracy, word-level error patterns, completed activities over time | **Dashboard**, **Reports** (printable), **Specialist** learner views, **Cohort overview**. Reader time counts towards "minutes practiced"; an activity left partway still counts its minutes but is not an activity *completed* | The records themselves, described per child; specialists rate each report's usefulness — instrument 06 Part D |
+| 6 | Software quality (ISO/IEC 25010:2023, three specialists) and user acceptance (three-point pictorial scale, five children) | The app is the artifact under evaluation | [Instrument 03](docs/instruments/03-iso-25010-questionnaire.md), weighted mean; [instrument 04](docs/instruments/04-pictorial-scale.md), frequency and percentage |
+
+All of it is treated descriptively, as the proposal's Statistical Treatment says — no
+inferential tests, and **no measure of reading gains**, which the proposal delimits out of
+scope.
 
 ### Exercise modules
 - **Read aloud** — single-word decoding. The child's reading is recorded and transcribed server-side by a pre-trained **Whisper** model; the recording is kept for specialist review.
-- **Listen & choose** — blending / word recognition with look-alike distractors.
+- **Listen & choose** — word recognition: hear a word, find it among look-alikes.
+- **Blend the parts** — syllable blending: hear a word only in its syllables (*ba… ta*) and
+  pick the word they make. The wrong options share a syllable with the answer, so the first
+  part alone is not enough; the whole word is played only as feedback.
 - **Count the syllables** — segmentation (pantig), with syllable-by-syllable audio.
 - **Rhyme time** — rhyming awareness from a curated item bank.
 - **First sound** — sound isolation: which word begins with the same sound.
@@ -93,11 +104,12 @@ specificity, precision, Cohen's κ, Matthews' correlation (MCC) and Youden's J**
   ear precisely because the machine's verdict on a non-word measures the recogniser rather
   than justifying a cut-point.
 
-**The page recommends; it never moves the threshold.** Changing `SCORE_THRESHOLD` mid-study
-would mean baseline and endline were scored by different rules. Since the similarity is
-stored on every attempt, the sound order is to leave it fixed for the study's duration and
-re-score the exported data at analysis time if the calibration warrants it — reporting both
-figures.
+**The page recommends; it never moves the threshold.** The proposal has discrepancies
+"used to refine the scoring logic and the feedback thresholds", with validation finished
+before the final evaluation — so refine it once, when validation ends, rather than
+repeatedly while children are being tested: changing `SCORE_THRESHOLD` partway means the
+readings either side were scored by different rules. Since the similarity is stored on every
+attempt, the percentage of agreement can be reported at both thresholds.
 
 ```bash
 npm run calibration:check     # κ/MCC against hand-computed values, and the replay rule
@@ -170,25 +182,18 @@ judgement)"* and are phrased as things to look at, never as instructions: an app
 does not diagnose should not be writing "recommended intervention". Carries the disclaimer
 inline and refuses outright for a demo learner.
 
-### Baseline to endline
+### Start and end of testing — a record, not a pre/post measure
 **Specialist → learner** and **Cohort**, or `/api/export?what=phase-comparison`.
 
-The study is a pre/post design, and until now the phase tag went into a CSV column
-and nowhere else — every figure the app computed was aggregated over all time, so a
-progress-tracking application could not show progress. `src/lib/phases.ts` splits
-accuracy, decoding time and probe accuracy by the phase a specialist tagged in
-**Study timeline**.
+A specialist may tag sessions `BASELINE` or `ENDLINE` in **Study timeline**, and
+`src/lib/phases.ts` puts accuracy, decoding time and probe accuracy for the two side by
+side, so the progress dashboard can show the first sessions beside the last.
 
-The probe split is the one that matters. Real-word accuracy rising over eight weeks is
-ambiguous: the child may have learned to decode, or learned those 254 words. Non-word
-accuracy rising is not ambiguous, because a made-up word cannot have been memorised in
-advance. Baseline probe against endline probe is the closest this study comes to asking
-its own question directly.
-
-- **Descriptives only — no significance testing.** Five participants cannot support a
-  p-value, and one rendered in a web page would be quoted long after the caveat was
-  forgotten. Whether a change is distinguishable from chance is a question for the
-  analysis, with the exported data and a test chosen for the design.
+It is **not** a measure of reading gains. The proposal's delimitation excludes measuring
+gains, and its statistical treatment is descriptive only, so the panel says so and offers
+no change score as a finding and no significance test. Its use is planning: real-word
+accuracy rising while the probe stays flat suggests a child is recognising the bank rather
+than decoding it.
 - **Minimums:** 10 readings per phase, and 8 reviewed probe readings per phase — one
   full run. Counts sit beside every figure; a caution appears below 20.
 - **Readings not linked to a session are reported, not hidden.** A session is created
@@ -199,25 +204,28 @@ its own question directly.
   failures or invalid data, because nothing about them went wrong.
 
 ### Study instruments
-[`docs/instruments/`](docs/instruments/) holds the four documents the application cannot
+[`docs/instruments/`](docs/instruments/) holds the six documents the application cannot
 produce: parental consent and child assent forms (English and Filipino), the ISO/IEC
-25010:2023 questionnaire for the reading specialists, and the children's three-point
-pictorial scale. Drafts — every factual claim in the consent form is checked against what
+25010:2023 questionnaire for the reading specialists (all nine characteristics), the
+children's three-point pictorial scale, the intake sheet and field log, and the
+specialists' verification sheet for Objectives 1, 3, 4 and 5. Drafts — every factual claim in the consent form is checked against what
 the code actually does, but they need adviser and ethics-committee review, and probably a
 Cebuano translation, before they reach a family.
 
 ### Data gathering and analysis guide
 [`docs/data-guide.md`](docs/data-guide.md) is the Chapter 3 and Chapter 4 companion:
 every column of every export and what it means, the four filters that silently corrupt
-an analysis if missed, the week-by-week collection protocol, the two evaluation
-instruments that still have to be written, and how to analyse each measure — including
-why a five-participant design reports per-participant change rather than p-values.
+an analysis if missed, the collection protocol from consultation to close-out, the
+evaluation instruments, and the analysis objective by objective — using only the
+proposal's descriptive measures (frequency and percentage, weighted mean, percentage of
+agreement, qualitative analysis), with everything else labelled supplementary.
 
 ### Operating manual
 [`docs/user-manual.md`](docs/user-manual.md) is the how-to: every screen and what it
 does, the demo accounts, a pre-flight checklist and a timed script for demonstrating to
 a panel and to the reading specialists, and the full protocol for real data gathering —
-enrolment, baseline tagging, weekly review, endline, export. Start there if the question
+enrolment under participant codes, weekly review, the specialists' verification, export,
+and deleting every recording at close-out. Start there if the question
 is "how do I use this" rather than "how does this work".
 
 ### Development record
@@ -299,7 +307,7 @@ From **Word bank**, a specialist can:
 `edge-tts --voice fil-PH-BlessicaNeural --text "bahay" --write-media bahay.mp3`
 
 ### UI language toggle (EN / FIL)
-Every learner-facing screen, the homepage, and the auth pages can switch between **English** and **Filipino (Taglish)** with the EN/FIL toggle (sidebar on desktop, top bar on mobile). The choice is stored in a cookie; reading content is always Filipino regardless of UI language. Dictionary: `src/lib/i18n.ts`.
+Every learner screen, every specialist screen (word bank and calibration included), the homepage and the auth pages can switch between **English** and **Filipino (Taglish)** with the EN/FIL toggle (sidebar on desktop, top bar on mobile). The choice is stored in a cookie; reading content is always Filipino regardless of UI language. Dictionary: `src/lib/i18n.ts`. Two pages stay English: the device check (`/diagnostics`), which the researchers run, and the privacy notice — the consent form carries the same commitments in both languages.
 
 ### CSV export for statistical treatment
 Specialists can download analysis-ready CSVs (UTF-8 with BOM, opens cleanly in Excel/SPSS):
@@ -325,14 +333,14 @@ Endpoints: `/api/export?what=summary|attempts|sessions[&learnerId=…]` (special
   reports retries separately as `retries` / `retries_correct` /
   `retry_success_pct`.
 - `study_phase` is `BASELINE`, `REGULAR` or `ENDLINE`, tagged per session by a
-  specialist on the learner page ("Study timeline"). Tagging is retroactive and
-  deliberate: it lets the pre/post comparison rest on sessions you chose rather
-  than a cut-off inferred from dates.
+  specialist on the learner page ("Study timeline"). Optional and retroactive: it
+  labels the record of the first and last sessions of testing. It is not a pre/post
+  measure — the study does not measure reading gains.
 
 ### Device support
 Fully responsive: desktop/laptop (persistent sidebar), tablet and phone (top bar + slide-out drawer). Tables scroll horizontally on small screens; exercise text scales with `clamp()` so long words never overflow.
 
-Because scoring happens on the server from a recording, read-aloud works anywhere `MediaRecorder` does — **Chrome, Edge, and Safari (iOS 14.3+), so iPads are supported**. Recording stops automatically after the child finishes speaking (~1.2 s of silence, 7 s max), or when the mic is tapped again.
+Because scoring happens on the server from a recording, read-aloud works anywhere `MediaRecorder` does — **Chrome, Edge, and Safari (iOS 14.3+), so iPads are supported**. **Firefox**, the third browser in the proposal's end-user requirements, records in a format the server now accepts (`npm run asr:check` holds every browser's format), but it has not been tested on a device end to end, and it has no browser fallback recogniser — run `/diagnostics` in it before relying on it. Recording stops automatically after the child finishes speaking (~1.2 s of silence, 7 s max), or when the mic is tapped again.
 
 **Check each tablet before the first session** at `/diagnostics` (Settings → *Check this
 device*). Microphone permission, recording format, whether a spoken instruction can be
@@ -373,10 +381,11 @@ wipes every table first.
 ### Decoding probe (non-words)
 26 pronounceable Filipino non-words in `prisma/pseudoword-bank.ts`, flagged `isPseudo`.
 
-A real word can be read from memory. After weeks of practice on a fixed 254-word bank, a
-pre/post gain on those same words cannot be told apart from having learned those items — and
-the study claims to measure decoding. A word that has never existed can only be decoded, so
-it separates letter–sound knowledge from sight-word recall.
+A real word can be read from memory. After weeks of practice on a fixed 254-word bank,
+accurate reading of those words cannot be told apart from having learned those items. A word
+that has never existed can only be decoded, so it separates letter–sound knowledge from
+sight-word recall. A specialist tool and a supplementary record — not one of the proposal's
+measures.
 
 - Stage-matched, so a child only ever meets letters they have been taught. Every stage can
   fill a full 8-item run.
@@ -391,8 +400,8 @@ it separates letter–sound knowledge from sight-word recall.
   probe run had it write seven of eight non-words correctly and garble the eighth — better
   than expected, and still not something to score a study on. The transcript is therefore
   stored *beside* the human verdict rather than instead of it, which turns the uncertainty
-  into a measurement: `specialist_correct` against `correct` gives human-vs-machine
-  agreement on unfamiliar items, directly comparable with the same figure on real words.
+  into a record: `specialist_correct` against `correct` gives human-vs-machine agreement on
+  unfamiliar items beside the same figure on real words.
 
 ### Stress-contrastive words
 Eight bank words carry a `stressNote`: `bukas`, `tubo`, `pito`, `puto`, `buhay`, `hapon`,
@@ -504,6 +513,20 @@ Data API on or off. Present the anon key instead, for a table
    learner account that would sit in the cohort figures beside real participants.
 3. Deploy. Vercel runs `vercel-build`, which regenerates the Prisma client, applies
    migrations, then builds.
+
+**Functions run beside the database.** `vercel.json` pins them to `icn1` (Seoul), the
+region the Supabase database is in (`ap-northeast-2`). Left on Vercel's default
+(`iad1`, Washington), every query crossed the Pacific and back. Measured on production on
+8 October, median of six authenticated requests from Davao:
+
+| | `iad1` | `icn1` |
+|---|---|---|
+| Specialist dashboard | 1,173 ms | 430 ms |
+| Cohort overview | 2,311 ms | 234 ms |
+| Summary export | 1,747 ms | 199 ms |
+
+Davao reaches the site through Vercel's Singapore edge either way. If the database ever
+moves, move this with it.
 
 The database already holds the word bank and audio, so no seeding step runs on deploy.
 If the ✨ generate-audio button ever fails on serverless, run `npm run audio:generate`
@@ -697,21 +720,24 @@ disabled until it is set.
 2. The **server** scores every oral reading (`src/lib/scoring.ts`): text is normalized (lowercased, diacritics and punctuation stripped), Levenshtein similarity is computed against the target, and the reading is accepted at **similarity ≥ 0.95** (exact match required for words of ≤ 3 letters). The strict threshold is deliberate — at 0.80 a single substituted vowel passes ("buhay" for "bahay" scores exactly 0.80), and those substitutions are precisely the misreadings the system exists to detect. Tune with `SCORE_THRESHOLD` after comparing system scoring against specialist judgments.
 3. Misreadings are classified as **substitution / omission / insertion / no-response** and logged with response time, level, and timestamp.
 4. Misread words are added to the learner's **practice list**; two consecutive correct practice reads master a word.
-5. **Adaptive difficulty** (`src/lib/adaptive.ts`): looking at the last 12 oral readings at the current level — accuracy ≥ 85 % over ≥ 8 attempts levels up (max 5); ≤ 50 % levels down. The Marungko stage widens with the level. A promotion **also** requires that decoding is not getting slower: across the last 24 timed correct readings at that level, the later half's median must be within 1.25× the earlier half's. Filipino is a transparent orthography, and in transparent orthographies a dyslexic reader is typically accurate but slow — a rule reading accuracy alone will walk such a child from level 1 to level 5 with the actual difficulty untouched. The guard can only ever delay a promotion; it never demotes, and it stands aside when there are fewer than 8 timed readings so it cannot strand anyone.
+5. **Adaptive difficulty** (`src/lib/adaptive.ts`) follows the proposal's skill-progression map — **phonological awareness, then single-word decoding**. A promotion first needs ≥ 8 answers in the listening activities at the current level with ≥ 80 % correct over the latest 12; then, over the last 12 oral readings at that level, accuracy ≥ 85 % over ≥ 8 attempts levels up (max 5). ≤ 50 % on the readings levels down, whatever the listening activities show. The Marungko stage widens with the level. A promotion **also** requires that decoding is not getting slower: across the last 24 timed correct readings at that level, the later half's median must be within 1.25× the earlier half's. Filipino is a transparent orthography, and in transparent orthographies a dyslexic reader is typically accurate but slow — a rule reading accuracy alone will walk such a child from level 1 to level 5 with the actual difficulty untouched. The guard can only ever delay a promotion; it never demotes, and it stands aside when there are fewer than 8 timed readings so it cannot strand anyone.
 6. **Reliability check**: in the specialist view, each system verdict can be confirmed or disputed after replaying the recording; the specialist–system **agreement percentage** is computed automatically (Objective 2).
 7. **Threshold calibration**: readings scoring within 0.15 *below* the acceptance line are listed separately with their audio. If a specialist listens and judges several of them correct, the threshold is too strict and is penalising children who read the word properly — which would depress accuracy and distort the agreement metric. This turns the choice of 0.95 from an assumption into something the Validation chapter can evidence.
-8. **Decoding speed is a co-primary outcome, not a footnote.** `median_decode_ms` (over `timed_readings` first, correct, plausible readings) sits beside accuracy in the summary export and in the report headline. In a transparent orthography the speed difference is the more sensitive marker; two learners at 85 % can be doing completely different things, and only the latency distinguishes them. Nothing is timed in front of the child — the measurement is passive, taken from readings they already gave.
-9. **The non-word probe answers a question accuracy cannot.** Real-word gains on a fixed bank confound decoding with recall. Probe items (`is_pseudoword = 1`) are scored by a specialist by ear, reported as `pseudo_accuracy_pct` over `pseudo_scored` — unreviewed items are counted as neither correct nor incorrect. Because the machine's verdict is recorded alongside the human's on both real words and non-words, `specialist_correct` supports a direct comparison of ASR–human agreement between familiar and unfamiliar items. Worth reporting: agreement between automatic and human scoring is known to be **lower for readers with disabilities**, which is the entire participant group here, so published accuracy figures from typical readers should not be assumed to transfer.
+8. **Decoding time is recorded, not measured as reading rate.** Response time is among the usage data the proposal lists; `median_decode_ms` (over `timed_readings` first, correct, plausible readings) sits beside accuracy in the summary export and the report, for the specialist. In a transparent orthography two learners at 85 % can be doing different things, and only the time distinguishes them. It is not a fluency or reading-rate measure, which the proposal excludes, and nothing is timed in front of the child.
+9. **The non-word probe answers a question accuracy cannot** — for the specialist. Real-word accuracy on a fixed bank confounds decoding with recall. Probe items (`is_pseudoword = 1`) are scored by a specialist by ear, reported as `pseudo_accuracy_pct` over `pseudo_scored` — unreviewed items are counted as neither correct nor incorrect. Because the machine's verdict is recorded alongside the human's on both real words and non-words, `specialist_correct` supports a direct comparison of ASR–human agreement between familiar and unfamiliar items. Worth reporting: agreement between automatic and human scoring is known to be **lower for readers with disabilities**, which is the entire participant group here, so published accuracy figures from typical readers should not be assumed to transfer.
 10. **A limitation the app cannot engineer away.** Filipino stress is unwritten and meaning-bearing, and the transcript does not encode it, so readings that differ only in stress are scored identically (see *Stress-contrastive words*). Since stress errors are a documented marker of dyslexia in Filipino, this belongs in the delimitations rather than being left implicit.
-11. **What is excluded, and why.** Corrective re-reads (`is_retry`) are recorded but kept out of accuracy, decoding time, error patterns, adaptive level, practice mastery, the borderline panel **and the agreement sample**. A reading taken seconds after the word was modelled measures repetition, not decoding; including retries in the agreement sample in particular would bias it toward clear, correct takes and overstate how well the scorer performs on the readings actually being measured. They appear on their own in the **Self-correction** panel and as `retries` / `retry_success_pct` in the summary export. State this in the methodology — it is a defensible choice, but it is a choice.
+11. **What is excluded, and why.** Corrective re-reads (`is_retry`) are recorded but kept out of accuracy, decoding time, error patterns, adaptive level, practice mastery, the borderline panel **and the agreement sample**. A reading taken seconds after the word was modelled measures repetition, not decoding; including retries in the agreement sample in particular would bias it toward clear, correct takes and overstate how well the scorer performs on the readings actually being measured. They appear on their own in the **Re-reads after hearing the word** panel and as `retries` / `retry_success_pct` in the summary export. State this in the methodology — it is a defensible choice, but it is a choice.
 
 ## Browser & privacy notes
 
-- **Recording** works in Chrome, Edge, and Safari (iOS 14.3+). The page must be served over `http://localhost` or HTTPS for the microphone to be available.
+- **Recording** works in Chrome, Edge, and Safari (iOS 14.3+); Firefox's format is accepted but untested on a device. The page must be served over `http://localhost` or HTTPS for the microphone to be available.
 - **Speech recognition** sends the recording to the Groq API for transcription, so it needs internet. Audio is not retained by the provider for training.
 - **Word audio** is served from your own database (`/api/word-audio/…`), so pronunciation is correct on every device with no cloud TTS at runtime.
+- **Every database connection is encrypted and verified** — the app, the scripts and the
+  tests connect with TLS checked against Supabase's root certificate (`src/lib/db-ssl.ts`).
+  Until 8 October they did not: node-postgres does not encrypt unless asked.
 - **Learner data** lives in your own Supabase Postgres database and nowhere else. Recordings exist only for the specialist reliability check and the re-reads panel.
-- **Recordings are deleted automatically** after `RECORDING_RETENTION_DAYS` (default 180), swept when a learner next starts an activity. Only the audio goes — transcripts, scores, error types and reviews survive, so no reported figure changes. A specialist can also clear them at any time, or erase a participant entirely, from the learner page. `/privacy` states whichever window is configured.
+- **Every recording is deleted at close-out**, as the proposal's ethics section commits — in the app, then in every backup (`npm run backup` names how many recordings a file holds). Before that, **recordings are deleted automatically** after `RECORDING_RETENTION_DAYS` (default 180), swept when a learner next starts an activity. Only the audio goes — transcripts, scores, error types and reviews survive, so no reported figure changes. A specialist can also clear them at any time, or erase a participant entirely, from the learner page. `/privacy` states whichever window is configured.
 
 ## Project structure
 

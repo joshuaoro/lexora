@@ -5,17 +5,21 @@ do with it, and why it is done that way.
 
 This is the companion to Chapter 3 (Methodology) and Chapter 4 (Results). The
 [operating manual](user-manual.md) says which buttons to press; this says what
-comes out and what it means.
+comes out and what it means. **The capstone proposal is the authority on the
+design:** its six objectives, its descriptive statistical treatment and its
+ethics commitments decide what is analysed here, and anything the application
+records beyond them is labelled supplementary (§5.8). Where the application and
+the proposal differ, [`proposal-alignment.md`](proposal-alignment.md) lists it.
 
 **Every number, column name and threshold in this document was checked against
-the running application on 13 August 2026, not written from memory.** Where a
-figure comes from the code, the file is named so a future change is traceable.
+the running application, not written from memory.** Where a figure comes from the
+code, the file is named so a future change is traceable.
 
 - [1. What data exists at all](#1-what-data-exists-at-all)
 - [2. Data dictionary — every column](#2-data-dictionary--every-column)
 - [3. The gathering protocol](#3-the-gathering-protocol)
-- [4. The evaluation instruments](#4-the-two-instruments-you-still-have-to-build)
-- [5. Analysis, measure by measure](#5-analysis-measure-by-measure)
+- [4. The evaluation instruments](#4-the-evaluation-instruments)
+- [5. Analysis, objective by objective](#5-analysis-objective-by-objective)
 - [6. Tables for Chapter 4](#6-tables-for-chapter-4)
 - [7. Limitations](#7-limitations)
 
@@ -52,11 +56,11 @@ layer the study's central claims rest on, and it does not accumulate by itself.*
 
 | Data | Where | Without it you lose |
 |---|---|---|
-| Specialist verdict on a recording | `AttemptReview.agrees` | Objective 2 entirely — no agreement %, no κ, no threshold calibration |
-| Whether the verdict was made blind | `AttemptReview.blind` | The ability to show the labels were independent |
-| Observation tags (vowel, cluster, stress…) | `ReviewErrorTag` | Any error profile that describes the child rather than the recogniser |
-| Probe verdicts, scored by ear | `AttemptReview` on `isPseudo` items | The decoding-vs-memorisation finding — the study's sharpest result |
-| Phase tags: BASELINE / REGULAR / ENDLINE | `ActivitySession.phase` | The entire pre/post comparison |
+| Specialist verdict on a recording | `AttemptReview.agrees` | Objective 2 entirely — no percentage of agreement, and no evidence for refining the threshold |
+| Whether the verdict was made blind | `AttemptReview.blind` | The ability to show the verdicts were independent of the machine's |
+| Observation tags (vowel, cluster, stress…) | `ReviewErrorTag` | Any error profile that describes the child rather than the recogniser (Objective 5) |
+| Probe verdicts, scored by ear | `AttemptReview` on `isPseudo` items | The probe record — supplementary (§5.8) |
+| Phase tags, optional: BASELINE / REGULAR / ENDLINE | `ActivitySession.phase` | The start-and-end-of-testing record — supplementary (§5.8) |
 
 **A study that collects Layer A diligently and Layer B sporadically has a large
 dataset and no findings.** Section 3 is built around this.
@@ -67,11 +71,13 @@ The app will never produce these. They do not exist yet.
 
 | Data | Instrument | Status |
 |---|---|---|
-| ISO/IEC 25010:2023 ratings, 3 specialists | 5-point Likert questionnaire | **Drafted** — [`instruments/03`](instruments/03-iso-25010-questionnaire.md), needs ethics review |
-| Children's acceptance, 5 participants | 3-point pictorial scale | **Drafted** — [`instruments/04`](instruments/04-pictorial-scale.md), needs ethics review |
+| ISO/IEC 25010:2023 ratings, 3 specialists — Objective 6 | 5-point Likert questionnaire | **Drafted** — [`instruments/03`](instruments/03-iso-25010-questionnaire.md), needs ethics review |
+| Children's acceptance, 5 participants — Objective 6 | 3-point pictorial scale | **Drafted** — [`instruments/04`](instruments/04-pictorial-scale.md), needs ethics review |
+| Specialist verification — Objectives 1, 3, 4, 5 | Verification sheet | **Drafted** — [`instruments/06`](instruments/06-objective-verification.md), needs ethics review |
+| Interviews with the specialists | Interview notes | Qualitative analysis (§5.7) |
 | Consent (parents) and assent (children) | Forms | **Drafted** — [`instruments/01`](instruments/01-consent-parent.md), [`02`](instruments/02-assent-child.md), need ethics review |
 | Participant characteristics: age, sex, grade, prior diagnosis | Intake sheet | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
-| Session notes: interruptions, mood, technical problems | Field log | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
+| Structured observation: usability issues, technical errors, points of confusion | Field log | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
 
 That last one is easy to skip and hard to reconstruct. When a child's accuracy
 drops 30 points in one session, the field log is the only thing that will ever
@@ -143,11 +149,11 @@ The raw data. Everything else can be recomputed from this.
 | `attempt_id` | Unique id |
 | `learner` | Display name |
 | `timestamp_iso` | When |
-| `activity_type` | `READ_ALOUD`, `PRACTICE`, `PSEUDO_PROBE`, `LISTEN_CHOOSE`, `SYLLABLES`, `RHYME`, `FIRST_SOUND` |
+| `activity_type` | `READ_ALOUD`, `PRACTICE`, `PSEUDO_PROBE`, `LISTEN_CHOOSE`, `BLEND`, `SYLLABLES`, `RHYME`, `FIRST_SOUND` |
 | `target_word` | The word shown. Denormalised, so history survives word edits |
 | `syllables` | Hyphenated, e.g. `ba-hay` |
 | `pattern` | CV, CVC, CVCV, CCVC … |
-| `pattern_family` | Collapsed into six instructional families (§5.8) |
+| `pattern_family` | Collapsed into six instructional families (§5.5) |
 | `word_stage` | Marungko stage 1–7 |
 | `word_level` | Difficulty 1–5 |
 | `level_at_time` | The learner's level when they read it — use this, not their current level, for anything historical |
@@ -165,9 +171,9 @@ The raw data. Everything else can be recomputed from this.
 | `is_pseudoword` | 1 = probe non-word |
 | `specialist_correct` | The specialist's own verdict, 1/0, blank if unreviewed. **This is the ground truth**, on both real and probe words |
 | `stress_pair` | Non-empty where meaning depends on unwritten stress — `correct` on these rows is not evidence about stress |
-| `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets §5.5 be recomputed from the rows |
+| `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets the blind percentage of agreement (§5.2) be recomputed from the rows |
 | `learner_id` | A stable, meaningless id for the child — the join key across `attempts`, `sessions` and `summary`. Join on this, never on `learner`: two children can share a first name |
-| `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.7. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
+| `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.5. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
 
 **`specialist_review` vs `specialist_correct`.** The first stores whether the
 specialist *agreed with the machine*; the second is their own verdict, already
@@ -196,9 +202,10 @@ convenient file; `attempts` is the authoritative one.
 analysis needs a join key, not a way to contact the family
 
 **Pseudonymising before the data leaves the research team.** `learner` is the
-display name the child was registered under. Map each `learner_id` to its
-participant code (`L1`…`L5`) using the intake sheet, replace `learner` with that
-code in every file, and only then share. The id itself identifies no one — it is
+display name the child was registered under — their participant code, if they
+were enrolled as §3.1 says. If any child was registered under a name, map their
+`learner_id` to its code (`L1`…`L5`) using the intake sheet, replace `learner`
+with that code in every file, and only then share. The id itself identifies no one — it is
 a random string — but it must not be published next to anything that does.
 
 **Accuracy** `oral_attempts`, `oral_correct`, `oral_accuracy_pct`
@@ -244,8 +251,8 @@ The threshold sweep, 0.50 to 1.00 in steps of 0.01 (51 rows).
 `condition` (blind / anchored), `n_reviews`, `threshold`, the four confusion
 cells, `accuracy`, `sensitivity`, `specificity`, `cohens_kappa`, `matthews_mcc`.
 
-The difference between the two rows is a **finding about anchoring**, not a
-footnote about method. See §5.5.
+The blind row's `accuracy` is the percentage of agreement for Objective 2; the
+anchored row is reported beside it. See §5.2.
 
 ### 2.6 `phase-comparison` — 9 columns, two rows
 
@@ -265,443 +272,367 @@ generate for a demo learner.
 
 ## 3. The gathering protocol
 
-Each step names what it produces and what it unblocks, so a skipped step has a
-visible cost.
+The proposal's order is **validation, then evaluation**: the speech-recognition
+check and the scoring review are "completed prior to the final evaluation of the
+system", and the questionnaires come last. Each step below names what it
+produces, so a skipped step has a visible cost.
 
 ### 3.1 Before the first child
 
 | Action | Produces |
 |---|---|
-| Rotate `learner1`/`learner2` passwords (§7.1 of the manual) | The last security gate |
-| Consent from parents, assent from children | Ethical basis for everything below |
-| Intake sheet per child: age, sex, grade, prior assessment | Table 1 of Chapter 4 |
-| `/diagnostics` on every tablet | Confidence the recording chain works on that device |
+| Ethics clearance from the HCDC research ethics review committee, and the partner institution's written approval | Permission for any data gathering at all (proposal, *Informed Consent*) |
+| Specialist consultation — [`consultation-brief.md`](consultation-brief.md), every decision ticked and the content signed off | "The instructional content is reviewed by the reading specialists for appropriateness before use" (proposal, *Data Set*) |
+| Research adviser and subject-matter experts review the ISO questionnaire | The instrument review the proposal requires before administration |
+| Consent from parents, assent from children, consent from the three specialists | The ethical basis for everything below |
+| Set `ENROLMENT_CODE` on Vercel; rotate the demo passwords (manual §7.1) | Only enrolled children can register |
+| **Enrol each child under their participant code** — name `L1`, email `l1@participant.lexora` — never their real name | Records held "under a coded learner identifier" (proposal, *Privacy and Confidentiality*) |
+| Intake sheet per child ([`instruments/05`](instruments/05-intake-and-field-log.md)) | The participants table |
+| `/diagnostics` on every device and browser to be used | ASR integration validation "across the supported browsers and microphone configurations" (proposal, *Validation*) |
+| Specialist sets each child's starting level | Sensible first sessions instead of everyone at level 1 |
 | `npm run backup` | A restore point |
-| Specialist sets each child's starting level and Marungko stage | Sensible first sessions instead of everyone at level 1 |
 
-### 3.2 Baseline — the irreplaceable one
+### 3.2 Every session
 
-Per child: **one Read-aloud run (8 words) and one Silly-words run (8 non-words).**
-
-Then, immediately: **Specialist → learner → Study timeline → tag both sessions
-`BASELINE`.**
-
-> A baseline nobody tagged cannot be reconstructed afterwards except by guessing
-> from timestamps, which is exactly what tagging exists to avoid. Every pre/post
-> figure in Chapter 4 depends on this one action.
-
-Within the same week, review those baseline recordings **blind**. Baseline probe
-accuracy is the anchor for the study's central comparison, and it only exists
-once someone has listened.
-
-### 3.3 Every session
-
-- Child signs in as themselves. Read-aloud is the activity that produces scored
-  data; the others support it.
-- Leave sessions as `REGULAR` unless baseline or endline.
-- Note anything unusual in the field log — interruptions, distress, a tablet
-  problem, a child who was unwell.
+- The child signs in under their code.
+- **Pair a listening activity with a reading activity.** One of *Blend the parts*,
+  *Count the syllables*, *Rhyme time* or *First sound*, and one *Read aloud* run.
+  The skill-progression map needs both to move a child up a level
+  (`src/lib/adaptive.ts`): a child who only reads aloud never shows the
+  phonological-awareness criterion and stays where they are.
+- **Structured observation** in the field log: usability issues, technical
+  errors, how the child interacted, and any point of confusion — the proposal's
+  observation categories. Draw a dash when there was nothing.
 - `npm run backup` afterwards.
 
-### 3.4 Weekly, by the specialist
+### 3.3 Weekly, by the specialist — the scoring review (Objective 2)
 
-This is Layer B, and it is the work that turns recordings into findings.
+This is the work that turns recordings into the percentage of agreement.
 
-1. **Review blind.** Do not switch to quick review without a reason; note it if
-   you do.
-2. **Target 30 reviewed readings cohort-wide as early as possible** —
+1. **Review blind** (the default). The machine's verdict stays hidden until the
+   specialist has given theirs. Do not switch to quick review without a reason;
+   note it if you do.
+2. **Aim for 30 reviewed readings across the children as early as possible.**
    `MIN_SAMPLE = 30` in `src/lib/calibration.ts` is the point at which the
-   threshold calibration will recommend an operating point.
-3. **Tag observations** where confident. Coverage is reported, so partial
-   tagging is honest — but coverage is also what makes the error profile worth
-   anything.
-4. **One probe run per child per phase.** Rests 7 days between runs
-   (`PROBE_COOLDOWN_DAYS`).
-5. **Watch the divergence panel** once a child has 10 reviewed real words and 8
-   reviewed probe words. A gap of 25+ points in favour of real words says the
-   child is recognising the bank rather than decoding it — worth acting on
-   during the study, not discovering at the end.
+   application will suggest whether the acceptance threshold should move. The
+   proposal: "Discrepancies will be documented and used to refine the scoring
+   logic and the feedback thresholds". The suggestion is that refinement; the
+   application never moves the threshold by itself.
+3. **Tag observations** where confident (vowel, cluster, stress…). Coverage is
+   reported, so partial tagging is honest.
+4. *Optional:* one decoding-probe run per child, rested 7 days between runs
+   (`PROBE_COOLDOWN_DAYS`), scored by ear. A supplementary record (§5.8).
 
-### 3.5 Endline
+### 3.4 Near the end of testing — the specialists' verification (Objectives 3 and 4)
 
-Mirror the baseline exactly — same activities, same length — then tag `ENDLINE`
-immediately and review those recordings blind.
+[`instruments/06`](instruments/06-objective-verification.md), per child:
 
-Using a different instrument at endline than at baseline would make the
-comparison meaningless, which is also why the probe bank is fixed and reviewed
-rather than generated fresh each run.
+1. **Part C first, blind:** the specialist records their own assessment of the
+   child's decoding level *before* opening the learner's page.
+2. Then **Part B:** the practice list, word by word, against the words the child
+   most often misreads — using the *confirmed · overturned* evidence shown beside
+   each practice word.
 
-### 3.6 Close-out
+### 3.5 Close-out — the evaluation, then the deletion
 
-- ISO/IEC 25010 questionnaire to the three specialists (§4.1)
-- Pictorial scale to the five children (§4.2)
-- Download all six CSV exports **without** `includeDemo`
-- Final `npm run backup` plus a verified restore rehearsal
-- Record the app version: `git rev-parse --short HEAD`
+**Evaluation** (the proposal's final evaluation, after validation):
+
+- ISO/IEC 25010 questionnaire to the three specialists ([`instruments/03`](instruments/03-iso-25010-questionnaire.md))
+- Instrument 06, Parts A and D, to the three specialists
+- Pictorial scale to the five children ([`instruments/04`](instruments/04-pictorial-scale.md)),
+  with a specialist, teacher or guardian present
+- Interviews with the specialists, notes kept by theme (§5.7)
+
+**Then the data:**
+
+1. Download all six CSV exports **without** `includeDemo`. They hold no audio.
+2. Record the application version: `git rev-parse --short HEAD`.
+3. **Delete every recording.** On each learner's page, *Clear recordings*. The
+   proposal: audio is "retained only for the duration of the evaluation phase,
+   after which all audio files will be permanently deleted". Every learner page
+   should then show no recordings.
+4. **Take one new backup, then delete every earlier backup file and every copy of
+   one** — on this laptop, on drives, in cloud folders. Each backup taken before
+   step 3 holds the recordings, and `npm run backup` says so when it writes one.
+   Deleting them in the application does not reach those files.
 
 ---
 
 ## 4. The evaluation instruments
 
-**Both now exist as drafts** in [`instruments/`](instruments/) — [ISO 25010 questionnaire](instruments/03-iso-25010-questionnaire.md) and [pictorial scale](instruments/04-pictorial-scale.md), alongside the [parental consent](instruments/01-consent-parent.md) and [child assent](instruments/02-assent-child.md) forms. They require adviser and ethics-committee review before use. The sections below are the reasoning behind their design.
+All are drafts in [`instruments/`](instruments/), and need adviser and
+ethics-committee review before use.
 
-### 4.1 ISO/IEC 25010:2023 questionnaire — 3 reading specialists
+### 4.1 ISO/IEC 25010:2023 questionnaire — the three specialists (Objective 6)
 
-**Verify the characteristic and sub-characteristic names against the standard
-itself before printing.** The 2023 revision renamed and added things — Usability
-became **Interaction Capability**, Portability became **Flexibility**, and
-**Safety** is new — and the list below is written from knowledge of that
-revision, not from the paywalled text. A questionnaire citing the 2011 list
-under a 2023 heading is the kind of error a panel notices immediately.
+[`instruments/03`](instruments/03-iso-25010-questionnaire.md). **All nine
+characteristics the proposal names are rated:** Functional Suitability,
+Performance Efficiency, Compatibility, Interaction Capability, Reliability,
+Security, Maintainability, Flexibility, Safety. Maintainability and Flexibility
+are worded around what a specialist could see during the study — changing the
+word bank without a developer, an error message that explained itself, using it
+on several devices — rather than developer concepts like modularity.
 
-The nine characteristics: Functional Suitability, Performance Efficiency,
-Compatibility, Interaction Capability, Reliability, Security, Maintainability,
-Flexibility, Safety.
+**Verify the characteristic names against the standard itself before printing.**
+The 2023 revision renamed Usability to Interaction Capability and Portability to
+Flexibility, and added Safety — as the proposal itself says.
 
-**Do not ask a reading specialist to rate all nine.** Maintainability and
-Flexibility are developer-facing — a reading specialist rating "modularity"
-produces a number with nothing behind it, and a panel is entitled to ask what
-they based it on. Rate what they can observe; evidence the rest objectively.
+**Five-point scale, Table 1 labels exactly:** 5 Strongly Agree (4.21–5.00),
+4 Agree (3.41–4.20), 3 Neutral (2.61–3.40), 2 Disagree (1.81–2.60),
+1 Strongly Disagree (1.00–1.80).
 
-**The stronger move: triangulate.** Several characteristics already have
-objective measurements in this repository, so the evaluation need not rest on
-three opinions. Present both.
+**Triangulate.** Several characteristics have objective evidence in this
+repository — accessibility checks, performance budgets, authorization tests. Put
+it beside the weighted mean; a characteristic that measures well but rates poorly
+is the interesting finding.
 
-| Characteristic | Rated by specialists? | Objective evidence already available |
-|---|---|---|
-| Functional Suitability | Yes | `audit:logic`, `audit:decoding`, `audit:calibration` |
-| Performance Efficiency | Yes | `audit:perf` — FCP < 3 s, LCP < 4 s, JS < 400 KB on the study's own minimum spec (dual-core 2.0 GHz, 5 Mbps) |
-| Compatibility | Yes | Chrome, Edge, Safari iOS 14.3+; `/diagnostics` per device |
-| **Interaction Capability** | **Yes — the main one** | `audit:a11y` — WCAG 2.1 AA, 19 checks, every route as every role |
-| Reliability | Yes | 442 checks; stale-session and dropped-connection handling |
-| Security | Partly | `audit:api` authorization, RLS on 11 tables, `secrets:check` |
-| Safety | Yes | Non-diagnostic disclaimers; IEP refuses prescriptive language |
-| Maintainability | **No** | Test suite, typed codebase, documented decisions |
-| Flexibility | **No** | Responsive; deploys from one command |
+### 4.2 Three-point pictorial scale — the five children (Objective 6)
 
-**Item design.** 4–6 statements per rated characteristic, in Taglish, about the
-application rather than about reading. Answer on 1–5: Strongly Disagree →
-Strongly Agree. Include a free-text comment box per characteristic — with three
-raters, the comments will be worth more than the means.
+[`instruments/04`](instruments/04-pictorial-scale.md). Eight items on usability,
+ease of use and accessibility, read aloud. **Nothing on it asks whether the child
+read better** — the study does not measure gains. Administered "with assistance
+by the researchers in the presence of a reading specialist, teacher, or
+guardian"; choose the researcher the child knows least, because acquiescence
+toward a familiar adult is the main threat here.
 
-**Scoring.** Report per characteristic: **mean and range**. Not SD — with three
-raters an SD is close to meaningless and invites over-reading. Interpret with
-the conventional bands:
+### 4.3 Specialist verification sheet (Objectives 1, 3, 4, 5)
 
-| Mean | Interpretation |
-|---|---|
-| 4.21 – 5.00 | Excellent / Strongly Agree |
-| 3.41 – 4.20 | Very Good / Agree |
-| 2.61 – 3.40 | Good / Neutral |
-| 1.81 – 2.60 | Fair / Disagree |
-| 1.00 – 1.80 | Poor / Strongly Disagree |
+[`instruments/06`](instruments/06-objective-verification.md). Four of the six
+objectives end in a specialist's judgement. Part A rates how far the features
+address the reading-access needs the specialists identified; Part B checks the
+practice lists; Part C compares levels, blind; Part D rates the usefulness of each
+part of the progress dashboard.
 
-**No inter-rater reliability statistic.** Three raters cannot support Cronbach's
-α or an ICC in any meaningful way. If you want to say something about
-consistency, report the range, or percent exact agreement. Claiming α from three
-raters is worse than claiming nothing.
+### 4.4 Interviews and structured observation (qualitative)
 
-### 4.2 Three-point pictorial scale — 5 children
-
-**Design.** 5–8 items, each a short Filipino sentence with three faces: 😊
-happy = 3, 😐 neutral = 2, ☹️ sad = 1. Read aloud to the child — the participants
-are children with a reading disability, so a self-administered written
-questionnaire would be measuring the thing the study is trying to help with.
-
-Items should ask about the experience, not about performance: was it easy to
-use, did you like the voice, was the text easy to see, would you use it again.
-
-**Two design constraints that matter more than the wording.**
-
-*Administer it by someone who did not run the sessions.* Acquiescence bias in
-7–12-year-olds toward a familiar adult is the main threat to this instrument.
-A child who has spent eight weeks with you will tell you they liked it.
-
-*Report per-child, not as a cohort mean.* The mean of five judgements on a
-3-point scale carries almost no information and implies a precision that is not
-there. A table of five rows is more honest and more informative.
-
-**Scoring.** Per item: how many chose each face. Per child: their pattern across
-items. Report the mode, and quote anything a child said unprompted.
+Interviews with the specialists — requirements at the start, recommendations at
+the end — and the field log's structured observation. The proposal organises
+both "by theme" to explain the quantitative results and to identify "usability
+and accessibility issues for the succeeding development iteration".
 
 ---
 
-## 5. Analysis, measure by measure
+## 5. Analysis, objective by objective
 
-### 5.0 The statistical stance — read this first
+### 5.0 The statistical treatment — as the proposal states it
 
-**With five participants, the Wilcoxon signed-rank test cannot reach p < .05
-two-tailed.** The minimum attainable p is **.0625**, even in the best case where
-all five children improve. One-tailed can reach .03125, but a one-tailed test
-chosen after seeing the direction of the data is not a test.
+"The data gathered will be subjected to **descriptive treatment only**. No
+inferential statistical tests will be applied, and no claim of statistical
+generalizability is made." Four measures, and only these as the study's results:
 
-A design that cannot produce a significant result should not be presented as
-testing for one. So this study reports:
+| Measure | Applied to | Formula |
+|---|---|---|
+| **Frequency and percentage** | The children's pictorial-scale responses, per item; the verification percentages (Objectives 3 and 4); the records in Objective 5 | f, and f ÷ n × 100 |
+| **Weighted mean** | The specialists' ratings: ISO/IEC 25010 (Objective 6) and instrument 06 Parts A and D | WM = Σ(f × w) / n, read with Table 1 |
+| **Percentage of agreement** | System scoring against the specialist's, on the same recordings (Objective 2) | PA = items scored identically ÷ items scored × 100 |
+| **Qualitative analysis** | Interviews and structured observation | Organised by theme |
 
-- **A per-participant table for every outcome** — five rows: baseline, endline,
-  change, direction. This is standard for small-n intervention research.
-- **Medians, not means**, across the cohort. Five values, any one of which can
-  drag a mean.
-- **"4 of 5 children improved"** as the headline figure. Honest, and exactly what
-  a reader of small-n work expects.
-- **Effect as raw and percentage change.** Not Cohen's *d* — it is unstable at
-  n=5 and would imply a precision the design does not have.
+The five children and three specialists are the **total enumeration** of those
+eligible at the partner institution, not a sample, and the findings describe
+LEXORA there. **The study does not measure gains in reading** — so no figure in
+Chapter 4 is a change score, and none is tested for significance.
 
-This is not a weaker analysis. It is the analysis the design supports, and it
-cannot be attacked for over-reaching — which a p of .0625 presented as a near-miss
-certainly can.
+### 5.1 Objective 1 — the features against the reading-access needs
 
-### 5.1 Single-word reading accuracy — Objectives 3, 4, 5
+**Source** instrument 06, Part A.
 
-**Source** `summary.oral_accuracy_pct`, or from `attempts`:
+**Present** each access need with the feature addressing it, its weighted mean
+over the three specialists, the lowest and highest rating, and the Table 1
+rating. A need no feature addresses is a finding; report it, do not drop it.
+
+**Alongside** the children's view of the same features — pictorial items 4–6
+(seeing the words, understanding the voice, hearing the words) — from §5.6.
+
+### 5.2 Objective 2 — percentage of agreement
+
+**Source** the `agreement-conditions` export, or `attempts`: first readings of
+real words (`activity_type` `READ_ALOUD` or `PRACTICE`, `is_retry = 0`,
+`is_pseudoword = 0`) that carry a specialist verdict (`specialist_correct` not
+empty).
 
 ```
-accuracy = correct=1 AND is_retry=0 AND activity_type IN (READ_ALOUD, PRACTICE)
-           ÷ all rows matching is_retry=0 AND the same activity types
+PA = rows where specialist_correct = correct  ÷  all such rows  × 100
 ```
 
-**Present** per child, baseline vs endline, plus the cohort median.
+**Report the blind reviews as the figure.** A verdict given with the machine's
+answer on screen can be pulled toward it, so the blind row of
+`agreement-conditions` (`accuracy` × 100) is the percentage of agreement the
+study stands on. Report the anchored row beside it, with its n, as what it is;
+do not pool them. `summary.agreement_pct` pools both and is the per-child view.
 
-**Why filtered this way.** Retries measure repetition (filter ①). The other
-activity types are not oral reading — `LISTEN_CHOOSE` is recognition,
-`SYLLABLES` is segmentation — and mixing them would make "accuracy" mean nothing
-in particular. Probe items are excluded here and analysed separately (§5.3),
-because the machine's verdict on a non-word is not evidence.
+**The discrepancies are part of the result.** The proposal has them "documented
+and used to refine the scoring logic and the feedback thresholds". Report the
+two kinds separately:
 
-### 5.2 Decoding latency — co-primary, not secondary
+| Discrepancy | Cell in the export | What it means |
+|---|---|---|
+| System accepted, specialist rejected | `false_positive` | A misreading the child was told was right — the costlier error |
+| System rejected, specialist accepted | `false_negative` | A correct reading marked wrong, and put on the practice list |
 
-**Source** `summary.median_decode_ms` over `timed_readings`.
+and say what was done about them: the threshold the calibration suggested
+(§5.8), whether it was adopted, and the PA at that threshold — re-scored from the
+stored similarity, so both figures can be reported.
 
-**Definition** the median milliseconds for a **correct**, **first**, **plausible**
-reading. Plausible means 300 ms – 60,000 ms (`PLAUSIBLE` in `src/lib/stats.ts`):
-faster is a mis-click, slower means the child walked away. Reported only at
-`MIN_LATENCY_SAMPLE = 5` timed readings or more.
+**Context, not a target.** Published figures for automatic scoring of
+children's oral reading — κ = .54 with classification accuracy of 92% for human
+scorers and 88% for ASR; MCC = 0.63 for the best of six systems on Dutch oral
+reading — were measured on typically developing readers, and agreement was found
+to be lower for students with disabilities, which is this whole group. The
+proposal's own literature makes the same point (Kim et al., on mispronounced
+items).
 
-**Why it is co-primary.** Filipino is a transparent orthography — letters map to
-sounds with few surprises. In transparent orthographies, dyslexia presents as
-*slow* reading far more reliably than as *inaccurate* reading; the finding
-replicates across Spanish, Italian and German. **A child can sit at 90% accuracy
-and still be sounding out every word**, and no accuracy figure will show it.
+### 5.3 Objective 3 — the practice list against frequent misreads
 
-Two children at 85% can be doing completely different things. Only the latency
-separates them. Report it beside accuracy, not beneath it.
+**Source** instrument 06, Part B.
 
-**Why the median.** One distraction mid-session drags a mean badly.
+```
+Correspondence = words marked Yes ÷ words marked Yes or No × 100
+```
 
-**Why correct readings only.** A wrong answer's latency measures giving up, not
-decoding.
+per child and for all five. Report *Cannot say* as its own count, and list the
+words the specialist named as frequently misread but missing from the list —
+the list's completeness, as distinct from its accuracy. Specialist-pinned words
+are left out: they were not generated.
 
-### 5.3 Non-word probe accuracy — the study's sharpest measure
+The **immediate pronunciation feedback** half of the objective is a feature to
+describe and demonstrate (the corrective sequence: the verdict, the word
+modelled, "Now you try"), supported by the specialists' ratings of A1 and D9 on
+the ISO questionnaire.
 
-**Source** `summary.pseudo_correct ÷ pseudo_scored` (filter ③).
+### 5.4 Objective 4 — the assigned level against the assessed level
 
-**Verified** — hand-computed from `attempts.csv` and matched against the app:
-Ana 8/8 = 100%, Juan 0 items. The arithmetic in this guide and the arithmetic in
-the application agree.
+**Source** instrument 06, Part C.
 
-**Why this measure exists.** A real word can be read from memory. After eight
-weeks on a fixed 254-word bank, a gain on those same words cannot be told apart
-from having learned those 254 items — and the study claims to measure decoding.
-A word that has never existed can only be sounded out.
+```
+Correspondence = children whose LEXORA level matched the specialist's assessment
+                 ÷ children assessed × 100
+```
 
-**Why scored by ear.** Whisper is a language model before it is a transcriber,
-and here it is transcribing words that exist in no language. The transcript is
-stored *beside* the human verdict rather than instead of it, which turns the
-uncertainty into a measurement: human-vs-machine agreement on unfamiliar items,
-directly comparable with the same figure on real words.
+Report the direction of every mismatch, and **whether a specialist set the level
+by hand** during the study — a hand-set level is not the system's assignment.
+The skill-progression panel on each learner's page shows which criterion was
+holding a child at their level at the end; quote it where it explains a
+mismatch.
 
-**Baseline probe → endline probe is the closest this study comes to asking its
-own question directly.**
+### 5.5 Objective 5 — what the progress dashboard recorded, and its usefulness
 
-### 5.4 Human–machine agreement — Objective 2
+The proposal uses the system usage data "to demonstrate and evaluate the
+application's progress-tracking functionality". So describe, per child, what it
+recorded — then report how useful the specialists judged it.
 
-**Source** `summary.agreement_pct`; `calibration` for the full statistics. The
-two describe the same readings — first readings of real words — so percent
-agreement in the summary equals `accuracy` on the calibration row marked
-`current`, as long as the threshold has not changed since the readings were
-scored. If they differ, the threshold moved; say so.
+**Reading accuracy** `summary.oral_accuracy_pct`, or from `attempts`:
 
-Report three figures at the operating threshold (0.95):
+```
+accuracy = correct = 1 AND is_retry = 0 AND activity_type IN (READ_ALOUD, PRACTICE)
+           ÷ all rows with is_retry = 0 and the same activity types
+```
 
-- **Percent agreement** — intuitive, but inflated when one class dominates.
-- **Cohen's κ** — the figure the oral-reading literature reports, so the one
-  that makes your result comparable.
-- **Matthews correlation (MCC)** — the honest one here. Most readings are
-  correct, so a scorer that accepted everything would post high accuracy and a
-  respectable F1 while being useless. MCC only rises when all four cells of the
-  confusion matrix are good.
+Retries measure repetition (filter ①). The listening activities are not oral
+reading — `LISTEN_CHOOSE` is recognition, `BLEND` and `SYLLABLES` are syllable
+awareness, `RHYME` and `FIRST_SOUND` are sound awareness — and are reported as
+their own frequencies. Probe items are excluded (filter ③).
 
-**Interpreting κ** with Landis & Koch: <0 poor, .01–.20 slight, .21–.40 fair,
-.41–.60 moderate, .61–.80 substantial, .81–1.00 almost perfect. State that these
-bands are **conventional rather than principled** — they are a rule of thumb,
-not a standard.
+**Word-level error patterns — two views, kept apart.**
 
-**Comparators**, already collected: published agreement for automatic scoring of
-children's oral reading is **κ = .54, human 92% vs ASR 88%** accuracy; the best
-of six ASR systems on Dutch oral reading reached **MCC = 0.63**. Both were
-measured on **typically-developing readers**, and the first study found agreement
-**significantly lower for students with disabilities** — which is this entire
-participant group. Treat them as context, never as targets.
+- *What the machine recorded:* `substitution`, `omission`, `insertion`,
+  `no_response` per child, as frequency and percentage of misreadings. These
+  describe the difference between two strings — the transcript and the target —
+  not necessarily the child's phonology.
+- *What the specialist heard:* `attempts.review_tags`. Error categories (vowel,
+  first sound, last sound, digraph, consonant cluster, syllable dropped, syllable
+  added, stress) are offered only on readings judged misread, so count them over
+  rows with `specialist_correct = 0` — and **always report coverage**: "categories
+  recorded for N of M reviewed misreadings (X%)". The behaviours (self-corrected,
+  could not tell) are not errors and are counted over all reviewed rows.
 
-### 5.5 Blind versus anchored agreement — a finding, not a footnote
+Stress deserves its own sentence: Filipino does not write it, so *búkas* and
+*bukás* reach the scorer as identical letters, and the specialist's ear is the
+only instrument the study has for it. Eight bank words are flagged.
 
-**Source** `agreement-conditions`, two rows — or recompute from `attempts`,
-splitting reviewed first readings of real words on `review_blind`.
+**By syllable-pattern family** `attempts.pattern_family` — Open (CV·CV), Closed
+syllable, Vowel pair, Consonant cluster, ng words, Long (4+ syllables). "Reads
+CVCV fine, misses clusters" points straight at what to teach next.
 
-Until blind review was built, the review screen showed the machine's transcript,
-verdict and similarity **above the play button** — so a specialist met the answer
-before they could hear the reading. Every review recorded before that repair is
-`blind = 0`, and that is the truthful value.
+**Completed practice activities** `sessions` — count per activity type per child,
+completed and partial; `summary.minutes_practiced`.
 
-Report κ under each condition side by side. **The gap between them is a result
-about anchoring bias in human scoring of ASR output**, which is worth reporting
-in its own right. If the blind κ is lower, that is not a failure — it is the
-honest number, and the anchored one was inflated.
+**Usefulness** — instrument 06, Part D: weighted mean per part of the dashboard,
+Table 1, with the comments organised by theme.
 
-If too few reviews exist in one condition, say so rather than pooling them.
+### 5.6 Objective 6 — software quality and user acceptance
 
-### 5.6 Error-type profile — Objective 5
+**ISO/IEC 25010** (instrument 03). Weighted mean per item and per
+characteristic — all nine — with the Table 1 rating, the lowest and highest
+rating, and the objective evidence beside it (§4.1). The proposal treats the
+weighted mean "as a descriptive summary of the evaluators' assessment and not as
+an estimate of a population parameter"; say so. No α, no ICC — three raters
+cannot support them.
 
-**Source** `summary`: `substitution`, `omission`, `insertion`, `no_response`.
+**Pictorial scale** (instrument 04). Per item, the frequency and percentage of
+each face — with five children, each is 20%. Then each item's mean, Σ(f × w) / n,
+read with Table 2 (2.34–3.00 Easy to Use; 1.67–2.33 Moderately Easy to Use;
+1.00–1.66 Difficult to Use), always printed beside the frequencies it came from.
+Report the practice-item result and who administered it.
 
-Present as counts and percentages of misreadings, per child.
+### 5.7 Qualitative analysis
 
-**Caveat to state.** These are derived from comparing the ASR transcript against
-the target — so they describe the *string difference*, not necessarily the
-child's phonology. A transcript is what a recogniser wrote down. §5.7 is the
-version that describes the child.
+Interview notes and the field log's structured observation, coded into themes —
+at least: usability issues, accessibility issues, technical errors, points of
+confusion, and recommendations. For each theme: how often it came up, a short
+quotation, and **what was changed in response** (SDLC Phase 6, review and
+iteration). Use the themes to explain the numbers in §5.1–§5.6, as the proposal
+intends, rather than as a separate chapter.
 
-### 5.7 Specialist observation tags — the error profile that describes a child
+### 5.8 Supplementary records — not results of the study
 
-**Source** `attempts.review_tags`. The **error** categories are offered only on
-readings the specialist judged misread, so build the error profile from rows where
-`specialist_correct = 0`; the denominator for coverage (filter ④) is every such
-row, tagged or not. The two **behaviours** can appear on any reviewed row — a
-self-correction ends in the right word, so it usually sits on a row the specialist
-judged correct. Count those over all reviewed rows. Split the semicolon list; one
-reading can carry several tags.
+The application records more than the proposal's analysis uses. These exist for
+the specialist working with a child, and for the Validation discussion. **If any
+appear in the manuscript, put them in an appendix or in the Validation section,
+described as records — never as reading gains or reading rate.**
 
-Ten categories, split by kind:
+| Record | Source | What it is — and is not |
+|---|---|---|
+| Decoding time | `summary.median_decode_ms` over `timed_readings` | The median time to a correct, first, plausible reading (300 ms – 60 s). Response time is among the usage data the proposal lists; it is **not** a measure of reading rate or fluency, which the study excludes |
+| Non-word probe | `summary.pseudo_*` | Made-up words scored by ear. Shows whether a child decodes or recognises the bank — useful for planning; **not** an outcome |
+| Start and end of testing | `phase-comparison` | What the app recorded in sessions tagged `BASELINE` and `ENDLINE`. **Not** a pre/post measure: the study does not measure gains, and applies no tests |
+| Threshold calibration | `calibration` (51 rows) | The evidence behind refining the acceptance threshold. κ, MCC and a bootstrap interval go beyond the proposal's statistics; use them, if at all, to explain *why* a threshold was chosen, and keep PA as the Objective 2 result |
+| Blind against anchored agreement | `agreement-conditions` | How much seeing the machine's answer moved the specialists' verdicts — relevant to Objective 2's validity |
 
-- **Errors** — vowel, first sound, last sound, digraph, consonant cluster,
-  syllable dropped, syllable added, **stress**
-- **Behaviours** — self-corrected in the recording, could not tell
-
-**Why these come from a person.** Most transcripts in a database like this carry
-the recogniser's own spelling — "Bahai" for *bahay*, "CC" for *sisi* — which is
-orthography and noise, not a child's phonology. A profile built from them would
-read convincingly and describe nobody.
-
-**Why the split matters.** `self_corrected` describes a child who *arrived at the
-right word*, and `unclear` describes the specialist rather than the child.
-Counting either as an error overstates how much went wrong.
-
-**Always report coverage** (filter ④): "categories recorded for N of M reviewed
-misreadings (X%)".
-
-**Stress deserves its own sentence in the results.** Filipino does not write
-stress, so *búkas* and *bukás* reach the scorer as identical letters. Eight bank
-words are flagged for it. A specialist's ear is the only instrument the study has
-for a marker its own literature calls diagnostic.
-
-### 5.8 Accuracy by syllable-pattern family — the most actionable view
-
-**Source** `attempts.pattern_family`, grouped.
-
-Six families: `Open (CV·CV)`, `Closed syllable`, `Vowel pair`,
-`Consonant cluster`, `ng words`, `Long (4+ syllables)`.
-
-**Why families rather than raw patterns.** "Reads CVCV fine, fails on clusters"
-points straight at what to teach next. A list of thirty raw patterns does not.
-
-Report per child, and only for families with enough attempts to mean anything —
-the app suppresses families with none rather than showing a misleading 0%.
-
-### 5.9 Baseline to endline — Objective 5
-
-**Source** `phase-comparison`, two rows, per child and for the cohort.
-
-Minimums enforced: 10 readings per phase (`MIN_PHASE_READINGS`), 8 reviewed
-probe readings per phase (`MIN_PHASE_PROBES`). Below 20 in either phase the app
-flags the comparison as thin — read the direction, not the size.
-
-**Present three rows per child**: accuracy, median decoding time, probe accuracy.
-
-**Read the probe row first.** Real-word accuracy rising over eight weeks is
-ambiguous — the child may have learned to decode, or learned those 254 words.
-Non-word accuracy rising is not ambiguous.
-
-**And read decoding time in the right direction:** falling is improvement.
-
-Follow §5.0 — per-participant table, cohort median, count improving. No p-value.
-
-### 5.10 Threshold calibration — the Validation chapter's table
-
-**Source** `calibration`, 51 rows.
-
-Report: the operating point in force (0.95), its confusion matrix and statistics,
-the MCC-optimal threshold, the plateau span, and the bootstrap interval.
-
-**Three things to state.**
-
-*The sweep replays the real scoring rule*, not `score >= t`. `scoreReading()`
-also accepts an approved ASR spelling outright and demands an exact match for
-words of ≤ 3 letters — both ignore the threshold. A naive sweep would report
-metrics for a classifier the app does not run.
-
-*Nothing was recommended below 30 labelled readings*, and if you finish below 30,
-the honest report is that the calibration could not be fitted.
-
-*The threshold was never changed mid-study.* Doing so would mean baseline and
-endline were scored by different rules. Since similarity is stored on every
-attempt, a change indicated by the calibration can be applied by re-scoring the
-exported data at analysis time — reporting both figures.
+Three things about the calibration, if it is reported. *The sweep replays the
+real scoring rule*, not `score >= t`: approved ASR spellings and words of three
+letters or fewer are decided without the threshold. *Nothing is recommended
+below 30 labelled readings.* And *a threshold changed after validation* means
+readings before and after were scored by different rules — since similarity is
+stored on every attempt, re-score and report both.
 
 ---
 
 ## 6. Tables for Chapter 4
 
-Skeletons to fill. Each needs a sentence that says what it shows; numbers left
-alone get read however the reader is inclined.
+One table per objective, in the proposal's order. Each needs a sentence saying
+what it shows; numbers left alone get read however the reader is inclined. (The
+proposal's Tables 1–6 belong to Chapter 3; number these to follow on.)
 
-**Table 1 — Participants.** ID, age, sex, grade, prior assessment, starting level
-and Marungko stage, sessions completed. *(From the intake sheet + `summary`.)*
+| Table | Objective | Rows | Columns |
+|---|---|---|---|
+| Participants | — | L1…L5 | Age, sex, grade, home language, prior assessment, starting level, sessions completed |
+| Features and access needs | 1 | Each access need | Feature, weighted mean, lowest–highest, Table 1 rating |
+| Percentage of agreement | 2 | Blind, anchored | Readings reviewed, scored identically, PA, the two discrepancy counts |
+| Practice-list correspondence | 3 | L1…L5, all | Words on the list, Yes, No, Cannot say, correspondence %, words missing |
+| Level correspondence | 4 | L1…L5 | Specialist's level, LEXORA's level, match, direction, hand-set? |
+| Recorded reading performance | 5 | L1…L5 | Readings, accuracy %, error types f (%), observation coverage, activities completed |
+| Usefulness of the reports | 5 | Each part of the dashboard | Weighted mean, lowest–highest, Table 1 rating |
+| Software quality | 6 | The nine characteristics | Weighted mean, lowest–highest, Table 1 rating, objective evidence |
+| User acceptance | 6 | The eight items | ☹️ / 😐 / 😊 f (%), mean, Table 2 rating |
 
-**Table 2 — Reading accuracy, baseline to endline.** One row per child: baseline
-%, endline %, change in points, direction. Cohort median. Count improving.
-
-**Table 3 — Decoding latency.** Same shape, median ms. **Note in the caption that
-a fall is an improvement** — otherwise a reader scanning the change column reads
-every negative as a loss.
-
-**Table 4 — Non-word probe.** Same shape. This is the table the discussion should
-lean on.
-
-**Table 5 — Human–machine agreement.** Reviewed n, agreement %, κ, MCC, with the
-published comparators in adjacent rows and their caveat in the note.
-
-**Table 6 — Blind vs anchored.** Two rows, n and κ each.
-
-**Table 7 — Error profile.** Error-type counts from the machine, and specialist
-tag counts with coverage %, clearly separated as two different things.
-
-**Table 8 — ISO/IEC 25010:2023.** Characteristic, mean, range, interpretation —
-and a column for the objective evidence where it exists (§4.1).
-
-**Table 9 — Pictorial scale.** Items down the side, five children across, faces
-in the cells. Plus a modal response per item.
-
-**Figures worth having:** per-child pre/post slope charts for the three outcomes
-(five lines, immediately readable); the threshold sweep with MCC against
-threshold and the plateau shaded; accuracy by pattern family as grouped bars.
+**Figures worth having:** accuracy by pattern family per child as grouped bars;
+the pictorial responses as stacked bars per item.
 
 ---
 
 ## 7. Limitations
 
-Five carried over from [`development-record.md`](development-record.md) §12:
-
-1. **Filipino stress is undetectable** by the app; mitigated only by the
+1. **Filipino stress is undetectable** by the scorer; mitigated only by the
    specialist's ear.
 2. **ASR agreement is known to be lower for readers with disabilities** — the
    entire participant group here.
@@ -709,26 +640,27 @@ Five carried over from [`development-record.md`](development-record.md) §12:
    probe over 25 words, Whisper matched exactly on 20/25 before variants, and
    **every miss was a Marungko stage 7 loanword or digraph** — two returned a
    different spelling on each run.
-4. **Anchored reviews exist and cannot be undone** — reported separately rather
-   than merged.
+4. **Reviews made with the machine's answer visible exist and cannot be undone**
+   — reported separately rather than merged.
 5. **Retry exclusion is a defensible choice, not a neutral fact.**
-
-And four that belong to the analysis specifically:
-
-6. **n = 5 precludes inferential statistics.** State the .0625 floor explicitly
-   so a reader does not mistake descriptive reporting for a failed test.
-7. **Three raters preclude reliability statistics.** No α, no ICC.
-8. **No control group.** Eight weeks of maturation and ordinary classroom
-   teaching are uncontrolled, so pre/post change **cannot be attributed to
-   LEXORA alone**. This is the single largest threat to any causal reading of
-   the results, and it is better stated by you than raised by a panel.
-9. **The specialists are not blind to the study's purpose**, and they both
-   deliver the intervention and score it. Blind review addresses anchoring to the
-   *machine's* verdict; it does not address their investment in the outcome.
+6. **The respondents are the total enumeration of one centre** — five children
+   and three specialists. The findings describe LEXORA at The Reading Owl and are
+   not statistically generalizable, as the proposal says.
+7. **Three raters.** Weighted means are descriptive summaries; no reliability
+   statistic is possible.
+8. **The specialists are not blind to the study's purpose**, and they both use
+   the application and evaluate it. Blind review addresses anchoring to the
+   *machine's* verdict, not their investment in the outcome.
+9. **Acquiescence in the children's ratings**, mitigated by who administers the
+   scale and by the "Bakit?" answers, not removed.
+10. **Phoneme-level manipulation** is in the proposal's item bank and not in the
+    application (consultation brief, decision 12), unless the specialists record
+    the sounds it needs.
 
 ---
 
-*Written 13 August 2026. Every column name, threshold and worked figure verified
-against the running application on that date. If the code changes, this document
-does not follow automatically — `src/app/api/export/route.ts` and the constants
-named in §5 are the source of truth.*
+*§1–§2 checked against the running application on 13 August 2026. §3–§7
+realigned to the capstone proposal on 8 October 2026, with every constant named
+checked against the code that day. If the code changes, this document does not
+follow automatically — `src/app/api/export/route.ts` and the constants named in
+§3 and §5 are the source of truth.*

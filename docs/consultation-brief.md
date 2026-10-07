@@ -1,9 +1,12 @@
 # LEXORA — Brief for the Reading Specialist Consultation
 
 **Purpose of the meeting:** to settle the decisions about reading content and scoring
-that only a reading specialist can make, *before the first baseline session*. After
-baseline, every one of these is frozen: if a rule changes between baseline and endline,
-the two can no longer be compared.
+that only a reading specialist can make, *before testing with the children begins*. The
+proposal has the instructional content "reviewed by the reading specialists for
+appropriateness before use", and this meeting is that review. Once testing starts, keep
+these fixed: if a scoring rule changes partway, the readings before and after the change
+were judged by different rules, and the percentage of agreement (Objective 2) would mix
+the two.
 
 Each item below states what LEXORA does now, the question, and what changes depending
 on the answer. Tick a box or write the decision beside it. The appendices list every item
@@ -18,7 +21,8 @@ A web application for word-level Filipino reading practice with children aged 7�
 have dyslexia, sequenced by the Marungko Approach. A child reads single words aloud; a
 pre-trained speech recogniser (Whisper, via Groq) transcribes the recording, and the
 transcript is compared letter by letter with the target word. The child also does
-listening activities (listen and choose, syllable counting, rhyme, first sound), a Reader
+listening activities (listen and choose, blend the parts, syllable counting, rhyme, first
+sound), a Reader
 where words are spoken to them, and a short **decoding probe** of made-up words.
 
 LEXORA does not diagnose and does not replace a specialist. Your verdicts are the ground
@@ -46,7 +50,7 @@ errors could make a Cebuano-dominant child look like a weaker reader than they a
 - ☐ Keep strict scoring. The analysis then reports, alongside, accuracy re-scored with
   e/i and o/u treated as equal — every transcript is stored, so this is possible later.
 - ☐ Accept e↔i and o↔u as correct from the start. (A small change in the application;
-  must be made before baseline.)
+  must be made before testing begins.)
 - ☐ Accept them only on some words, or only for some children: ______________________
 
 ### 2. The made-up words of the decoding probe (Appendix C)
@@ -63,8 +67,7 @@ kelo, sabim, misab, taklo, kanit, obisa*.
 generates candidates for you to screen; each needs a Tagalog **and** Cebuano check).
 Also: ☐ re-confirm that none of the 26 is a Cebuano word, name or brand familiar in Davao.
 
-The probe must be the same list at baseline and endline, so this is final once baseline
-starts.
+Keep the probe list fixed once testing starts, so every child meets the same items.
 
 ### 3. Spellings accepted as a correct reading (Appendix D)
 
@@ -132,15 +135,30 @@ recording, could not tell. All optional; blank is honest missing data.
 **Decide:** ☐ the categories are complete and distinct ☐ change: ______________________
 (Decision 1 affects whether e↔i belongs under "vowel".)
 
-### 8. How the difficulty level moves
+### 8. How the difficulty level moves — the skill-progression map
 
-**Now:** over the last 12 first readings at the child's level (at least 8): **85% or more →
-up a level**, unless correct readings are getting more than 25% slower (a sign of effortful
-decoding — Filipino is regular enough that a struggling reader is often accurate but slow);
-**50% or less → down a level**. A practice word is mastered after two correct readings in a
-row. A specialist can set the level by hand at any time.
+**Now:** the proposal's map — "phonological awareness, then single-word decoding" — in
+that order. To move **up** a level, a child must meet both at their current level:
 
-**Decide:** ☐ reasonable ☐ adjust: ______________________
+1. **Phonological awareness:** at least 8 answers in the listening activities (blend the
+   parts, count the syllables, rhyme, first sound), **80% or more** correct over the latest
+   12. Taken across the four together, not each one, so a short session does not hold a
+   child back; the split per activity is shown to you.
+2. **Single-word decoding:** at least 8 first readings aloud, **85% or more** correct over
+   the latest 12 — unless correct readings are getting more than 25% slower, a sign of
+   effortful decoding (Filipino is regular enough that a struggling reader is often
+   accurate but slow).
+
+**50% or less** on the readings → **down** a level; phonological awareness plays no part in
+moving down. A practice word is mastered after two correct readings in a row. A new
+*Skill progression* panel on each learner's page shows where the child stands on both,
+and you can set the level by hand at any time.
+
+One consequence to agree on: **a child who only ever does Read aloud will not move up**,
+because the first criterion is never shown. Sessions need a listening activity as well.
+
+**Decide:** ☐ reasonable ☐ adjust the 80% / 85% / 50%: ______________________
+☐ sessions will include a listening activity ☐ other: ______________________
 
 ### 9. The word bank itself (Appendix F)
 
@@ -158,12 +176,66 @@ deliberately because their colloquial sense is adult or upsetting (for example *
   it never moves it by itself.
 - Probe readings are yours alone to score; until you do, they count as neither right nor
   wrong.
-- **Tag the baseline sessions** (Study timeline on each learner's page). An untagged
-  baseline cannot be recovered later.
+- *Optional:* tag the first and last sessions of testing (Study timeline on each learner's
+  page). This labels the record for you; it is not a pre/post measure, because the study
+  does not measure reading gains.
 
 **Decide:** ☐ one specialist scores everything ☐ two specialists score an overlapping
 sample, for inter-rater agreement (recommended — it shows the human verdicts the machine is
 measured against are themselves reliable). Who: ______________________
+
+### 11. Blend the parts — the new blending activity
+
+**Now:** the proposal's phonological-awareness bank lists sound isolation, rhyming,
+**blending** and segmentation; until 8 October LEXORA had every one except blending. The
+child hears a word only in its syllables — *ba… ta* — and taps the word they make, from
+three. The wrong options share a syllable with the answer wherever the bank allows (*bata*
+against *baso* and *lata*), so catching the first part alone is not enough. The whole word
+is played only after the answer, as feedback. The syllables come from the same clips the
+syllable-counting activity uses.
+
+**Decide:** ☐ suitable as written ☐ the parts should be shown in print as well ☐ the gap
+between syllables is too short / too long on the clips ☐ other: ______________________
+
+### 12. Phoneme-level manipulation — in the proposal, not yet in LEXORA
+
+**Now:** the proposal's item bank runs "from simple to complex (syllable-level awareness,
+onset-rime awareness, and phoneme-level manipulation)". LEXORA covers syllable level
+(blending, counting), onset–rime (rhyme) and phoneme **isolation** (first sound) — but has
+no task that *manipulates* a phoneme (say *bata* without /b/; change /b/ to /m/).
+
+**Why it is not built:** such a task has to play single sounds — /b/, /m/ — and the speech
+voice says letters by their **names** ("bi", "em"). The Marungko Approach teaches sounds
+*before* names, so a voice that says "bi" for /b/ would teach the opposite of the method.
+It would need your own recordings of each sound.
+
+**Decide:** ☐ record the sounds (about 20 short clips) and add the task ☐ the study
+covers phoneme level through first-sound isolation; the manuscript wording is amended
+☐ other: ______________________
+
+### 13. Verifying Objectives 3 and 4 — instrument 06
+
+The proposal has a reading specialist verify two things LEXORA produces:
+
+- **Objective 3** — whether each child's practice list holds the words they most often
+  misread. Each practice word on the learner's page now shows how many of its misreads
+  you **confirmed** or **overturned** when reviewing recordings — the evidence for this.
+- **Objective 4** — whether the level LEXORA assigned matches the child's decoding level
+  as **you** assess it. To be fair to the comparison, you record your assessment *before*
+  looking at LEXORA's level.
+
+**Decide:** who completes the sheet ______ · when (near the end of testing) ______ · how
+you assess decoding level for Objective 4 (your usual method; Appendix F lists the words
+by level) ______________________
+
+### 14. Signing off the content
+
+The proposal: "The instructional content is reviewed by the reading specialists for
+appropriateness before use." The appendices below are that content, generated from the
+application itself.
+
+**Decide:** ☐ approved as it stands ☐ approved with the changes marked above
+Reviewed by: ______________________ Date: __________
 
 ---
 
@@ -190,6 +262,11 @@ So nothing you see contradicts this brief:
   target word. It now takes its own best guess.
 - **A word's stage could be typed by hand** when adding it to the bank; it is now always
   worked out from its letters.
+- **Readings made in Firefox could not be scored.** Firefox labels its recordings slightly
+  differently from Chrome and Safari, and the server refused the label. Firefox is one of
+  the three browsers the proposal's requirements name; its recordings are now accepted.
+- **"Listen and choose" was described as blending.** Hearing a whole word and finding it is
+  word recognition; blending is now its own activity (decision 11).
 
 ---
 

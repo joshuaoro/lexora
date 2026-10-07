@@ -1,7 +1,7 @@
 # LEXORA — Development Record
 
-**Design and Development of an AI-Assisted Reading and Progress Tracking Web
-Application for Persons with Dyslexia**
+**Development of an AI-Assisted Reading and Progress Tracking Web Application for
+Persons with Dyslexia Using the Marungko Approach**
 
 A complete account of what was built, how it was built, and why each decision was
 made the way it was.
@@ -15,6 +15,14 @@ how to run it, what a specialist sees. This document describes the *development*
 — the reasoning behind each design decision, the alternatives that were
 considered and rejected, the defects found and what caused them, and the
 methodological arguments that shaped the code.
+
+**The capstone proposal is the authority on what the application is for** — its
+objectives, delimitation, data set, statistical treatment and ethics. Where an
+earlier entry below reasons in terms the proposal does not use (a "pre/post
+design", a "co-primary outcome"), it is history: §8.17 records how the
+application and its documents were realigned to the proposal on 8 October, and
+[`proposal-alignment.md`](proposal-alignment.md) compares the two section by
+section.
 
 It exists because a capstone is defended on its reasoning, not only on its
 output. A panel asking "why 0.95?" or "why do you exclude retries?" or "why not
@@ -113,9 +121,11 @@ Italian and German — dyslexia presents as *slow* reading far more reliably tha
 as *inaccurate* reading. A child can sit at 90% accuracy and still be sounding
 out every single word.
 
-This is why decoding time is a **co-primary outcome** rather than a secondary
-panel. It appears beside accuracy in `learnerSummary()`, in the report headline,
-in the summary export, and — critically — in the adaptive level rule, where a
+This is why decoding time is **recorded and shown beside accuracy** rather than
+left in a secondary panel — response time is among the usage data the proposal
+lists, though it is not a measure of reading rate, which the study excludes. It
+appears beside accuracy in `learnerSummary()`, in the report headline, in the
+summary export, and — critically — in the adaptive level rule, where a
 promotion requires evidence that decoding is becoming automatic and not merely
 correct (§5.2). A level rule reading accuracy alone would walk exactly the child
 this study is for from level 1 to level 5 with the underlying difficulty
@@ -294,8 +304,8 @@ incorrect.
 
 **`isPseudo`** — the probe flag. The schema comment carries the full argument:
 reading a real word can be done from memory, reading a word that has never
-existed cannot; without these, a pre/post gain on a fixed 254-word bank cannot be
-told apart from having learned those 254 items.
+existed cannot; without these, accurate reading of a fixed 254-word bank cannot
+be told apart from having learned those 254 items.
 
 **`stressNote`** — set when meaning depends on stress the spelling does not mark.
 
@@ -325,9 +335,10 @@ correcting the first.
 
 ### 3.4 `ActivitySession`
 
-**`phase`** — `BASELINE | REGULAR | ENDLINE`, tagged by a specialist. Retroactive
-and deliberate: it lets the pre/post comparison rest on sessions someone *chose*
-rather than a cut-off inferred from dates. This column existed from commit
+**`phase`** — `BASELINE | REGULAR | ENDLINE`, optionally tagged by a specialist.
+Retroactive: it labels the first and last sessions of testing in the record. It
+is not a pre/post measure — the proposal delimits reading gains out of scope
+(§8.17). This column existed from commit
 `ba53bc4` (Aug 3) but did nothing but sit in a CSV until `6101208` (Aug 11) —
 see §7.6.
 
@@ -635,8 +646,8 @@ five children made, and the point of an export is that it works on the largest
 data set rather than the smallest.
 
 Two columns are flagged in the README as things to handle **before computing
-anything**: `is_retry = 1` rows must be filtered out, and `study_phase` selects
-the pre/post split.
+anything**: `is_retry = 1` rows must be filtered out, and `study_phase` is an
+optional label, not a pre/post split.
 
 ### 4.9–4.11 The three things accuracy cannot tell you
 
@@ -946,8 +957,9 @@ own entry — see §8.4.
 
 ### 6.4 The non-word probe
 
-**The claim protected:** that a pre/post gain measures decoding rather than
-memorisation.
+**The claim protected:** that accurate reading on the bank reflects decoding
+rather than memorisation — a question for the specialist planning teaching, and
+a supplementary record rather than one of the proposal's measures.
 
 A child who has practised the same 254-word bank for eight weeks can post a high
 accuracy without decoding much of anything. A word that has never existed cannot
@@ -1006,8 +1018,8 @@ probe in two ways that only show up later:
    on real words constantly: *ba-ta*, *ma-ta*, *ta-ma*, *ka-ma*, *lu-pa*,
    *pu-sa*. Every one of those a child reads from memory, scored as a decoding
    success that never happened. No word list fixes it either, because of §1.4.
-2. **Comparability.** A pre/post design needs the endline to be the same
-   instrument as the baseline. If both runs draw freshly invented words, "40% to
+2. **Comparability.** Any comparison of a child's early and late probe runs
+   needs both to be the same instrument. If both runs draw freshly invented words, "40% to
    70%" could as easily mean the second set was easier, and there is no way to
    tell after the fact.
 
@@ -1646,6 +1658,84 @@ Several accepted ASR spellings accept what the error tags call errors — `poble
 for *problema* is a cluster simplification. Both are on the consultation agenda
 (`docs/consultation-brief.md`).
 
+### 8.17 Realigned to the capstone proposal, 8 October
+
+The proposal was read end to end against the application, and three kinds of
+difference turned up: things it specifies that were missing, things the
+application or its documents claimed that it rules out, and things neither had
+checked.
+
+**Missing.**
+
+- *Blending.* The data set's phonological-awareness bank names four tasks:
+  sound isolation, rhyming, blending, segmentation. Three existed. "Listen &
+  choose" carried the blending label, but hearing a whole word and finding it is
+  word recognition. **Blend the parts** now plays a word only in syllables and
+  asks for the word they make; the wrong options share a syllable with the
+  answer, so the first part alone does not give it away.
+- *The skill-progression map.* "Mastery criteria … (phonological awareness, then
+  single-word decoding) before the system advances the learner". Promotion read
+  oral reading only. It now needs the phonological-awareness criterion first
+  (8 listening answers at the level, 80% over the latest 12), then the decoding
+  criterion as before. Demotion still reads decoding alone. A *Skill progression*
+  panel shows which criterion holds a child, so a level that stops moving is
+  explained — and the consequence is stated in the consultation brief: a child
+  who only reads aloud never moves up.
+- *Instruments for four objectives.* Objectives 1, 3, 4 and 5 each end in a
+  specialist's judgement, and nothing collected it. Instrument 06 does; each
+  practice word now shows the misreads its specialist confirmed or overturned,
+  which is the evidence Objective 3's verification needs.
+- *Two ISO characteristics.* The questionnaire left Maintainability and
+  Flexibility unrated, by an argument that was reasonable but not the proposal's.
+  They are rated now, with items about what a specialist can observe.
+
+**Ruled out by the proposal, and claimed anyway.**
+
+- *Gains.* "The study does not measure gains in reading proficiency." The phase
+  panel, its export, the data guide, the README and code comments described
+  baseline-to-endline as "the comparison the study is built on" and the probe row
+  as evidence "that decoding itself improved"; the pictorial scale asked "did you
+  get better at reading?"; the data guide built Chapter 4 around per-child change
+  and the Wilcoxon floor. All reframed: the panel is a descriptive record of the
+  start and end of testing, the pictorial item is now about hearing the words, and
+  the data guide analyses each objective with the proposal's four descriptive
+  measures only.
+- *Reading rate.* Decoding time had been called a "co-primary outcome". It is
+  recorded response time, which the proposal lists among usage data; it is not a
+  rate.
+- *Ethics.* The consent form put a child's first name in the database and kept
+  recordings up to 180 days; the proposal holds records "under a coded learner
+  identifier" and deletes audio when evaluation ends. Children are now enrolled
+  as `L1`…`L5`, and the close-out protocol clears every recording — then deletes
+  the backups, which held copies the application could never reach.
+
+**Never checked.**
+
+- *Firefox* is one of the three browsers in the proposal's end-user
+  requirements. Firefox labels a recording `audio/ogg; codecs=opus` — with a
+  space — and the server's pattern allowed none, so every Firefox reading would
+  have come back "We couldn't hear that clearly". Found by reading the
+  requirement against the code, not by a failure; no Firefox reading was ever
+  made. `npm run asr:check` now holds each browser's format.
+- *Whether the database connection was encrypted.* It was not. node-postgres
+  uses TLS only when asked, and nothing asked: every query the app made — readings,
+  verdicts, the children's recordings — and every backup crossed the internet to
+  Supabase in clear text (`tls=false`, measured with the app's own settings on the
+  pooler and the direct connection). The proposal's Table 4 promises "HTTPS / SSL
+  certificate for encrypted data transmission", and HTTPS had been taken to cover
+  it. `src/lib/db-ssl.ts` now verifies certificate and hostname against Supabase's
+  published root for the app, all eight scripts and the test helper. Found by
+  checking the claim before writing it into the alignment document.
+- *Where the functions ran.* Vercel's default region is Washington; the database
+  is in Seoul. Every query crossed the Pacific twice, and pages made several: the
+  cohort page took a median 2.3 s, a summary export 1.7 s. Pinned to `icn1`, they
+  take 0.23 s and 0.20 s. Performance Efficiency is one of the characteristics the
+  specialists rate.
+
+The manuscript has its own differences from the application — Tables 4–6, one
+sentence on what is stored, the title — collected with suggested wording in
+`proposal-alignment.md` rather than changed here.
+
 ---
 
 ## 9. Verification
@@ -2038,32 +2128,47 @@ They should all read `ok` before the first child reads into the application.
 
 ### 13.2 Study execution
 
-- Enrol the five participants as their **own accounts**, not the demo ones.
-- **Tag a baseline before anything else.** The pre/post comparison can only use
-  sessions someone marked, and a baseline nobody tagged cannot be recovered
-  afterwards except by guessing from timestamps — which is exactly what the
-  tagging exists to avoid.
+The full protocol is `docs/data-guide.md` §3. In short:
+
+- Enrol the five participants as their **own accounts under participant codes**
+  (`L1`, `l1@participant.lexora`) — never their names, never the demo accounts.
+- Pair a **listening activity** with Read aloud in every session: the
+  skill-progression map needs both before a child moves up.
 - Review roughly 30 readings **blind**, to reach `MIN_SAMPLE` for the
-  calibration.
-- Run one probe run per child per phase — 8 items, behind the 7-day cooldown.
-- Check each tablet at `/diagnostics` before the first session.
+  calibration; refine the threshold once, when validation ends.
+- Near the end of testing, the specialists complete instrument 06 Parts B and C
+  (Part C blind).
+- Check each device at `/diagnostics` before the first session — Firefox
+  included, if it will be used.
 - Back up before and after every session; run `--verify` on each.
+- At close-out, after the evaluation and the exports: clear every recording, take
+  one new backup, and delete every earlier backup and copy.
 
 ### 13.3 Instruments
 
-Drafted in `docs/instruments/` (commit `7cee6c6`): parental consent, child assent,
-the ISO/IEC 25010:2023 questionnaire, the pictorial scale, and the intake form and
-field log. **Drafts, not approved instruments** — each needs the research adviser's
+Drafted in `docs/instruments/` (commit `7cee6c6`, realigned 8 October): parental
+consent, child assent, the ISO/IEC 25010:2023 questionnaire (all nine
+characteristics), the pictorial scale, the intake form and field log, and the
+specialists' verification sheet for Objectives 1, 3, 4 and 5. **Drafts, not approved instruments** — each needs the research adviser's
 and the ethics committee's sign-off, and the consent and assent forms very likely
 need a Cebuano version made by a fluent speaker.
 
 ### 13.4 Decisions for the reading specialist
 
-Before the first baseline: the agenda in `docs/consultation-brief.md` — whether e↔i
+Before testing begins: the agenda in `docs/consultation-brief.md` — whether e↔i
 and o↔u count as errors for Cebuano-speaking children, the eight probe non-words
 one letter from a practice word, the accepted-spelling list, starting placement,
-the rhyme criterion, stress flags, observation categories, adaptive thresholds, the
-word bank, and whether a second specialist scores an overlapping sample.
+the rhyme criterion, stress flags, observation categories, the skill-progression
+thresholds, the word bank, whether a second specialist scores an overlapping
+sample, the blending activity, phoneme-level manipulation, the verification
+procedure, and the content sign-off.
+
+### 13.5 For the manuscript
+
+`docs/proposal-alignment.md` §2–§8: measures for Objectives 1, 3, 4 and 5; the
+skill-progression criteria; the Data Set wording if phoneme-level manipulation is
+not built; Tables 4–6; one sentence of *Privacy and Confidentiality*; and the
+title, which the body gives three times in a different form from the title page.
 
 ---
 
