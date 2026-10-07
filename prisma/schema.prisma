@@ -142,7 +142,7 @@ model SpeechClip {
 // Curated phonological-awareness items (e.g. rhyme sets)
 model PhonItem {
   id      String @id @default(cuid())
-  type    String // RHYME
+  type    String // RHYME | FIRST_SOUND
   prompt  String // target word
   options String // JSON array of choices
   answer  String
@@ -153,7 +153,7 @@ model ActivitySession {
   id          String   @id @default(cuid())
   learnerId   String
   learner     LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  type        String // READ_ALOUD | LISTEN_CHOOSE | SYLLABLES | RHYME | PRACTICE | READER
+  type        String // READ_ALOUD | LISTEN_CHOOSE | BLEND | SYLLABLES | RHYME | FIRST_SOUND | PRACTICE | PSEUDO_PROBE | READER
   total       Int      @default(0)
   correct     Int      @default(0)
   durationMs  Int      @default(0)
@@ -188,7 +188,7 @@ model Attempt {
   word         Word?    @relation(fields: [wordId], references: [id], onDelete: SetNull)
   sessionId    String?
   session      ActivitySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  activityType String // READ_ALOUD | LISTEN_CHOOSE | SYLLABLES | RHYME | PRACTICE
+  activityType String // READ_ALOUD | LISTEN_CHOOSE | BLEND | SYLLABLES | RHYME | FIRST_SOUND | PRACTICE | PSEUDO_PROBE
   target       String // target word text (denormalized so history survives edits)
   transcript   String? // what the ASR heard, or the option the learner chose
   engine       String? // which ASR scored it: server (Whisper) | browser (Web Speech)

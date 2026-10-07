@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { BookOpen, Mic, Target, Clock, Award, ListChecks, Star } from "lucide-react";
+import { BookOpen, Mic, Target, Clock, Award, ListChecks, Star, Headphones } from "lucide-react";
 import { requireLearner } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import { learnerSummary, dailyAccuracy, practiceStreak } from "@/lib/stats";
+import { progressionStatus } from "@/lib/adaptive";
 import StatCard from "@/components/StatCard";
 import AccuracyLine from "@/components/charts/AccuracyLine";
 import SpeakButton from "@/components/SpeakButton";
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
   const dict = getDict(lang);
   const t = dict.dashboard;
 
-  const [summary, series, tricky, recent, streak] = await Promise.all([
+  const [summary, series, tricky, recent, streak, progression] = await Promise.all([
     learnerSummary(session.learnerId),
     dailyAccuracy(session.learnerId, 14),
     prisma.practiceItem.findMany({
@@ -46,6 +47,7 @@ export default async function DashboardPage() {
       take: 4,
     }),
     practiceStreak(session.learnerId),
+    progressionStatus(session.learnerId, profile.level),
   ]);
 
   const greeting = t.hello(session.name);
@@ -121,6 +123,25 @@ export default async function DashboardPage() {
             </span>
           </Link>
         </div>
+
+        {/* The skill-progression map asks for the listening activities first,
+            and neither tile above leads to them — a child who only ever reads
+            aloud would never move up. So while that criterion is unmet at this
+            level, a third way in says so; once it is met, it goes away. */}
+        {!progression.atMax && !progression.pa.met && (
+          <Link
+            href="/exercises"
+            className="mt-4 flex items-center gap-4 rounded-3xl border-2 border-green/30 bg-green-soft p-5 text-ink shadow-sm transition hover:-translate-y-0.5"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-green">
+              <Headphones size={26} strokeWidth={2.4} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-lg font-extrabold">{t.soundGames}</span>
+              <span className="block text-sm font-semibold text-ink-soft">{t.soundGamesSub}</span>
+            </span>
+          </Link>
+        )}
 
         {/* Practice words, framed as work to do rather than a tally of misses. */}
         <div className="mt-6">

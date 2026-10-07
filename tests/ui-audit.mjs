@@ -42,6 +42,15 @@ const p = await ctx.newPage();
 watch(p, "learner");
 await signIn(p, learner.email, "/dashboard");
 
+section("[0] the dashboard points to what the skill-progression map needs");
+// The skill-progression map asks for listening activities before a level-up,
+// and the dashboard's two big tiles lead elsewhere. A fresh learner has shown
+// none, so the third way in must be there.
+check(
+  "a learner yet to show phonological awareness is pointed to the sound games",
+  (await p.locator("a[href='/exercises']", { hasText: /Sound games/ }).count()) === 1
+);
+
 section("[1] choice-based exercises play to completion");
 for (const [slug, type, label] of [
   ["listen-choose", "LISTEN_CHOOSE", "listen & choose"],

@@ -1039,20 +1039,30 @@ for (const [component, fil, en] of [
     filLearnerText.includes(fil) ? "in Filipino" : `still English: ${en}`
   );
 }
-check(
-  "the word bank follows the toggle",
-  filWordsText.includes("Bangko ng Salita") &&
-    filWordsText.includes("Tinatanggap na baybay") &&
-    !filWordsText.includes("Accepted spellings"),
-  "in Filipino"
+// Case-insensitive: innerText applies CSS text-transform, and the table's
+// column headers are styled uppercase.
+const followsToggle = (text, fil, en) => {
+  const missing = fil.filter((s) => !new RegExp(s, "i").test(text));
+  const leaked = en.filter((s) => new RegExp(s, "i").test(text));
+  return {
+    ok: missing.length === 0 && leaked.length === 0,
+    detail: missing.length || leaked.length
+      ? `missing: ${missing.join(", ") || "none"}; still English: ${leaked.join(", ") || "none"}`
+      : "in Filipino",
+  };
+};
+const wordsToggle = followsToggle(
+  filWordsText,
+  ["Bangko ng Salita", "Tinatanggap na baybay"],
+  ["Accepted spellings"]
 );
-check(
-  "and so does the calibration report",
-  filCalText.includes("Kalibrasyon ng threshold") &&
-    filCalText.includes("Kailan babaguhin ang threshold") &&
-    !filCalText.includes("When to change the threshold"),
-  "in Filipino"
+check("the word bank follows the toggle", wordsToggle.ok, wordsToggle.detail);
+const calToggle = followsToggle(
+  filCalText,
+  ["Kalibrasyon ng threshold", "Kailan babaguhin ang threshold"],
+  ["When to change the threshold"]
 );
+check("and so does the calibration report", calToggle.ok, calToggle.detail);
 check(
   "DemoToggle follows the toggle",
   /Itago ang demo data|Ipakita ang demo data/.test(filCohortText),
