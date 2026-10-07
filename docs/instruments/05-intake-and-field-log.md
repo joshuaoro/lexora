@@ -1,7 +1,7 @@
-# Participant Intake Sheet and Session Field Log
+# Participant Intake Sheet, Device Validation Log and Session Field Log
 
-Two small forms that nothing in the application can produce, and that Chapter 4
-needs.
+Three small forms that nothing in the application can produce, and that Chapters 3
+and 4 need: the intake sheet, the device validation log, and the session field log.
 
 > Requires the same adviser review as the rest. See [`README.md`](README.md).
 > **Completed copies contain identifying information — keep them with the
@@ -91,7 +91,32 @@ Completed by: `______________________` Date: `__________`
 ---
 ---
 
-# 2. Session field log — the structured observation
+# 2. Device and browser validation log
+
+**One row per device and browser, before that device's first session.** The
+proposal's *ASR Integration Validation* — verifying that speech recognition
+"correctly captures and transcribes the user's spoken reading … across the
+supported browsers and microphone configurations" — is what `/diagnostics` does
+on each device. The page shows its results and keeps nothing, so this table is
+the record the Validation chapter reports.
+
+Open **Settings → Check this device**, signed in as any learner (the test reading
+is not saved), and copy the verdicts across.
+
+| Date | Device | Browser and version | Microphone (built-in / headset / USB) | Microphone API | Recording format | Spoken instruction | End-to-end (what was heard) | Checked by |
+|---|---|---|---|---|---|---|---|---|
+| | | | | | | | | |
+| | | | | | | | | |
+| | | | | | | | | |
+
+A row that fails is a finding too: note what failed and what was done — a
+different browser, a headset, a permission setting. Report the table in the
+Validation section with the count of configurations that passed.
+
+---
+---
+
+# 3. Session field log — the structured observation
 
 **One row per session, per child.** Two minutes at the end of each session.
 

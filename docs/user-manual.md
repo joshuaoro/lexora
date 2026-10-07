@@ -587,7 +587,7 @@ later.
    with instrument 06 Parts A and D.
 2. Pictorial scale to the five children ([instrument 04](instruments/04-pictorial-scale.md)),
    read aloud by a researcher with a specialist, teacher or guardian present.
-3. Interviews with the specialists.
+3. Interviews with the specialists ([instrument 07](instruments/07-interview-guides.md), guide C).
 
 **Then the data, in this order:**
 

@@ -204,11 +204,12 @@ than decoding it.
   failures or invalid data, because nothing about them went wrong.
 
 ### Study instruments
-[`docs/instruments/`](docs/instruments/) holds the six documents the application cannot
+[`docs/instruments/`](docs/instruments/) holds the seven documents the application cannot
 produce: parental consent and child assent forms (English and Filipino), the ISO/IEC
 25010:2023 questionnaire for the reading specialists (all nine characteristics), the
-children's three-point pictorial scale, the intake sheet and field log, and the
-specialists' verification sheet for Objectives 1, 3, 4 and 5. Drafts — every factual claim in the consent form is checked against what
+children's three-point pictorial scale, the intake sheet and field log, the
+specialists' verification sheet for Objectives 1, 3, 4 and 5, and interview guides for the
+specialists and for parents as key informants. Drafts — every factual claim in the consent form is checked against what
 the code actually does, but they need adviser and ethics-committee review, and probably a
 Cebuano translation, before they reach a family.
 

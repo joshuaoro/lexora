@@ -74,7 +74,7 @@ The app will never produce these. They do not exist yet.
 | ISO/IEC 25010:2023 ratings, 3 specialists — Objective 6 | 5-point Likert questionnaire | **Drafted** — [`instruments/03`](instruments/03-iso-25010-questionnaire.md), needs ethics review |
 | Children's acceptance, 5 participants — Objective 6 | 3-point pictorial scale | **Drafted** — [`instruments/04`](instruments/04-pictorial-scale.md), needs ethics review |
 | Specialist verification — Objectives 1, 3, 4, 5 | Verification sheet | **Drafted** — [`instruments/06`](instruments/06-objective-verification.md), needs ethics review |
-| Interviews with the specialists | Interview notes | Qualitative analysis (§5.7) |
+| Interviews with the specialists; parents as key informants | Interview guides | **Drafted** — [`instruments/07`](instruments/07-interview-guides.md) |
 | Consent (parents) and assent (children) | Forms | **Drafted** — [`instruments/01`](instruments/01-consent-parent.md), [`02`](instruments/02-assent-child.md), need ethics review |
 | Participant characteristics: age, sex, grade, prior diagnosis | Intake sheet | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
 | Structured observation: usability issues, technical errors, points of confusion | Field log | **Drafted** — [`instruments/05`](instruments/05-intake-and-field-log.md) |
@@ -288,7 +288,7 @@ produces, so a skipped step has a visible cost.
 | Set `ENROLMENT_CODE` on Vercel; rotate the demo passwords (manual §7.1) | Only enrolled children can register |
 | **Enrol each child under their participant code** — name `L1`, email `l1@participant.lexora` — never their real name | Records held "under a coded learner identifier" (proposal, *Privacy and Confidentiality*) |
 | Intake sheet per child ([`instruments/05`](instruments/05-intake-and-field-log.md)) | The participants table |
-| `/diagnostics` on every device and browser to be used | ASR integration validation "across the supported browsers and microphone configurations" (proposal, *Validation*) |
+| `/diagnostics` on every device and browser to be used, copied into the device validation log ([`instruments/05`](instruments/05-intake-and-field-log.md) §2) | ASR integration validation "across the supported browsers and microphone configurations" (proposal, *Validation*) — the page keeps nothing, so the log is the record |
 | Specialist sets each child's starting level | Sensible first sessions instead of everyone at level 1 |
 | `npm run backup` | A restore point |
 
@@ -406,7 +406,9 @@ part of the progress dashboard.
 ### 4.4 Interviews and structured observation (qualitative)
 
 Interviews with the specialists — requirements at the start, recommendations at
-the end — and the field log's structured observation. The proposal organises
+the end — and the field log's structured observation, using the guides in
+[`instruments/07`](instruments/07-interview-guides.md). Parents are key
+informants: what they say informs the design, and is not tabulated as a finding. The proposal organises
 both "by theme" to explain the quantitative results and to identify "usability
 and accessibility issues for the succeeding development iteration".
 
@@ -496,8 +498,9 @@ are left out: they were not generated.
 
 The **immediate pronunciation feedback** half of the objective is a feature to
 describe and demonstrate (the corrective sequence: the verdict, the word
-modelled, "Now you try"), supported by the specialists' ratings of A1 and D9 on
-the ISO questionnaire.
+modelled, "Now you try"), supported by the specialists' ratings of A1 (the
+functions they need) and G3 (feedback to the child is encouraging) on the ISO
+questionnaire.
 
 ### 5.4 Objective 4 — the assigned level against the assessed level
 

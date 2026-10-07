@@ -661,12 +661,15 @@ methodological safeguard below.
 
 ### 5.1 Exercise modules
 
-Seven activities, each mapped to a study objective:
+Eight activities. The four listening ones are the proposal's phonological-awareness
+bank — blending, segmentation, rhyming, sound isolation — and they are what the
+first criterion of the skill-progression map counts (§8.17):
 
 | Activity | Skill | Notes |
 |---|---|---|
 | **Read aloud** | Single-word decoding | Recorded, transcribed server-side, recording kept for review |
-| **Listen & choose** | Blending / word recognition | Look-alike distractors |
+| **Listen & choose** | Word recognition | Look-alike distractors |
+| **Blend the parts** | Syllable blending | Heard only in syllables; wrong options share a syllable with the answer (added 8 October) |
 | **Count the syllables** | Segmentation (pantig) | Syllable-by-syllable audio |
 | **Rhyme time** | Rhyming awareness | 46 curated items |
 | **First sound** | Sound isolation | 30 curated items |
@@ -695,9 +698,19 @@ change.
 ```
 WINDOW = 12          MIN_ATTEMPTS = 8
 UP_THRESHOLD = 0.85  DOWN_THRESHOLD = 0.50
+PA_WINDOW = 12       PA_MIN_ANSWERS = 8     PA_THRESHOLD = 0.80
 ```
 
-**The latency guard** is the part that matters, and §1.3 is why it exists. A
+**The skill-progression map** (added 8 October, §8.17). The proposal defines
+"the mastery criteria that a learner must meet at each stage (phonological
+awareness, then single-word decoding)", so a promotion first needs the listening
+activities at this level — blend, syllables, rhyme, first sound, taken together —
+at 80% over the latest 12 answers, at least 8 of them. Unlike the latency guard,
+no data here means "not yet": it is a mastery criterion, not a safeguard. The
+*Skill progression* panel on the learner page reads the same tallies, so it
+cannot describe a different rule from the one applied. Demotion ignores it.
+
+**The latency guard** is the part that matters most, and §1.3 is why it exists. A
 promotion also requires evidence that decoding is not getting slower: across the
 last 24 timed correct readings at that level, the later half's median must be
 within `SLOWER_TOLERANCE = 1.25` of the earlier half's.
@@ -2148,8 +2161,9 @@ The full protocol is `docs/data-guide.md` §3. In short:
 
 Drafted in `docs/instruments/` (commit `7cee6c6`, realigned 8 October): parental
 consent, child assent, the ISO/IEC 25010:2023 questionnaire (all nine
-characteristics), the pictorial scale, the intake form and field log, and the
-specialists' verification sheet for Objectives 1, 3, 4 and 5. **Drafts, not approved instruments** — each needs the research adviser's
+characteristics), the pictorial scale, the intake form and field log, the
+specialists' verification sheet for Objectives 1, 3, 4 and 5, and interview guides
+for the specialists and for parents as key informants. **Drafts, not approved instruments** — each needs the research adviser's
 and the ethics committee's sign-off, and the consent and assent forms very likely
 need a Cebuano version made by a fluent speaker.
 

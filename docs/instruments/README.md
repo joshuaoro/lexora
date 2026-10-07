@@ -1,6 +1,6 @@
 # Study instruments
 
-The six documents this study needs that the application cannot produce.
+The seven documents this study needs that the application cannot produce.
 
 | File | Who fills it in | When |
 |---|---|---|
@@ -8,8 +8,9 @@ The six documents this study needs that the application cannot produce.
 | [`02-assent-child.md`](02-assent-child.md) | Each child, read aloud to them | Before their first session |
 | [`03-iso-25010-questionnaire.md`](03-iso-25010-questionnaire.md) | The 3 reading specialists | At close-out |
 | [`04-pictorial-scale.md`](04-pictorial-scale.md) | The 5 children | At close-out |
-| [`05-intake-and-field-log.md`](05-intake-and-field-log.md) | Researcher — intake at enrolment, log every session | Throughout |
+| [`05-intake-and-field-log.md`](05-intake-and-field-log.md) | Researcher — intake at enrolment, each device before first use, log every session | Throughout |
 | [`06-objective-verification.md`](06-objective-verification.md) | The 3 reading specialists — Objectives 1, 3, 4, 5 | Parts B–C near the end of testing; A and D at close-out |
+| [`07-interview-guides.md`](07-interview-guides.md) | Specialists (requirements, close-out); parents as key informants | Before development is final; at enrolment; at close-out |
 
 How each one enters Chapter 4 is in [`../data-guide.md`](../data-guide.md) §4–5,
 objective by objective, using only the proposal's descriptive measures.
