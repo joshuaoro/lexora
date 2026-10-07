@@ -106,8 +106,10 @@ upward:
 | Juan | **81.7%** (n=126) | 81.9% (n=127) |
 
 The left column is correct and matches what the app reports. Report retries
-separately as self-correction (`retries`, `retries_correct`,
-`retry_success_pct`) — it is a real and interesting behaviour, just not accuracy.
+separately as re-reads after modelling (`retries`, `retries_correct`,
+`retry_success_pct`) — a real and interesting behaviour, just not accuracy. Do not
+call them self-correction: in running-record terms that is a child fixing an error
+unprompted, which the specialist records separately as the `self_corrected` tag.
 
 **② Demo learners — never include them.**
 
@@ -150,7 +152,7 @@ The raw data. Everything else can be recomputed from this.
 | `word_level` | Difficulty 1–5 |
 | `level_at_time` | The learner's level when they read it — use this, not their current level, for anything historical |
 | `transcript` | What the recogniser heard |
-| `asr_engine` | `server` (Whisper) or `browser` (Web Speech) |
+| `asr_engine` | `server` (Whisper) or `browser` (Web Speech, used only when Whisper could not be reached); blank when nothing was heard. Report how many readings each engine scored, and repeat accuracy without the `browser` rows as a sensitivity check — the fallback is a weaker recogniser, and before 7 October it kept whichever of five guesses was closest to the target, which favours "correct" |
 | `alt_transcript` | The other engine's transcript, when both ran |
 | `correct` | The machine's verdict, 1/0 |
 | `similarity_score` | Levenshtein similarity 0–1 — the continuous variable the calibration sweeps |
@@ -204,7 +206,7 @@ non-word the recogniser returns the nearest real word, so its verdict is wrong
 by construction and would pull agreement down whenever a child decoded well.
 They are reported in the `pseudo_*` columns instead.
 
-**Self-correction** `retries`, `retries_correct`, `retry_success_pct`
+**Re-reads after modelling** `retries`, `retries_correct`, `retry_success_pct`
 
 **Decoding latency** `median_decode_ms`, `timed_readings` — median milliseconds
 over correct, first, plausible readings
@@ -362,7 +364,7 @@ three opinions. Present both.
 | Performance Efficiency | Yes | `audit:perf` — FCP < 3 s, LCP < 4 s, JS < 400 KB on the study's own minimum spec (dual-core 2.0 GHz, 5 Mbps) |
 | Compatibility | Yes | Chrome, Edge, Safari iOS 14.3+; `/diagnostics` per device |
 | **Interaction Capability** | **Yes — the main one** | `audit:a11y` — WCAG 2.1 AA, 19 checks, every route as every role |
-| Reliability | Yes | 435 checks; stale-session and dropped-connection handling |
+| Reliability | Yes | 440 checks; stale-session and dropped-connection handling |
 | Security | Partly | `audit:api` authorization, RLS on 11 tables, `secrets:check` |
 | Safety | Yes | Non-diagnostic disclaimers; IEP refuses prescriptive language |
 | Maintainability | **No** | Test suite, typed codebase, documented decisions |

@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-13 migrations, 10 automated audit suites, 435 assertions (as of 7 October 2026).
+14 migrations, 10 automated audit suites, 440 assertions (as of 7 October 2026).
 
 ---
 
@@ -370,7 +370,8 @@ comment states the case:
 > modelled. Instructionally the point of the exercise; statistically it is not an
 > independent measure of decoding, because the child has just been told the
 > answer. Excluded from accuracy, adaptive level, error patterns, decoding time
-> and mastery — reported only as self-correction.
+> and mastery — reported only as a re-read after modelling (not self-correction,
+> which is unprompted and recorded as a review tag).
 
 See §6.1 for the full argument and the enforcement points.
 
@@ -820,8 +821,11 @@ stay in English. Translating them would make the interface *less* legible to its
 actual users.
 
 The specialist workspace was finished last, in the final build: ten components
-plus the cohort page. The type system enforces key parity, so nothing can be
-half-translated silently.
+plus the cohort page. The type system enforces key parity between the two
+dictionaries — but not that a component uses them, and on 7 October seventeen
+written translations turned out never to have been wired, leaving English bodies
+under Filipino headings (§8.16). `calibration-audit` §15 now samples body text,
+not only headings.
 
 ### 5.9 The specialist workspace
 
@@ -837,7 +841,7 @@ Eleven surfaces:
 | Divergence panel | Decoding vs recall |
 | Phase comparison | Baseline vs endline |
 | Session phases | Tagging the study timeline |
-| Self-correction | The retry panel, kept apart from accuracy |
+| Re-reads | The retry panel, kept apart from accuracy — titled "Self-correction" until 7 October; see §8.16 |
 | Word bank | Add words, variants, audio, probe suggestions |
 | Learner data controls | Clear recordings, erase a participant |
 
@@ -868,7 +872,7 @@ and overstate how well the scorer performs on the readings actually being
 measured.
 
 They are reported separately as `retries` / `retries_correct` /
-`retry_success_pct` and in the Self-correction panel. The README states this
+`retry_success_pct` and in the re-reads panel. The README states this
 belongs in the methodology chapter — it is a defensible choice, but it is a
 choice.
 
@@ -1565,6 +1569,56 @@ ungrammatical ("Mag-Basahin nang malakas", "paglagpas nilang mag-register"). And
 intake form asked the specialist to set a starting Marungko stage, which the app has
 no control for — the stage follows the level; the form now says so.
 
+**Second pass, after deployment.** A further read, prompted by "keep going until
+there is nothing left":
+
+- *The browser fallback favoured "correct".* When Whisper could not be reached, the
+  Web Speech fallback asked for five guesses and kept whichever was closest to the
+  target — so "dola" for *bola* passed whenever "bola" was among them. That is the
+  bias `asr.ts` refuses for Whisper. It now takes the recogniser's own best guess;
+  the data guide asks for accuracy to be reported with and without `browser` rows.
+- *A child's name went to Microsoft.* The dashboard's read-aloud greeting said
+  "Hi, Juan!", and an uncached phrase is synthesized by Microsoft's speech service
+  and kept in `SpeechClip` — which erasing the learner does not touch. The privacy
+  notice and the consent form both say no such sharing happens. The name now stays
+  on screen and out of the audio, and the warm-up script pre-synthesizes the
+  greeting and streak lines every child shares.
+- *The device check wrote into a child's record.* `/diagnostics` needs a learner
+  sign-in and posted a real reading of "bahay" — counted in accuracy, able to move a
+  level, and onto the practice list whenever Whisper misheard it. It now scores
+  through the real pipeline with `diagnostic: true` and saves nothing.
+- *A word's stage could be typed.* The add-word form offered a stage picker that
+  defaulted to 1, and the route stored it, so a word with stage-6 letters could
+  reach a child taught only m, s, a. The stage is now derived from the letters on
+  the server, by the one `stageForWord` in `src/lib/marungko.ts` (the duplicate
+  table in `prisma/` is gone). All 280 stored words were already consistent.
+- *Learner registration was open to the public URL.* A stranger's account would sit
+  in the cohort and the exports, and the per-account speech ceiling could be
+  stepped around by registering again. `ENROLMENT_CODE`, when set, now gates it.
+- *"Self-correction" named two different things.* The retry panel — a re-read after
+  the app said the word — carried the name of the unprompted behaviour the review
+  tags record. A specialist would raise it first. Renamed "Re-reads after hearing
+  the word"; CSV column names are unchanged.
+- *Filipino that existed but was never shown.* Seventeen dictionary strings were
+  written and never wired, so panels showed English bodies under Filipino headings,
+  and the render check sampled only headings. The panels are now wired, the cohort
+  page and both headline comparison panels fully translated, the review chips use
+  their Filipino labels, and the check samples body text too. Eleven dead strings
+  from an earlier dashboard were removed. The claim in §5.8 that "the type system
+  enforces key parity, so nothing can be half-translated" was true of the
+  dictionaries and false of the components.
+- *Smaller.* The cohort's group accuracy was rebuilt from rounded per-child
+  percentages rather than counts; a zero change on the pre/post table was coloured
+  as an improvement; the cohort grid's explanation was garbled ("a column that is
+  weak across the row"); the signed-in error and not-found screens were English
+  only; the warm-up script missed the probe's instructions; the run skill said
+  eight suites.
+- *The database logs.* Switching the Data API off made PostgREST log an ERROR every
+  ~32 s (a known Supabase issue); quieted by `20261007120000`. The only other
+  errors in the logs were the audit's own refused anon reads — the door working.
+- *Housekeeping.* Two 9 MB SQLite files from the first day (`dev.db`,
+  `dev.db.backup`, seed data only) moved to the Recycle Bin.
+
 **Left for the specialist, deliberately.** Eight probe non-words are one letter
 from a word the child practises (`mesu`/mesa, `sobi`/sabi, `kelo`/kilo…), against
 the bank's own stated rule; replacing a probe item is a measurement decision that
@@ -1579,18 +1633,18 @@ for *problema* is a cluster simplification. Both are on the consultation agenda
 
 ### 9.1 The suites
 
-Ten suites, **435 checks locally** (7 October 2026). Run with `npm run audit [url]`.
+Ten suites, **440 checks locally** (7 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
-| `api-audit` | 61 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
+| `api-audit` | 62 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
 | `logic-audit` | 23 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
-| `links-audit` | 52 | Every route reachable from the navigation, as each role |
-| `stale-session-audit` | 23 | A learner or specialist erased mid-session |
+| `links-audit` | 51 | Every route reachable from the navigation, as each role |
+| `stale-session-audit` | 24 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
-| `decoding-audit` | 70 | Probe walls, latency guard, stress caveat, exports, Filipino |
-| `calibration-audit` | 86 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
+| `decoding-audit` | 71 | Probe walls, latency guard, stress caveat, exports, Filipino |
+| `calibration-audit` | 89 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress |
 | `a11y-audit` | 19 | WCAG 2.1 AA via axe-core, keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
@@ -1891,7 +1945,7 @@ deployment, plus a sign-in attempt for each demo learner:
 
 | Item | State |
 |---|---|
-| 1. Data API disabled | **Done (7 October).** Switched off in the dashboard. Presenting the anon key for a table now returns 503 `PGRST002` — PostgREST can no longer load the schema at all. A keyless request still gets 401 "No API key found", but that is the API gateway, which checks for a key before routing anywhere, so it is not evidence the Data API is up |
+| 1. Data API disabled | **Done (7 October).** Switched off in the dashboard, which made PostgREST log `schema "pg_pgrst_no_exposed_schemas" does not exist` every ~32 s (445 errors in four hours) — a known Supabase issue, quieted by `20261007120000` with their documented workaround; verified silent afterwards. Presenting the anon key for a table now returns 503 `PGRST002` — PostgREST can no longer load the schema at all. A keyless request still gets 401 "No API key found", but that is the API gateway, which checks for a key before routing anywhere, so it is not evidence the Data API is up |
 | 2. `SPECIALIST_CODE` rotated | **Done** — the published code is refused (403) and local and deployed values agree |
 | 3. Specialist password changed | **Done** — the published password is refused (401) |
 | 4. Demo learners re-credentialed | **Not done** — `learner1` and `learner2` still sign in with `lexora123` on the deployment |

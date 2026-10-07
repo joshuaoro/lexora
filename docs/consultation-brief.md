@@ -181,6 +181,15 @@ So nothing you see contradicts this brief:
 - **Dates and times** showed in UTC on the live site — 8 hours behind; they now show
   Philippine time.
 - **A new child's stage** showed as 1 while they were taught from stage 3 (decision 4).
+- **"Self-correction" meant two things.** The panel of re-reads taken *after LEXORA said
+  the word* is now called "Re-reads after hearing the word". Self-correction — fixing an
+  error unprompted — is what you record with the *Self-corrected* observation, which can
+  now be recorded on a reading you mark correct.
+- **The backup recogniser leaned towards "correct".** When the main speech recogniser was
+  unreachable, the browser's own picked whichever of five guesses was closest to the
+  target word. It now takes its own best guess.
+- **A word's stage could be typed by hand** when adding it to the bank; it is now always
+  worked out from its letters.
 
 ---
 

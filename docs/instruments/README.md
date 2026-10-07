@@ -35,6 +35,12 @@ Two things in particular need a human decision that this document cannot make:
 - **Whether your institution requires specific wording, letterhead, reference
   numbers, or a data-protection officer's contact.** Most do.
 
+One claim in the consent form is about someone else's policy, not this app: that
+Groq does not use the recordings to train its models. That is true of LEXORA by
+construction, but for Groq it rests on their current API data terms, which can
+change. Check them on the day you print, and keep a dated copy with the ethics
+file.
+
 ### The language question — decide this before printing
 
 The partner site is in **Davao City**, where the everyday language is

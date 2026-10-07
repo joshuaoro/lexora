@@ -466,6 +466,13 @@ Two layers now:
 1. **The Data API is disabled** (Supabase → Settings → Data API). LEXORA uses no PostgREST
    at all — no `@supabase/supabase-js`, no anon key anywhere in the tree — so nothing is
    lost, and it stays correct for tables added later.
+   Supabase does not actually stop PostgREST when this is switched off; it points it at a
+   schema that does not exist, and the database then logs `schema
+   "pg_pgrst_no_exposed_schemas" does not exist` every 30 seconds. Migration
+   `20261007120000_quiet_disabled_data_api` applies Supabase's documented workaround: an
+   empty schema, `pgrst_no_exposed_schemas`, set as the only one PostgREST may expose. **Do
+   not drop that schema** — the errors return. To re-enable the Data API one day, first run
+   `ALTER ROLE authenticator RESET pgrst.db_schemas; NOTIFY pgrst, 'reload config';`.
 2. **RLS is enabled on all 11 tables** (migration `20260812010000_enable_rls_all_tables`),
    each with one explicit `USING (false)` policy for `anon` and `authenticated`
    (`20260930120000_add_deny_all_policies`), and those roles hold no grants at all
@@ -491,8 +498,10 @@ Data API on or off. Present the anon key instead, for a table
 
 1. Push the repository to GitHub, then import it at **vercel.com/new**.
 2. Set the environment variables (Project → Settings → Environment Variables):
-   `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SPECIALIST_CODE`, `GROQ_API_KEY`.
-   Use a **fresh** `AUTH_SECRET` and a **private** `SPECIALIST_CODE` — not the local ones.
+   `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SPECIALIST_CODE`, `GROQ_API_KEY`, and
+   `ENROLMENT_CODE` before anyone is enrolled. Use a **fresh** `AUTH_SECRET` and **private**
+   codes — not the local ones. Without `ENROLMENT_CODE`, anyone with the URL can create a
+   learner account that would sit in the cohort figures beside real participants.
 3. Deploy. Vercel runs `vercel-build`, which regenerates the Prisma client, applies
    migrations, then builds.
 
@@ -562,16 +571,16 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (435 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (440 checks)
 npm run audit -- <url>    # or against the deployment
-npm run audit:api         # authorization, validation, erasure, RLS  (61)
-npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)
+npm run audit:api         # authorization, validation, erasure, RLS  (62)
+npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (23)
 npm run audit:ui          # learner journeys, specialist workflows, responsive  (20)
-npm run audit:links       # every route reachable from the navigation  (50)
-npm run audit:stale       # a learner or specialist erased mid-session  (21)
+npm run audit:links       # every route reachable from the navigation  (51)
+npm run audit:stale       # a learner or specialist erased mid-session  (24)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
-npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (64)
-npm run audit:calibration # calibration, blind review, tags, demo, IEP, pre/post  (85)
+npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (71)
+npm run audit:calibration # calibration, blind review, tags, demo, IEP, pre/post  (89)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (19)
 npm run audit:perf        # budgets on a throttled low-end device
@@ -701,7 +710,7 @@ disabled until it is set.
 - **Recording** works in Chrome, Edge, and Safari (iOS 14.3+). The page must be served over `http://localhost` or HTTPS for the microphone to be available.
 - **Speech recognition** sends the recording to the Groq API for transcription, so it needs internet. Audio is not retained by the provider for training.
 - **Word audio** is served from your own database (`/api/word-audio/…`), so pronunciation is correct on every device with no cloud TTS at runtime.
-- **Learner data** lives in your own Supabase Postgres database and nowhere else. Recordings exist only for the specialist reliability check and the self-correction panel.
+- **Learner data** lives in your own Supabase Postgres database and nowhere else. Recordings exist only for the specialist reliability check and the re-reads panel.
 - **Recordings are deleted automatically** after `RECORDING_RETENTION_DAYS` (default 180), swept when a learner next starts an activity. Only the audio goes — transcripts, scores, error types and reviews survive, so no reported figure changes. A specialist can also clear them at any time, or erase a participant entirely, from the learner page. `/privacy` states whichever window is configured.
 
 ## Project structure

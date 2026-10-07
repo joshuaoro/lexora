@@ -195,7 +195,8 @@ Also here: **Check this device** → `/diagnostics`.
 Run this on **every tablet before its first session**. It checks microphone permission,
 recording format support, whether a spoken instruction can be fetched and played, and
 then **records three seconds of real audio and scores it end to end** — the only honest
-way to know the whole chain works on that device.
+way to know the whole chain works on that device. The page needs a learner sign-in, but
+the test reading is **not saved**: it leaves that account's record exactly as it was.
 
 Rows marked *offline fallback only* describe what the app would do without a server. A
 tablet with no Filipino voice of its own is **normal** and not a problem: the app plays
@@ -233,7 +234,9 @@ and Print. Then, top to bottom:
    both from your verdicts.
 5. **Borderline readings (Threshold calibration)** — readings that scored just below the
    acceptance line, with audio, so you can hear whether the line is set right.
-6. **Self-correction** — the retry pairs, kept apart from accuracy.
+6. **Re-reads after hearing the word** — a missed word, and the child's second go at it
+   after LEXORA said it. Kept apart from accuracy. Not self-correction: that is unprompted,
+   and you record it with the "Self-corrected" observation on a review.
 7. **Baseline → endline (Phase comparison)** — whether the child improved.
 8. **Study timeline** — tag each session `BASELINE`, `REGULAR` or `ENDLINE`. **Tagging
    is what makes pre/post comparison possible.** It is retroactive: you can tag sessions
@@ -465,7 +468,7 @@ npm run password:set -- learner2@lexora.ph --generate --random
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 435 checks
+npm run audit                  # 440 checks
 npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
 
@@ -484,7 +487,9 @@ expected. To end every session at once, rotate `AUTH_SECRET` in Vercel and redep
 
 ### 7.2 Enrolling the five participants
 
-1. Register each child at `/register` as a **learner**, with their own account. **Do not
+1. Register each child at `/register` as a **learner**, with their own account, entering
+   the **enrolment code** (`ENROLMENT_CODE` on the deployment — set it before this step, or
+   anyone with the URL can register). **Do not
    use `learner1` / `learner2`** — those are demo accounts and are excluded from every
    aggregate figure by design, so real data in them would be invisible to the cohort
    view, calibration, divergence and phase comparison.
@@ -492,8 +497,9 @@ expected. To end every session at once, rotate `AUTH_SECRET` in Vercel and redep
    allows. First name or an initial is usually right.
 3. Set each password with `npm run password:set -- <email> --generate`, and keep the list
    somewhere the specialists can reach and nobody else can.
-4. On the specialist page, set each child's **starting level and Marungko stage** to match
-   the specialist's judgement, rather than letting them all begin at 1.
+4. On the specialist page, set each child's **starting level** to match the specialist's
+   judgement, rather than letting them all begin at 1. The Marungko stage follows the level
+   (level 1 → stage 3 … level 5 → stage 7); record anything finer on the intake form.
 5. Run `/diagnostics` on every tablet that will be used.
 6. **Take a backup** before the first session: `npm run backup`.
 
@@ -669,7 +675,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 435 checks
+npm run audit                  # all 10 suites, 440 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values
