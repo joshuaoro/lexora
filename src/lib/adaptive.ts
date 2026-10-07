@@ -4,12 +4,25 @@ import { effectiveStage } from "./marungko";
 
 /**
  * Adaptive difficulty: the learner's level (1–5) is recomputed from the most
- * recent oral-reading attempts recorded *at the current level*, so the window
- * naturally resets after every level change.
+ * recent attempts recorded *at the current level*, so the windows naturally
+ * reset after every level change.
  *
- *  - ≥ 8 attempts at this level with accuracy ≥ 85%, and decoding not getting
- *    slower                                            → level up
- *  - ≥ 8 attempts at this level with accuracy ≤ 50%    → level down
+ * This is the study's skill-progression map — "the mastery criteria that a
+ * learner must meet at each stage (phonological awareness, then single-word
+ * decoding) before the system advances the learner to the next difficulty
+ * level". In that order:
+ *
+ *  1. Phonological awareness: ≥ 8 answers at this level across the listening
+ *     activities (blend, count the syllables, rhyme, first sound), ≥ 80%
+ *     correct over the latest 12.
+ *  2. Single-word decoding: ≥ 8 oral readings at this level, ≥ 85% correct
+ *     over the latest 12, and decoding not getting slower.
+ *
+ *  Both met                                            → level up
+ *  ≥ 8 oral readings at this level with accuracy ≤ 50% → level down
+ *
+ * Demotion reads decoding alone. A child who cannot read the words at a level
+ * should not be kept there because they happen to rhyme well.
  *
  * Why accuracy alone is not enough to move a child up
  * ---------------------------------------------------
@@ -45,19 +58,63 @@ const LATENCY_WINDOW = 24;
 const MIN_LATENCY_ATTEMPTS = 8;
 const SLOWER_TOLERANCE = 1.25;
 
+/**
+ * Phonological awareness, the first criterion on the map.
+ *
+ * Judged on the four listening activities together rather than on each one.
+ * Asking for all four at every level would hold a child back because a session
+ * ran short, not because of anything they cannot do; the per-activity split is
+ * shown to the specialist instead, who can see a gap and fill it.
+ *
+ * Unlike the latency guard, no data here means "not yet": this is a mastery
+ * criterion, not a safeguard. A child whose sessions are all read-aloud is
+ * held at their level until they have shown it — and the specialist's learner
+ * page says so, rather than leaving a level that has stopped moving
+ * unexplained. The specialist can still set the level by hand.
+ *
+ * 80% rather than the 85% asked of reading, because these are three-option
+ * choices made from listening: one slip in eight is 88%, two is 75%, and the
+ * line sits between them.
+ */
+export const PA_TYPES = ["BLEND", "SYLLABLES", "RHYME", "FIRST_SOUND"] as const;
+const PA_WINDOW = 12;
+export const PA_MIN_ANSWERS = 8;
+export const PA_THRESHOLD = 0.8;
+
 export const MAX_LEVEL = 5;
 
-export async function updateAdaptiveLevel(
-  learnerId: string
-): Promise<{ level: number; changed: "up" | "down" | null }> {
-  // The learner may have been erased mid-session; nothing to adapt.
-  const profile = await prisma.learnerProfile.findUnique({ where: { id: learnerId } });
-  if (!profile) return { level: 1, changed: null };
+type Tally = { answered: number; correct: number };
 
+/** Phonological-awareness answers at a level, newest first, within the window. */
+async function paTally(learnerId: string, level: number) {
+  const rows = await prisma.attempt.findMany({
+    where: { learnerId, levelAtTime: level, activityType: { in: [...PA_TYPES] } },
+    orderBy: { createdAt: "desc" },
+    take: PA_WINDOW,
+    select: { correct: true, activityType: true },
+  });
+  const byType: Record<string, Tally> = Object.fromEntries(
+    PA_TYPES.map((t) => [t, { answered: 0, correct: 0 }])
+  );
+  for (const r of rows) {
+    byType[r.activityType].answered += 1;
+    if (r.correct) byType[r.activityType].correct += 1;
+  }
+  const correct = rows.filter((r) => r.correct).length;
+  return {
+    answered: rows.length,
+    correct,
+    met: rows.length >= PA_MIN_ANSWERS && correct / rows.length >= PA_THRESHOLD,
+    byType,
+  };
+}
+
+/** Oral readings at a level, newest first, within the window. */
+async function decodingTally(learnerId: string, level: number) {
   const recent = await prisma.attempt.findMany({
     where: {
       learnerId,
-      levelAtTime: profile.level,
+      levelAtTime: level,
       activityType: { in: ["READ_ALOUD", "PRACTICE"] },
       // A retry follows the correct word being modelled, so letting it count
       // would move the learner up on repetition rather than on decoding.
@@ -67,15 +124,63 @@ export async function updateAdaptiveLevel(
     take: WINDOW,
     select: { correct: true },
   });
+  const correct = recent.filter((a) => a.correct).length;
+  return { answered: recent.length, correct };
+}
 
-  if (recent.length < MIN_ATTEMPTS) return { level: profile.level, changed: null };
+/**
+ * Where a learner stands on the skill-progression map at their current level:
+ * what each criterion has seen so far and whether it is met. For the
+ * specialist's learner page — built from the same functions the level rule
+ * uses, so the panel cannot describe a different rule from the one applied.
+ */
+export async function progressionStatus(learnerId: string, level: number) {
+  const [pa, decoding] = await Promise.all([
+    paTally(learnerId, level),
+    decodingTally(learnerId, level),
+  ]);
+  const accurate =
+    decoding.answered >= MIN_ATTEMPTS && decoding.correct / decoding.answered >= UP_THRESHOLD;
+  const slowing = accurate ? await decodingSlowingDown(learnerId, level) : false;
+  return {
+    level,
+    atMax: level >= MAX_LEVEL,
+    pa,
+    decoding: { ...decoding, met: accurate && !slowing, slowing },
+    rule: {
+      paMin: PA_MIN_ANSWERS,
+      paThreshold: PA_THRESHOLD,
+      paWindow: PA_WINDOW,
+      decodingMin: MIN_ATTEMPTS,
+      decodingThreshold: UP_THRESHOLD,
+      window: WINDOW,
+    },
+  };
+}
 
-  const accuracy = recent.filter((a) => a.correct).length / recent.length;
+export type ProgressionStatus = Awaited<ReturnType<typeof progressionStatus>>;
+
+export async function updateAdaptiveLevel(
+  learnerId: string
+): Promise<{ level: number; changed: "up" | "down" | null }> {
+  // The learner may have been erased mid-session; nothing to adapt.
+  const profile = await prisma.learnerProfile.findUnique({ where: { id: learnerId } });
+  if (!profile) return { level: 1, changed: null };
+
+  const recent = await decodingTally(learnerId, profile.level);
+
+  if (recent.answered < MIN_ATTEMPTS) return { level: profile.level, changed: null };
+
+  const accuracy = recent.correct / recent.answered;
 
   let changed: "up" | "down" | null = null;
   let level = profile.level;
 
   if (accuracy >= UP_THRESHOLD && level < MAX_LEVEL) {
+    // Phonological awareness first, then decoding — the map's order.
+    if (!(await paTally(learnerId, profile.level)).met) {
+      return { level: profile.level, changed: null };
+    }
     if (await decodingSlowingDown(learnerId, profile.level)) {
       return { level: profile.level, changed: null };
     }

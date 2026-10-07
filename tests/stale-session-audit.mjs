@@ -46,6 +46,7 @@ const LEARNER_PAGES = [
   "/exercises",
   "/exercises/read-aloud",
   "/exercises/listen-choose",
+  "/exercises/blend",
   "/exercises/syllables",
   "/exercises/rhyme",
   "/exercises/first-sound",

@@ -776,7 +776,7 @@ if (scAttempt) {
 }
 
 /* ── 14. baseline against endline ──────────────────────────────────────── */
-section("[14] the pre/post comparison the study is built on");
+section("[14] the start-and-end-of-testing record");
 
 /**
  * A learner with a tagged baseline, a tagged endline, and one reading that
@@ -923,10 +923,10 @@ await phaseView.goto(`${BASE}/specialist/learner/${phaseLearner.learnerId}`, {
 const phaseText = await phaseView.locator("main").innerText();
 await phaseBrowser.close();
 
-check("the panel draws the comparison", /Baseline to endline/.test(phaseText), "shown");
+check("the panel draws the comparison", /Start and end of testing/.test(phaseText), "shown");
 check(
   "it reports no p-value, and says why",
-  !/p\s*[=<]\s*0?\.\d/.test(phaseText) && /distinguishable from chance/i.test(phaseText),
+  !/p\s*[=<]\s*0?\.\d/.test(phaseText) && /applies no inferential tests/i.test(phaseText),
   "descriptives only"
 );
 
@@ -1007,7 +1007,7 @@ for (const [component, fil, en] of [
   ["SessionPhases", "Timeline ng pag-aaral", "Study timeline"],
   ["ThresholdCalibration", "Mga borderline na pagbasa", "Borderline readings"],
   ["DivergencePanel", "Pagdedekowd ba o pagkabisado", "Decoding or memorisation"],
-  ["PhaseComparison", "Baseline hanggang endline", "Baseline to endline"],
+  ["PhaseComparison", "Simula at dulo ng pagsubok", "Start and end of testing"],
   // Not "Blind review": that phrase is deliberately identical in both
   // languages, so asserting on it would pass whatever the toggle did.
   ["ReviewList", "nakatago ang hatol ng sistema", "the system's verdict is hidden"],
@@ -1015,7 +1015,8 @@ for (const [component, fil, en] of [
   // this checked, and headings were the part that had been translated: the
   // explanations under them stayed English with their Filipino sitting unused
   // in the dictionary, and the check passed throughout.
-  ["SessionPhases body", "Markahan kung aling mga session", "Mark which sessions form"],
+  ["SessionPhases body", "markahan kung aling mga session", "mark which sessions open"],
+  ["SkillProgression", "Pag-usad ng kasanayan", "Skill progression"],
   ["ThresholdCalibration body", "Mga pagbasang nakakuha ng", "Readings that scored between"],
   ["Rereads", "Muling pagbasa matapos marinig ang salita", "Re-reads after hearing the word"],
 ]) {

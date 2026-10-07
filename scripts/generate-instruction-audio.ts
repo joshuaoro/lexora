@@ -20,6 +20,7 @@ import { prisma } from "../src/lib/db";
 const EXERCISE_TYPES = [
   "READ_ALOUD",
   "LISTEN_CHOOSE",
+  "BLEND",
   "SYLLABLES",
   "RHYME",
   "FIRST_SOUND",

@@ -8,6 +8,7 @@ import ExerciseSession from "@/components/exercises/ExerciseSession";
 const SLUGS: Record<string, ExerciseType> = {
   "read-aloud": "READ_ALOUD",
   "listen-choose": "LISTEN_CHOOSE",
+  blend: "BLEND",
   syllables: "SYLLABLES",
   rhyme: "RHYME",
   "first-sound": "FIRST_SOUND",

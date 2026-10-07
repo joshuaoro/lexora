@@ -26,8 +26,10 @@ const SECTIONS: { heading: string; body: React.ReactNode }[] = [
     body: (
       <ul className="ml-5 list-disc space-y-1">
         <li>
-          <strong>Account details</strong> — name or nickname, email address, and a hashed
-          password. Passwords are never stored in readable form.
+          <strong>Account details</strong> — a display name, a sign-in address, and a
+          hashed password. In the study, each child is enrolled under a participant code
+          such as L1 rather than their name, so their records are held under that code.
+          Passwords are never stored in readable form.
         </li>
         <li>
           <strong>Reading activity</strong> — the words presented, what the speech
@@ -64,7 +66,7 @@ const SECTIONS: { heading: string; body: React.ReactNode }[] = [
       <>
         To score a reading, the recorded clip is sent to <strong>Groq</strong>, which runs a
         pre-trained Whisper speech-recognition model, and the transcript is returned to
-        LEXORA. No custom model is trained and the recordings are not used to train or
+        LEXORA. The clip is sent without the learner&apos;s name or code. No custom model is trained and the recordings are not used to train or
         fine-tune any model. Aside from this transcription step, learner data is not shared
         with anyone outside the research team and the partner institution&apos;s reading
         specialists.
@@ -87,11 +89,12 @@ const SECTIONS: { heading: string; body: React.ReactNode }[] = [
     heading: "How long it is kept",
     body: (
       <>
-        Voice recordings are deleted automatically once they are{" "}
+        Voice recordings are kept only for the evaluation phase of the study. When it
+        ends, every recording is permanently deleted — from the application and from every
+        backup copy. Before then, a recording is deleted automatically once it is{" "}
         {retentionDays() === 0 ? "no longer needed" : `${retentionDays()} days old`}, and a
-        specialist can clear them at any time from the learner&apos;s page — normally as soon
-        as the scoring-reliability check for that learner is complete. Deleting a recording
-        leaves the reading record itself intact. Reading records are retained for the duration
+        specialist can clear them at any time from the learner&apos;s page. Deleting a
+        recording leaves the reading record itself intact. Reading records are retained for the duration
         of the study and are deleted once the research has been completed and defended.
       </>
     ),

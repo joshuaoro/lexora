@@ -381,7 +381,7 @@ async function main() {
 
     /* ── 5. study phase tagging ───────────────────────────────────────── */
 
-    section("[5] sessions can be tagged for pre/post comparison");
+    section("[5] sessions can be tagged as the start or end of testing");
 
     const sid = cuid("ses");
     await query(

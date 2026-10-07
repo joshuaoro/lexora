@@ -19,8 +19,12 @@ import PhaseComparison from "@/components/specialist/PhaseComparison";
  * answer "what is this group finding hard", and reading that off five separate
  * pages invites the eye to average things it should not. Grouping the same
  * measures side by side makes the shared difficulty visible — if four of five
- * children fail on consonant clusters, that is a finding about the
- * intervention, not about any one child.
+ * children fail on consonant clusters, that is something to teach the group,
+ * not a fact about any one child.
+ *
+ * A working view for the specialist, ordered by name rather than ranked. The
+ * study commits to no comparative or public reporting of individual reading
+ * performance, so this page is not for printing or circulating.
  *
  * Retries are excluded throughout, as everywhere else: a reading taken after
  * the word was modelled is repetition, not decoding.

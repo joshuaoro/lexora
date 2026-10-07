@@ -357,14 +357,15 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
       )}
 
       <section className="rounded-2xl border border-line bg-cream/60 p-5 text-sm font-semibold text-ink-soft">
-        <p className="font-extrabold text-ink">Changing the threshold mid-study</p>
+        <p className="font-extrabold text-ink">When to change the threshold</p>
         <p className="mt-1.5 max-w-3xl">
-          This page recommends; it never changes the setting. Moving{" "}
-          <code className="font-mono text-xs">SCORE_THRESHOLD</code> partway through would mean
-          the baseline and the endline were scored by different rules, and the comparison
-          between them would no longer be sound. The similarity is stored on every attempt, so
-          the safe order is to leave it fixed for the study, then re-score the exported data at
-          analysis time if the calibration warrants it — and report both figures.
+          This page recommends; it never changes the setting. The study uses the
+          disagreements between your verdicts and the system&apos;s to refine the threshold,
+          so a change is expected — once, when validation ends, not repeatedly while children
+          are being tested. Moving{" "}
+          <code className="font-mono text-xs">SCORE_THRESHOLD</code> partway means the readings
+          either side were scored by different rules. The similarity is stored on every attempt,
+          so the percentage of agreement can be reported at both the old and the new threshold.
         </p>
       </section>
     </div>

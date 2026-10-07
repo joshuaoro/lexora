@@ -49,19 +49,35 @@ const MIME_EXT: Record<string, string> = {
   "audio/flac": "flac",
 };
 
+/**
+ * Split a recording's data URL into its media type and bytes, or null.
+ *
+ * Every browser writes the parameters differently, and a pattern that misses
+ * one fails silently: each reading from that browser falls through to the
+ * browser recognizer or goes unscored, with nothing in the UI to say why.
+ *
+ *  - Chrome and Edge: `audio/webm;codecs=opus`
+ *  - Safari: `audio/mp4;codecs=mp4a.40.2` — a dot in the parameter
+ *  - Firefox: `audio/ogg; codecs=opus` — a space after the semicolon
+ *
+ * Firefox is one of the three browsers the study's end-user requirements name,
+ * and the space alone was enough to lose every reading made in it.
+ * `npm run asr:check` holds all three.
+ */
+export function parseAudioDataUrl(dataUrl: string): { mime: string; bytes: Buffer } | null {
+  const match = dataUrl.match(/^data:(audio\/[\w.+-]+)(?:;\s*[\w.=+-]+)*;base64,([\s\S]+)$/);
+  if (!match) return null;
+  return { mime: match[1], bytes: Buffer.from(match[2], "base64") };
+}
+
 /** Transcribe a base64 data-URL recording. Returns null on any failure. */
 export async function transcribeAudio(dataUrl: string): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY ?? process.env.ASR_API_KEY;
   if (!apiKey) return null;
 
-  // Media-type parameters may contain dots: Safari records
-  // `audio/mp4;codecs=mp4a.40.2`, and a pattern without the dot silently fails
-  // to parse it — every reading from that device would then fall through to the
-  // browser recognizer or go unscored, with nothing in the UI to say why.
-  const match = dataUrl.match(/^data:(audio\/[\w.+-]+)(?:;[\w.=+-]+)*;base64,([\s\S]+)$/);
-  if (!match) return null;
-  const mime = match[1];
-  const bytes = Buffer.from(match[2], "base64");
+  const parsed = parseAudioDataUrl(dataUrl);
+  if (!parsed) return null;
+  const { mime, bytes } = parsed;
   if (bytes.length < 1000) return null; // too short to contain speech
 
   const baseUrl = process.env.ASR_BASE_URL ?? DEFAULT_BASE_URL;

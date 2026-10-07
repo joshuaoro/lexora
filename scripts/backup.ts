@@ -84,6 +84,16 @@ async function main() {
 
   console.log("\nKeep a copy somewhere other than this laptop — a drive failure");
   console.log("would otherwise take the study data with it.");
+
+  // The consent form promises that every recording is deleted when the
+  // evaluation phase ends. Clearing them in the app does not reach this file,
+  // or any copy of it, so say so every time one is written with voices in it.
+  const recordings = (data.Attempt as { audio: string | null }[]).filter((a) => a.audio).length;
+  if (recordings > 0) {
+    console.log(`\nThis backup holds ${recordings} children's voice recording(s). At close-out,`);
+    console.log("after clearing recordings in the app, take one new backup and delete this");
+    console.log("file and every copy of it (data guide §3.5).");
+  }
 }
 
 /**

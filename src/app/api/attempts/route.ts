@@ -25,6 +25,7 @@ const schema = z.object({
   activityType: z.enum([
     "READ_ALOUD",
     "LISTEN_CHOOSE",
+    "BLEND",
     "SYLLABLES",
     "RHYME",
     "FIRST_SOUND",

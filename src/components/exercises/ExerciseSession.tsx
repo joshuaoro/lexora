@@ -55,6 +55,24 @@ function playChime(good: boolean) {
   }
 }
 
+/**
+ * Play a word in parts: the stored syllable clip when there is one, else each
+ * syllable through the browser voice.
+ *
+ * Module scope, and handed the item, because starting an item has to play the
+ * parts of the item about to be shown — not the one still in state.
+ */
+async function playParts(it: ExerciseItem, rate: number) {
+  stopSpeaking();
+  if (it.wordId && it.hasSyllAudio) {
+    await playAudioUrl(`/api/word-audio/${it.wordId}?kind=syll&v=${it.audioVersion}`, Math.max(0.6, rate + 0.15));
+    return;
+  }
+  for (const part of (it.syllables ?? it.target).split("-")) {
+    await speakOnce(part, Math.max(0.5, rate * 0.9));
+  }
+}
+
 /** Word display size that shrinks gracefully on small screens. */
 function wordSize(base: number, factor: number) {
   return `clamp(26px, 11vw, ${Math.round(base * factor)}px)`;
@@ -192,6 +210,11 @@ export default function ExerciseSession({
       setPhase("item");
       itemStartRef.current = now();
       const next = list[i];
+      // Blending plays the word in parts and never whole — hearing it whole
+      // first would leave nothing to blend.
+      if (next && type === "BLEND") {
+        setTimeout(() => void playParts(next, settings.ttsRate), 350);
+      }
       // Receptive activities speak the target automatically
       if (next && (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND")) {
         setTimeout(
@@ -408,18 +431,8 @@ export default function ExerciseSession({
     });
   }
 
-  async function speakSyllables() {
-    stopSpeaking();
-    if (item.wordId && item.hasSyllAudio) {
-      await playAudioUrl(
-        `/api/word-audio/${item.wordId}?kind=syll&v=${item.audioVersion}`,
-        Math.max(0.6, settings.ttsRate + 0.15)
-      );
-      return;
-    }
-    for (const part of (item.syllables ?? item.target).split("-")) {
-      await speakOnce(part, Math.max(0.5, settings.ttsRate * 0.9));
-    }
+  function speakSyllables() {
+    return playParts(item, settings.ttsRate);
   }
 
   /* ————— render helpers ————— */
@@ -714,6 +727,43 @@ export default function ExerciseSession({
           </>
         )}
 
+        {/* ——— Syllable blending ———
+             The parts are heard, never printed: shown "ba-ta", the child could
+             read the answer off the screen instead of putting the sounds
+             together. The split appears in the feedback, after the answer. */}
+        {type === "BLEND" && (
+          <>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {t.whichWordParts}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
+            <button
+              onClick={speakSyllables}
+              aria-label={t.hearPartsAgainAria}
+              className="mt-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-peach text-peach-deep shadow-md transition hover:scale-105"
+            >
+              <Volume2 size={36} />
+            </button>
+            {phase === "item" && (
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {item.options!.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => onChoose(opt)}
+                    disabled={posting}
+                    className="rounded-2xl border-2 border-line bg-white px-4 py-5 font-bold text-ink transition hover:border-primary hover:bg-primary-soft"
+                    style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 0.75) }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {/* ——— Syllable counting ——— */}
         {type === "SYLLABLES" && (
           <>
@@ -851,6 +901,11 @@ export default function ExerciseSession({
                 {type === "LISTEN_CHOOSE" && (
                   <p className="mt-2 text-sm font-semibold text-ink-soft">
                     {t.listenAnswer(item.answer ?? "")}
+                  </p>
+                )}
+                {type === "BLEND" && (
+                  <p className="mt-2 text-sm font-semibold text-ink-soft">
+                    {t.blendAnswer(item.answer ?? "")}
                   </p>
                 )}
                 <p className="mt-3 text-lg font-extrabold text-ink" style={wordStyle}>

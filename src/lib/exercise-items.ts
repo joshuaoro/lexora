@@ -4,6 +4,7 @@ import { effectiveStage } from "./marungko";
 export type ExerciseType =
   | "READ_ALOUD"
   | "LISTEN_CHOOSE"
+  | "BLEND"
   | "SYLLABLES"
   | "RHYME"
   | "FIRST_SOUND"
@@ -76,7 +77,7 @@ const RECENT_WINDOW = 40;
  *
  * Without this, sessions draw from the same small level pool every time and a
  * learner can memorise a handful of words rather than learn to decode them —
- * which would make accuracy gains meaningless. Rotation keeps sessions varied
+ * which would make the accuracy record meaningless. Rotation keeps sessions varied
  * while staying inside the level the adaptive logic has chosen.
  */
 async function wordPool(learnerId: string, level: number, stage: number): Promise<WordRow[]> {
@@ -244,6 +245,49 @@ export async function buildItems(
       const distractors = shuffle(similar.length >= 2 ? similar : others)
         .slice(0, 2)
         .map((o) => o.text);
+      return {
+        wordId: w.id,
+        target: w.text,
+        syllables: w.syllables,
+        options: shuffle([w.text, ...distractors]),
+        answer: w.text,
+        ...flags(w.id),
+      };
+    });
+  }
+
+  /**
+   * Syllable blending: the child hears the word only in parts — "ba… ta" — and
+   * picks the word those parts make.
+   *
+   * The whole word is never played before the answer, or this is Listen &
+   * choose again. And the wrong options share a part with the target where the
+   * bank allows it — same first syllable or same last — so catching "ba…"
+   * alone is not enough: the parts have to be put together. One-syllable words
+   * have nothing to blend and are left out.
+   */
+  if (type === "BLEND") {
+    const parts = (w: WordRow) => w.syllables.split("-");
+    const blendable = pool.filter((w) => parts(w).length >= 2);
+    return blendable.slice(0, count).map((w) => {
+      const mine = parts(w);
+      const others = blendable.filter((o) => o.text !== w.text);
+      const sharesPart = (o: WordRow) => {
+        const theirs = parts(o);
+        return theirs[0] === mine[0] || theirs[theirs.length - 1] === mine[mine.length - 1];
+      };
+      const sameLength = (o: WordRow) => parts(o).length === mine.length;
+      const distractors: string[] = [];
+      for (const group of [
+        shuffle(others.filter(sharesPart)),
+        shuffle(others.filter((o) => !sharesPart(o) && sameLength(o))),
+        shuffle(others),
+      ]) {
+        for (const o of group) {
+          if (distractors.length === 2) break;
+          if (!distractors.includes(o.text)) distractors.push(o.text);
+        }
+      }
       return {
         wordId: w.id,
         target: w.text,

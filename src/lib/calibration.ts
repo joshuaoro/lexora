@@ -18,11 +18,12 @@ import { viaLearnerScope } from "./demo";
  * measures agreement with the specialists at each value, and reports where the
  * evidence puts it.
  *
- * It reports. It never moves the threshold on its own: doing that mid-study
- * would mean the baseline and the endline were scored by different rules. The
- * similarity is stored on every attempt, so a change decided at the end can be
- * applied by re-scoring the exported data rather than by silently altering what
- * "correct" meant halfway through.
+ * It reports. It never moves the threshold on its own. The study's validation
+ * uses these disagreements "to refine the scoring logic and the feedback
+ * thresholds", so a change is expected — decided once, when validation ends,
+ * by a person. Moving it silently would alter what "correct" meant partway
+ * through; since the similarity is stored on every attempt, the agreement can
+ * instead be re-scored and reported at both thresholds.
  */
 
 /* ── the labelled sample ────────────────────────────────────────────────── */

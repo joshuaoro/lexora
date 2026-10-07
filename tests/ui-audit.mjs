@@ -45,6 +45,7 @@ await signIn(p, learner.email, "/dashboard");
 section("[1] choice-based exercises play to completion");
 for (const [slug, type, label] of [
   ["listen-choose", "LISTEN_CHOOSE", "listen & choose"],
+  ["blend", "BLEND", "blend the parts"],
   ["syllables", "SYLLABLES", "count the syllables"],
   ["rhyme", "RHYME", "rhyme time"],
 ]) {

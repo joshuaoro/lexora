@@ -71,10 +71,34 @@ check(
   `S${fresh.stage}`
 );
 
-const easy = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
-for (const w of easy) await adaptiveRead(w.id, w.text, w.text);
+// The skill-progression map asks for phonological awareness first, then
+// decoding. These are listening answers — the activity reports the choice.
+const listeningAnswers = async (who, n, correct = true) => {
+  for (let i = 0; i < n; i++) {
+    await json("/api/attempts", {
+      cookie: who.cookie,
+      method: "POST",
+      body: { activityType: "BLEND", target: "mama", choiceCorrect: correct, responseMs: 1500 },
+    });
+  }
+};
+
+const easy = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 11`);
+for (const w of easy.slice(0, 10)) await adaptiveRead(w.id, w.text, w.text);
+const readOnly = await adaptiveProfile();
+check(
+  "accurate reading alone does not promote before phonological awareness is shown",
+  readOnly.level === 1,
+  `L${readOnly.level}`
+);
+
+await listeningAnswers(adaptive, 8);
+const listenedOnly = await adaptiveProfile();
+check("listening answers by themselves never move the level", listenedOnly.level === 1, `L${listenedOnly.level}`);
+
+await adaptiveRead(easy[10].id, easy[10].text, easy[10].text);
 const up = await adaptiveProfile();
-check("levels up after sustained accuracy", up.level === 2, `L${up.level} S${up.stage}`);
+check("levels up once both criteria on the map are met", up.level === 2, `L${up.level} S${up.stage}`);
 check("Marungko stage widens with the level", up.stage >= 4, `S${up.stage}`);
 
 const any = await query(`SELECT id, text FROM "Word" WHERE level <= 2 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
@@ -89,6 +113,9 @@ check("stage never shrinks back", down.stage >= up.stage, `S${down.stage}`);
 // Two misreads followed by ten correct keeps the 12-attempt window at 83%,
 // just under the 85% rule.
 const borderline = await createTestLearner("borderline");
+// Phonological awareness met first, so the reading threshold is the only
+// thing that can be holding this learner.
+await listeningAnswers(borderline, 8);
 const bWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 12`);
 for (let i = 0; i < 12; i++) {
   const w = bWords[i % bWords.length];

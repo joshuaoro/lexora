@@ -8,6 +8,7 @@ const schema = z.object({
   type: z.enum([
     "READ_ALOUD",
     "LISTEN_CHOOSE",
+    "BLEND",
     "SYLLABLES",
     "RHYME",
     "FIRST_SOUND",

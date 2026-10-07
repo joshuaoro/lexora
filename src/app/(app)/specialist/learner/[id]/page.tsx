@@ -20,6 +20,8 @@ import { divergence } from "@/lib/divergence";
 import DivergencePanel from "@/components/specialist/DivergencePanel";
 import { phaseComparison } from "@/lib/phases";
 import PhaseComparison from "@/components/specialist/PhaseComparison";
+import SkillProgression from "@/components/specialist/SkillProgression";
+import { progressionStatus } from "@/lib/adaptive";
 import { formatDate, dateLocale } from "@/lib/time";
 
 /** How far below the threshold still counts as a borderline reading. */
@@ -45,6 +47,7 @@ export default async function LearnerDetailPage({
     include: { user: true },
   });
   if (!profile) notFound();
+  const progression = await progressionStatus(profile.id, profile.level);
 
   const [
     attempts,
@@ -187,6 +190,38 @@ export default async function LearnerDetailPage({
       },
     }),
   ]);
+
+  /**
+   * The practice list's evidence, per word: how many of the misreads that put
+   * it there the specialist confirmed or overturned on review.
+   *
+   * The study asks whether the generated list matches the words the learner
+   * most often misreads, as verified by a reading specialist. The list is built
+   * from the system's verdicts; the reviews are the specialist's. Showing them
+   * side by side is what lets the verification rest on something a specialist
+   * has listened to rather than on recall.
+   */
+  const practiceMisses = practiceItems.length
+    ? await prisma.attempt.findMany({
+        where: {
+          learnerId: id,
+          wordId: { in: practiceItems.map((p) => p.wordId) },
+          activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+          isRetry: false,
+          correct: false,
+          review: { isNot: null },
+        },
+        select: { wordId: true, review: { select: { agrees: true } } },
+      })
+    : [];
+  const practiceReviewed = new Map<string, { confirmed: number; overturned: number }>();
+  for (const m of practiceMisses) {
+    if (!m.wordId || !m.review) continue;
+    const tally = practiceReviewed.get(m.wordId) ?? { confirmed: 0, overturned: 0 };
+    if (m.review.agrees) tally.confirmed += 1;
+    else tally.overturned += 1;
+    practiceReviewed.set(m.wordId, tally);
+  }
 
   // Pair each re-read with the failed reading it followed: the same word, in
   // the same session, immediately before it. Matching on the word rather than
@@ -362,18 +397,27 @@ export default async function LearnerDetailPage({
               {t.currentPracticeList}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {practiceItems.map((p) => (
-                <span key={p.id} className="rounded-full bg-cream px-3 py-1 text-sm font-bold text-ink">
-                  {p.word.text}
-                  <span className="ml-1.5 text-xs font-semibold text-ink-muted">
-                    {p.source === "SPECIALIST" ? t.pinned : `×${p.missCount}`}
+              {practiceItems.map((p) => {
+                const reviewed = practiceReviewed.get(p.wordId);
+                return (
+                  <span key={p.id} className="rounded-full bg-cream px-3 py-1 text-sm font-bold text-ink">
+                    {p.word.text}
+                    <span className="ml-1.5 text-xs font-semibold text-ink-muted">
+                      {p.source === "SPECIALIST" ? t.pinned : `×${p.missCount}`}
+                      {reviewed && ` · ${t.practiceReviewed(reviewed.confirmed, reviewed.overturned)}`}
+                    </span>
                   </span>
-                </span>
-              ))}
+                );
+              })}
             </div>
+            <p className="mt-2 max-w-3xl text-xs font-semibold text-ink-muted">
+              {t.practiceEvidenceNote}
+            </p>
           </div>
         )}
       </section>
+
+      <SkillProgression s={progression} lang={lang} />
 
       {/* Scoring reliability check */}
       <section className="no-print mt-5 rounded-2xl border border-line bg-card p-6 shadow-sm">

@@ -410,9 +410,10 @@ export async function GET(req: Request) {
           // was modelled, came out right. Reported apart from accuracy.
           "retries", "retries_correct", "retry_success_pct",
           // Decoding latency: the median milliseconds a correct single-word
-          // reading takes, over `timed_readings` first attempts. Treat as a
-          // co-primary outcome with accuracy, not a secondary one — see the
-          // note above the query.
+          // reading takes, over `timed_readings` first attempts. Response time
+          // is among the usage data the study records; it is reported beside
+          // accuracy for the specialist, not as a measure of reading rate —
+          // see the note above the query.
           "median_decode_ms", "timed_readings",
           // Non-word decoding probe, scored by ear by a reading specialist.
           // pseudo_scored is the denominator: unreviewed items are neither
@@ -489,12 +490,12 @@ export async function GET(req: Request) {
   }
 
   /**
-   * Baseline against endline — the study's pre/post table.
+   * The start and the end of testing, side by side.
    *
-   * One row per phase, and only the two that are compared. Descriptives only:
-   * the change between them is arithmetic anyone can redo from these numbers,
-   * and whether it is distinguishable from chance belongs in the analysis with
-   * a test chosen for the design.
+   * One row per phase, and only those two. A descriptive record for the
+   * specialist, not a study outcome: the study does not measure reading gains
+   * and applies no inferential tests, so nothing here is, or should be read
+   * as, evidence of change caused by the application.
    *
    * `untagged_readings` is carried on both rows so it cannot be lost when
    * someone filters to one phase. Those readings are complete — score,
@@ -523,13 +524,12 @@ export async function GET(req: Request) {
         [
           "phase",
           "readings", "correct", "accuracy_pct",
-          // Median milliseconds for a correct reading. Falling is the
-          // improvement: in a transparent orthography such as Filipino, speed
-          // separates dyslexic from typical readers more reliably than accuracy.
+          // Median milliseconds for a correct reading — recorded response
+          // time, not a measure of reading rate.
           "median_decode_ms",
           // Probe items are scored by a specialist by ear, never by the
-          // recogniser. A rise here is the least ambiguous evidence of decoding
-          // gain, because a made-up word cannot have been memorised.
+          // recogniser. A made-up word cannot have been memorised, which is
+          // what makes the row worth a specialist's attention.
           "probe_reviewed", "probe_correct", "probe_accuracy_pct",
           // Readings with no session, and therefore no phase. Not errors: they
           // are complete records counted everywhere else, and excluded from

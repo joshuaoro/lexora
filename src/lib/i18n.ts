@@ -35,6 +35,7 @@ const en = {
   activity: {
     READ_ALOUD: "Read aloud",
     LISTEN_CHOOSE: "Listen & choose",
+    BLEND: "Blend the parts",
     SYLLABLES: "Count syllables",
     RHYME: "Rhyme time",
     FIRST_SOUND: "First sound",
@@ -97,7 +98,8 @@ const en = {
     title: "Exercises",
     sub: (l: number) => `Word practice tuned to your level — right now you're on Level ${l}.`,
     readAloud: { title: "Read aloud", desc: "Read words out loud — LEXORA listens and checks your reading.", skill: "Single-word decoding" },
-    listen: { title: "Listen & choose", desc: "Hear a word and find it among look-alike words.", skill: "Blending & word recognition" },
+    listen: { title: "Listen & choose", desc: "Hear a word and find it among look-alike words.", skill: "Word recognition" },
+    blend: { title: "Blend the parts", desc: "Hear a word in parts (pantig) and find the word they make.", skill: "Syllable blending" },
     syllables: { title: "Count the syllables", desc: "Break words into parts (pantig) and count them.", skill: "Segmentation" },
     rhyme: { title: "Rhyme time", desc: "Find words that end with the same sound.", skill: "Rhyming awareness" },
     firstSound: {
@@ -123,6 +125,11 @@ const en = {
         title: "Listen & choose",
         blurb: "Listen to the word, then tap the word you heard.",
         how: "Press the speaker any time to hear the word again.",
+      },
+      BLEND: {
+        title: "Blend the parts",
+        blurb: "Listen to the parts (pantig) of a word, then put them together. Tap the word they make.",
+        how: "Press the speaker any time to hear the parts again.",
       },
       SYLLABLES: {
         title: "Count the syllables",
@@ -180,6 +187,8 @@ const en = {
     hearAgainAria: "Hear the word again",
     howManyParts: "How many parts (pantig)?",
     hearParts: "Hear the parts",
+    whichWordParts: "Which word do the parts make?",
+    hearPartsAgainAria: "Hear the parts again",
     whichRhymes: "Which word rhymes with…",
     whichStartsSame: "Which word starts with the same sound as…",
     startsAnswer: (w: string) => `The matching word is ${w}.`,
@@ -189,6 +198,7 @@ const en = {
     heardNothing: "LEXORA didn't hear the word.",
     rhymeAnswer: (w: string) => `The rhyming word is ${w}.`,
     listenAnswer: (w: string) => `The word was ${w}.`,
+    blendAnswer: (w: string) => `The parts make ${w}.`,
     hearItAgain: "Hear it again",
     nowYouTry: "Now you try it!",
     tryItNow: "Say it",
@@ -260,6 +270,10 @@ const en = {
     interventionControls: "Intervention controls",
     currentPracticeList: "Current practice list",
     pinned: "pinned",
+    practiceReviewed: (confirmed: number, overturned: number) =>
+      `${confirmed} confirmed · ${overturned} overturned`,
+    practiceEvidenceNote:
+      "×n is how often the system scored the word as misread. Where you have reviewed those readings, the count you confirmed and the count you overturned follow it — a word whose misreads you mostly overturned may not belong on the list. This is the evidence for checking the list against the words this learner really misreads.",
     difficultyLevel: "Difficulty level",
     addPracticeWord: "Add a practice word",
     typeAWord: "Type a word…",
@@ -269,14 +283,32 @@ const en = {
     agreementChip: (n: number) => `specialist–system agreement (${n} reviewed)`,
     probeTitle: "Decoding probe (non-words)",
     probeSub:
-      "Made-up words cannot be read from memory, so these separate decoding from sight-word recall — the difference between a learner who has learned to decode and one who has learned this word bank. Score them by ear. The recogniser is transcribing words that exist in no language, and how often it gets them right is one of the things this study is measuring, so its verdict is shown for comparison rather than for approval.",
+      "Made-up words cannot be read from memory, so these separate decoding from sight-word recall — the difference between a learner who has learned to decode and one who has learned this word bank. Score them by ear. The recogniser is transcribing words that exist in no language, so it cannot be trusted to spell them; its verdict is shown beside yours for comparison rather than for approval.",
     probeChip: (scored: number, pending: number) =>
       `read correctly (${scored} scored${pending > 0 ? `, ${pending} to review` : ""})`,
+
+    /* ── Skill progression ──────────────────────────────────────────── */
+    progressionTitle: "Skill progression",
+    progressionSub: (level: number) =>
+      `What this learner has to show at level ${level} before moving up — phonological awareness first, then single-word decoding. Moving down depends on decoding alone. You can set the level yourself at any time, above.`,
+    progressionPa: "1 · Phonological awareness",
+    progressionPaRule: (min: number, pct: number, window: number) =>
+      `At least ${min} answers in the listening activities at this level, ${pct}% correct over the latest ${window}.`,
+    progressionDecoding: "2 · Single-word decoding",
+    progressionDecodingRule: (min: number, pct: number, window: number) =>
+      `At least ${min} oral readings at this level, ${pct}% correct over the latest ${window}, and correct readings not getting slower.`,
+    progressionTally: (correct: number, answered: number) => `${correct} of ${answered} correct`,
+    progressionNone: "Nothing yet at this level",
+    progressionMet: "Met",
+    progressionNotYet: "Not yet",
+    progressionSlowing: "Accurate, but correct readings are getting slower — held at this level for now.",
+    progressionAtMax: "Level 5 is the highest level, so there is no further level to move up to.",
+    progressionByType: "By activity",
 
     /* ── Study timeline ─────────────────────────────────────────────── */
     timelineTitle: "Study timeline",
     timelineSub:
-      "Mark which sessions form the baseline and which form the endline. The tag is exported as study_phase, so the pre/post comparison uses sessions you chose rather than a cut-off inferred from dates.",
+      "Optionally, mark which sessions open the testing period (baseline) and which close it (endline). The tag labels the record and is exported as study_phase. It is not a pre/post measure: the study does not measure reading gains.",
     timelineEmpty:
       "No completed sessions yet. They appear here once the learner finishes an activity.",
     phaseSaveFailed: "Could not save that tag.",
@@ -371,25 +403,25 @@ const en = {
     phaseReadingsHint: (bc: number, bn: number, ec: number, en: number) =>
       `${bc}/${bn} → ${ec}/${en} readings`,
     phaseDecodeHint:
-      "Faster is the improvement — in a transparent orthography, speed is the sensitive marker",
+      "Recorded response time, for the specialist — not a measure of reading rate",
     phaseProbeHint: (bc: number, bn: number, ec: number, en: number) =>
       `${bc}/${bn} → ${ec}/${en} scored by ear`,
     phaseProbeNeeds: (min: number, baseline: number, endline: number) =>
       `Needs ${min} reviewed probe readings per phase — one full run (${baseline} and ${endline} so far)`,
-    phaseProbeNoteTitle: "The probe is the one that answers the question.",
+    phaseProbeNoteTitle: "Reading the probe row",
     phaseProbeNote:
-      "Real words can be learned by sight, so a rise there is ambiguous. Made-up words cannot, so a rise on the probe is evidence that decoding itself improved — and a flat probe alongside rising real-word accuracy suggests the word bank was learned rather than the skill.",
+      "Real words can be learned by sight; made-up words cannot. Real-word accuracy rising while the probe stays flat suggests the child is recognising the word bank rather than decoding it — worth knowing when you plan what to teach next.",
     phaseThin: (n: number) =>
       `Fewer than ${n} readings in at least one phase. Read the direction rather than the size of the change.`,
     phaseDescriptive:
-      "Descriptive figures only. Whether a change is distinguishable from chance is a question for the statistical analysis, using the exported data and a test chosen for this design — not something this page can answer for five learners.",
+      "A descriptive record for the specialist, not a study outcome. The study does not measure gains in reading (see its Delimitation) and applies no inferential tests, so read these as what the app saw at the start and the end of testing — not as evidence that LEXORA changed anything.",
     phaseUntagged: (n: number) =>
       n === 1
         ? "1 reading is not linked to a session, so it has no phase and is left out of this comparison only. Nothing is wrong with it — the score, the recording and the timing are all there, and it is included in every other figure on this page."
         : `${n} readings are not linked to a session, so they have no phase and are left out of this comparison only. Nothing is wrong with them — the score, the recording and the timing are all there, and they are included in every other figure on this page.`,
 
     /* ── Baseline to endline ────────────────────────────────────────── */
-    phaseTitle: "Baseline to endline",
+    phaseTitle: "Start and end of testing",
     phaseSubCohort:
       "Across every learner, comparing the sessions tagged as the baseline with those tagged as the endline.",
     phaseSubLearner:
@@ -610,6 +642,7 @@ const fil: Dict = {
   activity: {
     READ_ALOUD: "Basahin nang malakas",
     LISTEN_CHOOSE: "Makinig at pumili",
+    BLEND: "Pagsamahin ang pantig",
     SYLLABLES: "Bilangin ang pantig",
     RHYME: "Tugmaan",
     FIRST_SOUND: "Unang tunog",
@@ -668,7 +701,8 @@ const fil: Dict = {
     title: "Mga Ehersisyo",
     sub: (l) => `Praktis ng mga salitang angkop sa iyo — nasa Level ${l} ka ngayon.`,
     readAloud: { title: "Basahin nang malakas", desc: "Basahin ang mga salita nang malakas — nakikinig at sinusuri ni LEXORA.", skill: "Pagbasa ng salita" },
-    listen: { title: "Makinig at pumili", desc: "Pakinggan ang salita at hanapin ito sa magkakahawig na salita.", skill: "Pag-uugnay ng tunog" },
+    listen: { title: "Makinig at pumili", desc: "Pakinggan ang salita at hanapin ito sa magkakahawig na salita.", skill: "Pagkilala ng salita" },
+    blend: { title: "Pagsamahin ang pantig", desc: "Pakinggan ang salita nang paisa-isang pantig at hanapin ang salitang nabubuo.", skill: "Pagsasama ng pantig" },
     syllables: { title: "Bilangin ang pantig", desc: "Hatiin ang salita sa mga pantig at bilangin ang mga ito.", skill: "Paghahati ng pantig" },
     rhyme: { title: "Tugmaan", desc: "Hanapin ang mga salitang magkatugma ang dulong tunog.", skill: "Kamalayan sa tugma" },
     firstSound: {
@@ -694,6 +728,11 @@ const fil: Dict = {
         title: "Makinig at pumili",
         blurb: "Pakinggan ang salita, tapos pindutin ang salitang narinig mo.",
         how: "Pindutin ang speaker kahit kailan para marinig ulit ang salita.",
+      },
+      BLEND: {
+        title: "Pagsamahin ang pantig",
+        blurb: "Pakinggan ang mga pantig ng salita, tapos pagsamahin mo. Pindutin ang salitang nabubuo.",
+        how: "Pindutin ang speaker kahit kailan para marinig ulit ang mga pantig.",
       },
       SYLLABLES: {
         title: "Bilangin ang pantig",
@@ -744,6 +783,8 @@ const fil: Dict = {
     hearAgainAria: "Pakinggan ulit ang salita",
     howManyParts: "Ilang pantig?",
     hearParts: "Pakinggan ang mga pantig",
+    whichWordParts: "Anong salita ang nabubuo ng mga pantig?",
+    hearPartsAgainAria: "Pakinggan ulit ang mga pantig",
     whichRhymes: "Aling salita ang katugma ng…",
     whichStartsSame: "Aling salita ang pareho ang unang tunog ng…",
     startsAnswer: (w) => `Ang tamang salita ay ${w}.`,
@@ -753,6 +794,7 @@ const fil: Dict = {
     heardNothing: "Hindi narinig ni LEXORA ang salita.",
     rhymeAnswer: (w) => `Ang katugmang salita ay ${w}.`,
     listenAnswer: (w) => `Ang salita ay ${w}.`,
+    blendAnswer: (w) => `Ang nabubuong salita ay ${w}.`,
     hearItAgain: "Pakinggan ulit",
     nowYouTry: "Ngayon, subukan mo!",
     tryItNow: "Basahin mo",
@@ -809,6 +851,10 @@ const fil: Dict = {
     interventionControls: "Mga kontrol sa interbensyon",
     currentPracticeList: "Kasalukuyang listahan ng praktis",
     pinned: "naka-pin",
+    practiceReviewed: (confirmed, overturned) =>
+      `${confirmed} kinumpirma · ${overturned} binaliktad`,
+    practiceEvidenceNote:
+      "Ang ×n ay kung ilang beses itinuring ng sistema na mali ang pagbasa ng salita. Kung nasuri mo na ang mga pagbasang iyon, kasunod nito ang bilang na kinumpirma mo at ang binaliktad mo — ang salitang karamihan ng mali ay binaliktad mo ay maaaring hindi dapat nasa listahan. Ito ang ebidensya sa pagsusuri kung tugma ang listahan sa mga salitang talagang nababasa nang mali ng mag-aaral.",
     difficultyLevel: "Antas ng hirap",
     addPracticeWord: "Magdagdag ng salitang praktis",
     typeAWord: "Mag-type ng salita…",
@@ -819,13 +865,30 @@ const fil: Dict = {
     agreementChip: (n) => `pagkakasundo ng specialist at sistema (${n} nasuri)`,
     probeTitle: "Pagsusuri sa pagdedekowd (mga salitang imbento)",
     probeSub:
-      "Hindi puwedeng basahin sa memorya ang mga imbentong salita, kaya inihihiwalay nito ang pagdedekowd sa pagkilala ng salitang kabisado — ang pagkakaiba ng mag-aaral na natutong magdekowd at ng natutong kabisaduhin ang word bank na ito. Suriin ito sa pamamagitan ng pakikinig. Nagta-transcribe ang recogniser ng mga salitang wala sa kahit anong wika, at bahagi ng sinusukat ng pag-aaral na ito kung gaano ito kadalas tumama — kaya ipinapakita ang hatol nito para paghambingan, hindi para sang-ayunan.",
+      "Hindi puwedeng basahin sa memorya ang mga imbentong salita, kaya inihihiwalay nito ang pagdedekowd sa pagkilala ng salitang kabisado — ang pagkakaiba ng mag-aaral na natutong magdekowd at ng natutong kabisaduhin ang word bank na ito. Suriin ito sa pamamagitan ng pakikinig. Nagta-transcribe ang recogniser ng mga salitang wala sa kahit anong wika, kaya hindi ito maaasahang baybayin ang mga ito; ipinapakita ang hatol nito sa tabi ng sa iyo para paghambingan, hindi para sang-ayunan.",
     probeChip: (scored, pending) =>
       `tamang nabasa (${scored} nasuri${pending > 0 ? `, ${pending} pang susuriin` : ""})`,
 
+    progressionTitle: "Pag-usad ng kasanayan",
+    progressionSub: (level) =>
+      `Ang kailangang maipakita ng mag-aaral sa level ${level} bago umakyat — kamalayang ponolohikal muna, saka pagbasa ng isang salita. Ang pagbaba ay batay lamang sa pagbasa. Maaari mong itakda ang level anumang oras, sa itaas.`,
+    progressionPa: "1 · Kamalayang ponolohikal",
+    progressionPaRule: (min, pct, window) =>
+      `Hindi bababa sa ${min} sagot sa mga gawaing pakikinig sa level na ito, ${pct}% tama sa huling ${window}.`,
+    progressionDecoding: "2 · Pagbasa ng isang salita",
+    progressionDecodingRule: (min, pct, window) =>
+      `Hindi bababa sa ${min} pagbasa nang malakas sa level na ito, ${pct}% tama sa huling ${window}, at hindi bumabagal ang mga tamang pagbasa.`,
+    progressionTally: (correct, answered) => `${correct} sa ${answered} ang tama`,
+    progressionNone: "Wala pa sa level na ito",
+    progressionMet: "Naabot na",
+    progressionNotYet: "Hindi pa",
+    progressionSlowing: "Tama, pero bumabagal ang mga tamang pagbasa — mananatili muna sa level na ito.",
+    progressionAtMax: "Ang level 5 ang pinakamataas, kaya wala nang susunod na level.",
+    progressionByType: "Ayon sa gawain",
+
     timelineTitle: "Timeline ng pag-aaral",
     timelineSub:
-      "Markahan kung aling mga session ang baseline at alin ang endline. Kasama ang tag sa export bilang study_phase, kaya ang paghahambing na pre/post ay gumagamit ng mga session na pinili mo, hindi ng hinuha mula sa petsa.",
+      "Kung nais, markahan kung aling mga session ang nagbubukas ng panahon ng pagsubok (baseline) at alin ang nagsasara nito (endline). Tatak ito sa talaan at kasama sa export bilang study_phase. Hindi ito sukatang pre/post: hindi sinusukat ng pag-aaral ang pag-unlad sa pagbasa.",
     timelineEmpty:
       "Wala pang natapos na session. Lilitaw sila rito kapag may natapos nang aktibidad ang mag-aaral.",
     phaseSaveFailed: "Hindi na-save ang tag na iyon.",
@@ -912,23 +975,23 @@ const fil: Dict = {
     phaseMissingEndline: " Ang endline ang kulang pa.",
     phaseReadingsHint: (bc, bn, ec, en) => `${bc}/${bn} → ${ec}/${en} na pagbasa`,
     phaseDecodeHint:
-      "Ang pagbilis ang pag-unlad — sa wikang binabasa kung paano binabaybay, bilis ang sensitibong palatandaan",
+      "Naitalang oras ng pagsagot, para sa espesyalista — hindi sukatan ng bilis ng pagbasa",
     phaseProbeHint: (bc, bn, ec, en) => `${bc}/${bn} → ${ec}/${en} na sinuri sa pakikinig`,
     phaseProbeNeeds: (min, baseline, endline) =>
       `Kailangan ng ${min} nasuring probe na pagbasa sa bawat phase — isang buong run (${baseline} at ${endline} sa ngayon)`,
-    phaseProbeNoteTitle: "Ang probe ang sumasagot sa tanong.",
+    phaseProbeNoteTitle: "Pagbasa sa hanay ng probe",
     phaseProbeNote:
-      "Puwedeng makilala sa paningin ang tunay na salita, kaya malabo ang kahulugan kapag tumaas ito. Hindi ganoon ang salitang imbento, kaya ang pagtaas sa probe ay ebidensya na umunlad ang pagdedekowd mismo — at kapag patag ang probe habang tumataas ang accuracy sa tunay na salita, malamang ang word bank ang natutunan at hindi ang kasanayan.",
+      "Puwedeng makilala sa paningin ang tunay na salita; hindi ang salitang imbento. Kapag tumataas ang accuracy sa tunay na salita habang patag ang probe, malamang kinikilala ng bata ang word bank sa halip na dinedekowd ito — mahalagang malaman ito sa pagpaplano ng susunod na ituturo.",
     phaseThin: (n) =>
       `Kulang sa ${n} na pagbasa sa kahit isang phase. Basahin ang direksyon, hindi ang laki ng pagbabago.`,
     phaseDescriptive:
-      "Mga deskriptibong bilang lamang. Kung masasabing hindi nagkataon ang isang pagbabago ay tanong para sa statistical analysis, gamit ang na-export na data at test na pinili para sa disenyong ito — hindi ito masasagot ng page na ito para sa limang mag-aaral.",
+      "Deskriptibong talaan para sa espesyalista, hindi resulta ng pag-aaral. Hindi sinusukat ng pag-aaral ang pag-unlad sa pagbasa (tingnan ang Delimitation nito) at walang inferential test, kaya basahin ang mga ito bilang nakita ng app sa simula at sa dulo ng pagsubok — hindi bilang ebidensya na may binago ang LEXORA.",
     phaseUntagged: (n) =>
       n === 1
         ? "1 pagbasa ang hindi naka-link sa isang session, kaya wala itong phase at hindi lang kasama sa paghahambing na ito. Walang problema rito — kumpleto ang score, ang recording at ang oras, at kasama ito sa lahat ng iba pang bilang sa page na ito."
         : `${n} pagbasa ang hindi naka-link sa isang session, kaya wala silang phase at hindi lang sila kasama sa paghahambing na ito. Walang problema sa kanila — kumpleto ang score, ang recording at ang oras, at kasama sila sa lahat ng iba pang bilang sa page na ito.`,
 
-    phaseTitle: "Baseline hanggang endline",
+    phaseTitle: "Simula at dulo ng pagsubok",
     phaseSubCohort:
       "Sa lahat ng mag-aaral, inihahambing ang mga session na naka-tag na baseline sa mga naka-tag na endline.",
     phaseSubLearner:

@@ -3,27 +3,20 @@ import { median, PLAUSIBLE } from "./stats";
 import { viaLearnerScope } from "./demo";
 
 /**
- * Baseline against endline — the comparison the study is built on.
+ * The start and the end of testing, side by side — a record, not an outcome.
  *
- * A specialist tags each completed session BASELINE, REGULAR or ENDLINE, and
- * until now that tag went into a CSV column and nowhere else: every figure the
- * app computed was aggregated over all time. So an application whose objective
- * is progress tracking could not show whether a child had progressed.
+ * A specialist may tag completed sessions BASELINE, REGULAR or ENDLINE. Without
+ * this, every figure the app computed was aggregated over all time, and a
+ * progress-tracking dashboard (Objective 5: accuracy "over time") could not put
+ * the first sessions beside the last.
  *
- * It matters most on the probe. Real-word accuracy rising over eight weeks is
- * ambiguous — the child may have learned to decode, or learned those 254 words.
- * Non-word accuracy rising is not ambiguous, because a made-up word cannot be
- * memorised in advance. Baseline probe against endline probe is the closest
- * this study comes to asking its own question directly, and it needs the phase
- * split to exist at all.
- *
- * What this deliberately does not do
- * ----------------------------------
- * No significance testing. Five children cannot support a p-value, and one
- * rendered in a web page would be quoted long after the caveat was forgotten.
- * The app reports the descriptives and the counts they rest on; whether a
- * change is distinguishable from noise is a question for the analysis, with the
- * exported data and a method chosen for the design.
+ * What this is not: a pre/post measure. The study's delimitation excludes
+ * measuring gains in reading, and its statistical treatment is descriptive
+ * only. So this reports what the app recorded in each phase and the counts it
+ * rests on, for the specialist planning what to teach — no change score is
+ * offered as a finding, and no significance test is run. The probe row is the
+ * useful one for that planning: real-word accuracy rising while the probe stays
+ * flat suggests the bank is being recognised rather than decoded.
  */
 
 export const MIN_PHASE_READINGS = 10;

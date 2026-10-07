@@ -341,6 +341,15 @@ section("[7] a learner who is accurate but slowing down is not promoted");
  * level until the words are far beyond them.
  */
 async function readRun(who, timings) {
+  // The map's first criterion, met up front so that only decoding — accuracy
+  // and its pace — decides these two.
+  for (let i = 0; i < 8; i++) {
+    await json("/api/attempts", {
+      cookie: who.cookie,
+      method: "POST",
+      body: { activityType: "BLEND", target: "mama", choiceCorrect: true, responseMs: 1500 },
+    });
+  }
   const pool = await query(
     `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT $1`,
     [timings.length]
