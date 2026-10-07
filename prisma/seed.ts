@@ -19,12 +19,15 @@ import { WORDS, ASR_VARIANTS, STRESS_NOTES } from "./word-bank";
 import { PSEUDOWORDS } from "./pseudoword-bank";
 import { RHYMES, FIRST_SOUNDS, phonItemRows } from "./phon-items";
 import { stageForWord } from "./marungko-stage";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 // Scripts run outside the request path, so the direct (session) connection is
 // preferred; fall back to the pooled URL when only that is available.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString, max: 2, ssl: databaseSsl(connectionString) }),
+});
 
 // Plausible dyslexic-style misreadings for demo history (letter reversals etc.)
 function mutate(word: string): string {

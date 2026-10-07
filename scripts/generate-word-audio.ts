@@ -20,11 +20,14 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createSynthesizer, TTS_VOICE } from "../src/lib/word-tts";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 // Long-running script: use the direct (session) connection when available.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString, max: 2, ssl: databaseSsl(connectionString) }),
+});
 
 async function main() {
   const force = process.argv.includes("--force");

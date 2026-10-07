@@ -21,6 +21,7 @@ import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import pg from "pg";
 import { TABLE_ORDER, assertCoversSchema } from "./db-tables";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 async function main() {
   const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -35,7 +36,7 @@ async function main() {
 
   await mkdir(dirname(outPath), { recursive: true });
 
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ssl: databaseSsl(connectionString) });
   await client.connect();
 
   // Before writing anything: does this dump still cover the whole schema?

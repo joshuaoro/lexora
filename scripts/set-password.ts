@@ -40,6 +40,7 @@ import { randomInt } from "node:crypto";
 import pg from "pg";
 import { WORDS } from "../prisma/word-bank";
 import { appearsInRepo, describeHit } from "./git-history";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 /** Same cost factor as registration, so the login route's compare is unchanged. */
 const BCRYPT_ROUNDS = 10;
@@ -118,7 +119,7 @@ async function main() {
   const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
   if (!connectionString) throw new Error("Set DIRECT_URL (or DATABASE_URL) in .env");
 
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ssl: databaseSsl(connectionString) });
   await client.connect();
 
   try {

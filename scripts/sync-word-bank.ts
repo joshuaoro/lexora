@@ -19,10 +19,13 @@ import { WORDS, STRESS_NOTES } from "../prisma/word-bank";
 import { PSEUDOWORDS } from "../prisma/pseudoword-bank";
 import { phonItemRows } from "../prisma/phon-items";
 import { stageForWord } from "../prisma/marungko-stage";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env");
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 2 }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString, max: 2, ssl: databaseSsl(connectionString) }),
+});
 
 async function main() {
   const existing = new Map(

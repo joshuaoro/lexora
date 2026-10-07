@@ -1,5 +1,6 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { databaseSsl } from "./db-ssl";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -33,7 +34,10 @@ function createClient() {
   }
   // Must be Supabase's transaction pooler (port 6543) — serverless opens many
   // short-lived connections and the direct port cannot absorb them.
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString, ...POOL }) });
+  // Encrypted and verified — see db-ssl.ts for why this was ever otherwise.
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString, ...POOL, ssl: databaseSsl(connectionString) }),
+  });
 }
 
 export const prisma = globalForPrisma.prisma ?? createClient();

@@ -28,6 +28,7 @@
 import "dotenv/config";
 import pg from "pg";
 import { appearsInRepo } from "./git-history";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 const BASE = process.argv[2] ?? process.env.AUDIT_BASE_URL ?? "http://localhost:3000";
 
@@ -43,18 +44,38 @@ function check(name: string, ok: boolean, detail = "") {
   if (!ok) failures++;
 }
 
-async function post(path: string, body: unknown) {
-  try {
-    const res = await fetch(`${BASE}${path}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20000),
-    });
-    return res.status;
-  } catch {
-    return 0;
+/**
+ * Vercel's firewall answered instead of the app.
+ *
+ * Several quick POSTs to the sign-in routes from a script look like credential
+ * stuffing, and the platform returns its own 403 challenge page
+ * (`x-vercel-mitigated: challenge`) without the request reaching LEXORA. Read
+ * as the app's answer, that 403 produced two false findings on 8 October: "the
+ * published password is refused" passed for the wrong reason once, and "your
+ * .env disagrees with the deployment" failed when it did not.
+ */
+const CHALLENGED = -1;
+const CHALLENGE_DETAIL =
+  "INCONCLUSIVE — Vercel's firewall challenged the request (x-vercel-mitigated), so the app never answered. Wait a minute and run this again.";
+
+async function post(path: string, body: unknown): Promise<number> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch {
+      return 0;
+    }
+    if (!res.headers.get("x-vercel-mitigated")) return res.status;
+    // Challenges are rate-based; a pause usually lets the next one through.
+    await new Promise((r) => setTimeout(r, 5000 * attempt));
   }
+  return CHALLENGED;
 }
 
 /* ── 1. the published specialist code no longer opens the door ──────────── */
@@ -70,7 +91,7 @@ async function post(path: string, body: unknown) {
 async function deleteAccount(email: string): Promise<boolean> {
   const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
   if (!connectionString) return false;
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ssl: databaseSsl(connectionString) });
   try {
     await client.connect();
     await client.query(`DELETE FROM "User" WHERE email = $1`, [email]);
@@ -98,6 +119,10 @@ async function checkSpecialistCode() {
 
   if (status === 0) {
     check("could reach the deployment", false, `no response from ${BASE}`);
+    return;
+  }
+  if (status === CHALLENGED) {
+    check("registering a specialist with the published code is rejected", false, CHALLENGE_DETAIL);
     return;
   }
 
@@ -135,6 +160,10 @@ async function checkDemoPassword() {
 
   if (status === 0) {
     check("could reach the deployment", false, `no response from ${BASE}`);
+    return;
+  }
+  if (status === CHALLENGED) {
+    check(`${DEMO_SPECIALIST} cannot sign in with the published password`, false, CHALLENGE_DETAIL);
     return;
   }
 
@@ -267,6 +296,10 @@ async function checkEnvMatchesDeployment() {
 
   if (status === 0) {
     check("could reach the deployment", false, `no response from ${BASE}`);
+    return;
+  }
+  if (status === CHALLENGED) {
+    check("the local SPECIALIST_CODE is the one the deployment accepts", false, CHALLENGE_DETAIL);
     return;
   }
 

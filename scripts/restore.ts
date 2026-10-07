@@ -22,6 +22,7 @@ import { createGunzip } from "node:zlib";
 import { text } from "node:stream/consumers";
 import pg from "pg";
 import { TABLE_ORDER } from "./db-tables";
+import { databaseSsl } from "../src/lib/db-ssl";
 
 const BATCH = 100; // audio clips make rows large; insert in modest batches
 
@@ -52,7 +53,7 @@ async function main() {
     throw new Error(`Unrecognised backup format: ${backup.format}`);
   }
 
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client({ connectionString, ssl: databaseSsl(connectionString) });
   await client.connect();
   const host = new URL(connectionString.replace(/^postgres(ql)?:/, "http:")).host;
 

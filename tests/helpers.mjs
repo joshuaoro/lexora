@@ -7,6 +7,7 @@
  */
 import "dotenv/config";
 import pg from "pg";
+import { readFileSync } from "node:fs";
 
 export const BASE = process.env.AUDIT_BASE_URL ?? process.argv[2] ?? "http://localhost:3000";
 
@@ -166,7 +167,19 @@ function getPool() {
     if (!connectionString) {
       throw new Error("Set DATABASE_URL (and ideally DIRECT_URL) in .env to run the audits.");
     }
-    pool = new pg.Pool({ connectionString, max: 2 });
+    // Encrypted and verified, as the app is: the certificate is read out of
+    // src/lib/db-ssl.ts so there is one copy of it.
+    const host = new URL(connectionString.replace(/^postgres(ql)?:/, "http:")).hostname;
+    const ca = /\.supabase\.(com|co)$/.test(host)
+      ? readFileSync(new URL("../src/lib/db-ssl.ts", import.meta.url), "utf8").match(
+          /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/
+        )?.[0]
+      : undefined;
+    pool = new pg.Pool({
+      connectionString,
+      max: 2,
+      ssl: ca ? { ca, rejectUnauthorized: true } : undefined,
+    });
   }
   return pool;
 }
