@@ -198,9 +198,7 @@ export default function ReviewList({
   if (attempts.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        {isProbe
-          ? "No probe readings yet. They appear here after the learner runs the Silly words activity."
-          : "No oral readings recorded yet. Readings appear here after the learner does Read-aloud or Practice exercises."}
+        {isProbe ? t.noProbeReadings : t.noReadings}
       </p>
     );
   }
@@ -277,21 +275,21 @@ export default function ReviewList({
                       space, so the precise trigger is not established — writing
                       the separator out removes the question either way, and it
                       is the same guard already used before the word. */}
-                  Play the recording, then say whether the learner read{" "}
+                  {t.blindPromptBefore}{" "}
                   <span className="font-bold text-ink">{a.target}</span>{" "}
-                  correctly. The system&apos;s reading is hidden until you decide.
+                  {t.blindPromptAfter}
                 </p>
               ) : (
                 <>
                   <p className="text-sm font-semibold text-ink-soft">
-                    Heard:{" "}
+                    {t.heardLabel}:{" "}
                     <span className="font-bold text-ink">
-                      {a.transcript ? `“${a.transcript}”` : "(nothing)"}
+                      {a.transcript ? `“${a.transcript}”` : t.heardNothing}
                     </span>
                   </p>
                   {a.altTranscript && (
                     <p className="text-xs font-semibold text-ink-muted">
-                      Browser heard: “{a.altTranscript}”
+                      {t.browserHeard}: “{a.altTranscript}”
                     </p>
                   )}
                 </>
@@ -472,25 +470,25 @@ export default function ReviewList({
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
                   {ERROR_TAGS.filter(
-                    (t) => readCorrectly === false || t.kind === "behaviour"
-                  ).map((t) => {
-                    const on = (tags[a.id] ?? []).includes(t.id);
+                    (tag) => readCorrectly === false || tag.kind === "behaviour"
+                  ).map((tag) => {
+                    const on = (tags[a.id] ?? []).includes(tag.id);
                     return (
-                      <li key={t.id}>
+                      <li key={tag.id}>
                         <button
-                          onClick={() => toggleTag(a.id, t.id)}
+                          onClick={() => toggleTag(a.id, tag.id)}
                           disabled={busy === a.id}
                           aria-pressed={on}
-                          title={t.hintEn}
+                          title={tag.hintEn}
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold transition disabled:opacity-50 ${
                             on
-                              ? t.kind === "behaviour"
+                              ? tag.kind === "behaviour"
                                 ? "border-primary bg-primary-soft text-primary"
                                 : "border-peach-deep bg-peach-soft text-peach-deep"
                               : "border-line bg-white text-ink-muted hover:border-ink-muted hover:text-ink"
                           }`}
                         >
-                          {t.en}
+                          {lang === "fil" ? tag.fil : tag.en}
                         </button>
                       </li>
                     );

@@ -349,7 +349,7 @@ export default function ExerciseSession({
     }
     if (micState !== "idle" || posting) return;
     stopSpeaking();
-    const { audio, browserTranscript } = await listen(item.target);
+    const { audio, browserTranscript } = await listen();
     await submitAttempt({ audio, browserTranscript, isRetry: true });
   }
 
@@ -362,7 +362,7 @@ export default function ExerciseSession({
     }
     if (micState !== "idle" || posting) return;
     setScoreError(null);
-    const { audio, browserTranscript } = await listen(item.target);
+    const { audio, browserTranscript } = await listen();
     await submitAttempt({ audio, browserTranscript });
   }
 

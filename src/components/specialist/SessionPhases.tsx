@@ -82,11 +82,7 @@ export default function SessionPhases({
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
             <CalendarRange size={20} className="text-primary" /> {t.timelineTitle}
           </h2>
-          <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
-            Mark which sessions form the baseline and which form the endline. The tag is included
-            in the CSV export as <code className="font-mono text-xs">study_phase</code>, so the
-            pre/post comparison uses sessions you chose rather than a cut-off inferred from dates.
-          </p>
+          <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">{t.timelineSub}</p>
         </div>
         <div className="flex gap-2">
           {counts.map(({ p, n }) => (
@@ -118,7 +114,7 @@ export default function SessionPhases({
                   {/* Unscored activities have no correct count to show. A probe
                       session reads 0 however well it went, because the marking
                       happens later and by ear. */}
-                  {s.type} · {s.scored ? `${s.correct}/${s.total}` : `${s.total} items`}
+                  {s.type} · {s.scored ? `${s.correct}/${s.total}` : t.phaseItems(s.total)}
                 </p>
               </div>
               <div

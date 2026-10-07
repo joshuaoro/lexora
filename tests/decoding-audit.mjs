@@ -549,6 +549,28 @@ if (added.body?.id) {
   await query(`DELETE FROM "Word" WHERE id = $1`, [added.body.id]);
 }
 
+// A word's stage comes from its letters, whatever the request says. The add
+// form used to offer a stage picker defaulting to 1, so a word with stage-6
+// letters could be shown to a child who had been taught only m, s and a.
+// d and w are stage 6; vowels after them cannot form a stage-7 digraph.
+const staged = "dw" + Array.from({ length: 4 }, () => "aeiou"[Math.floor(Math.random() * 5)]).join("");
+const claimed = await json("/api/words", {
+  cookie: specialist,
+  method: "POST",
+  body: { text: staged, syllables: `${staged.slice(0, 3)}-${staged.slice(3)}`, pattern: "CCVVVV", stage: 1, level: 2 },
+});
+if (claimed.body?.id) {
+  const row = await one(`SELECT stage FROM "Word" WHERE id = $1`, [claimed.body.id]);
+  check(
+    "a word's stage is derived from its letters, not taken from the request",
+    row.stage === 6,
+    `asked for 1, stored ${row.stage}`
+  );
+  await query(`DELETE FROM "Word" WHERE id = $1`, [claimed.body.id]);
+} else {
+  check("a word's stage is derived from its letters, not taken from the request", false, `HTTP ${claimed.status}`);
+}
+
 // The mistake that would silently break the probe: registering a real word.
 const clash = await json("/api/words", {
   cookie: specialist,

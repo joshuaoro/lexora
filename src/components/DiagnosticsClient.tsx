@@ -234,6 +234,9 @@ export default function DiagnosticsClient() {
         target: "bahay",
         responseMs: 3000,
         audio: dataUrl,
+        // Scored by the real pipeline, saved nowhere: this runs inside a
+        // learner's account, and a test reading is not one of theirs.
+        diagnostic: true,
       }),
     });
     const ms = Date.now() - started;

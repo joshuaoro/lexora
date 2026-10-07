@@ -16,6 +16,21 @@ const WINDOW_MS = 15 * 60 * 1000;
 // than falling back to a value published in the repository.
 const SPECIALIST_CODE = process.env.SPECIALIST_CODE ?? "";
 
+/**
+ * Optional: the code the reading centre gives out to enrol a child.
+ *
+ * Learner registration was open to anyone with the URL, and the study runs on a
+ * public deployment. A stranger's account is not a demo account, so it would
+ * sit in the specialists' list, the cohort view and every export as if it were
+ * a participant. Worse, the speech-synthesis ceiling is per account, and
+ * accounts were free — so the ceiling that keeps a script from filling the
+ * database could be stepped around by registering again.
+ *
+ * Unset, registration stays open, which keeps a local setup and the audit suite
+ * working with no configuration. Set it on the deployment before enrolment.
+ */
+const ENROLMENT_CODE = process.env.ENROLMENT_CODE ?? "";
+
 const schema = z.object({
   name: z.string().min(1).max(60),
   email: z.string().email(),
@@ -59,6 +74,14 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
+  }
+
+  if (role === "LEARNER" && ENROLMENT_CODE && code !== ENROLMENT_CODE) {
+    recordFailure(limitKey, WINDOW_MS);
+    return NextResponse.json(
+      { error: "An enrolment code from the reading centre is needed to create a learner account." },
+      { status: 403 }
+    );
   }
 
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });

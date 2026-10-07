@@ -55,26 +55,16 @@ export default function DivergencePanel({ d, lang = "en" }: { d: Divergence; lan
       <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
         <GitCompareArrows size={20} className="text-primary" /> {t.divergenceTitle}
       </h2>
-      <p className="mt-1 max-w-3xl text-sm font-semibold text-ink-muted">
-        Real words can be read from memory; made-up words cannot. A learner who reads real
-        words far better than non-words is recognising this word bank rather than decoding
-        it — which needs a different intervention, not more of the same practice. Both
-        figures are the specialist&apos;s own verdicts, so the two sides are marked the same
-        way.
-      </p>
+      <p className="mt-1 max-w-3xl text-sm font-semibold text-ink-muted">{t.divergenceSub}</p>
 
       {!d.enoughData ? (
         <div className="mt-4 rounded-2xl border border-line bg-cream/60 p-5">
-          <p className="text-sm font-extrabold text-ink">Not enough reviewed readings yet</p>
+          <p className="text-sm font-extrabold text-ink">{t.divergenceNotEnough}</p>
           <p className="mt-1.5 max-w-2xl text-sm font-semibold text-ink-soft">
-            Needs {MIN_REAL_REVIEWS} reviewed real words and {MIN_PROBE_REVIEWS} reviewed probe
-            words — one full probe run. So far: <strong>{d.real.n}</strong> real and{" "}
-            <strong>{d.pseudo.n}</strong> probe.
+            {t.divergenceNeeds(MIN_REAL_REVIEWS, MIN_PROBE_REVIEWS, d.real.n, d.pseudo.n)}
           </p>
           <p className="mt-2 max-w-2xl text-xs font-semibold text-ink-muted">
-            The probe minimum is lower than the calibration&apos;s 30 on purpose: a run is 8
-            items behind a 7-day cooldown, so 30 would mean four sittings per child before
-            this could ever be drawn.
+            {t.divergenceMinNote}
           </p>
         </div>
       ) : (
@@ -99,24 +89,18 @@ export default function DivergencePanel({ d, lang = "en" }: { d: Divergence; lan
               {d.gapPoints === null
                 ? "—"
                 : d.gapPoints >= 25
-                  ? `Real words ${d.gapPoints} points higher — consistent with sight-word recall`
+                  ? t.divergenceGapReal(d.gapPoints)
                   : d.gapPoints <= -25
-                    ? `Non-words ${Math.abs(d.gapPoints)} points higher — unusual; worth listening to both sets`
-                    : `Within ${Math.abs(d.gapPoints)} points — decoding and recall are tracking together`}
+                    ? t.divergenceGapProbe(Math.abs(d.gapPoints))
+                    : t.divergenceGapEven(Math.abs(d.gapPoints))}
             </p>
-            <p className="mt-1 text-xs font-semibold text-ink-muted">
-              A large gap in favour of real words suggests the word bank has been learned. A
-              small gap suggests the accuracy reflects decoding that should transfer to words
-              the child has not met.
-            </p>
+            <p className="mt-1 text-xs font-semibold text-ink-muted">{t.divergenceGapNote}</p>
           </div>
 
           {d.thin && (
             <p className="mt-3 flex items-start gap-2 rounded-xl bg-orange-soft px-4 py-3 text-xs font-bold text-orange">
               <AlertTriangle size={15} className="mt-px shrink-0" />
-              Fewer than {THIN_SAMPLE} readings on at least one side. At this size a single
-              item moves the figure by several points, so read the direction rather than the
-              number, and do not quote the gap on its own.
+              {t.divergenceThin(THIN_SAMPLE)}
             </p>
           )}
 
@@ -128,10 +112,8 @@ export default function DivergencePanel({ d, lang = "en" }: { d: Divergence; lan
             unequally. Stated rather than assumed away.
           */}
           <p className="mt-3 text-xs font-semibold text-ink-muted">
-            Judged blind: {d.blindReal}/{d.real.n} real words, {d.blindPseudo}/{d.pseudo.n}{" "}
-            probe words.
-            {(d.blindReal < d.real.n || d.blindPseudo < d.pseudo.n) &&
-              " Verdicts made with the system's answer visible may have been pulled toward it, and the system is more reliable on real words than on non-words — so anchoring could affect the two sides unequally. Worth naming as a limitation."}
+            {t.divergenceBlind(d.blindReal, d.real.n, d.blindPseudo, d.pseudo.n)}
+            {(d.blindReal < d.real.n || d.blindPseudo < d.pseudo.n) && t.divergenceAnchored}
           </p>
         </>
       )}

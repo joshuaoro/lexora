@@ -41,6 +41,16 @@ const schema = z.object({
   // A second reading taken after the word was modelled. Recorded, but kept out
   // of every measure — see the note on Attempt.isRetry.
   isRetry: z.boolean().optional(),
+  /**
+   * Score it and say so, but keep nothing: the device check (/diagnostics).
+   *
+   * The check has to run the real chain — upload, Whisper, the scorer — or it
+   * proves nothing about the tablet. But it runs inside a learner's account,
+   * since the page requires one, and every test reading of "bahay" it posted
+   * became a reading in that child's record: counted in accuracy, able to move
+   * their level, and onto their practice list whenever Whisper misheard it.
+   */
+  diagnostic: z.boolean().optional(),
 });
 
 /** Activities whose answer is spoken, and therefore has to be transcribed. */
@@ -151,6 +161,10 @@ export async function POST(req: Request) {
     score = result.score;
     errorType = result.errorType;
     heard = result.heard;
+
+    if (data.diagnostic) {
+      return NextResponse.json({ diagnostic: true, correct, score, errorType, heard, engine });
+    }
   } else {
     correct = data.choiceCorrect ?? false;
     score = correct ? 1 : 0;

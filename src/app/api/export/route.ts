@@ -282,7 +282,7 @@ export async function GET(req: Request) {
     const rows = [];
     for (const l of learners) {
       // Every figure below is over first readings only; retries are counted
-      // separately as self-correction so they can never inflate accuracy.
+      // separately as re-reads after modelling so they can never inflate accuracy.
       const measured = { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false };
 
       const [attempts, errorGroups, sessions, sessionsCompleted, practice, reviews, retries] =
@@ -393,7 +393,8 @@ export async function GET(req: Request) {
           "sessions_completed", "sessions_partial", "minutes_practiced",
           "practice_words_active", "practice_words_mastered",
           "attempts_reviewed", "reviews_agreed", "agreement_pct",
-          // Self-correction: how often a second reading, taken after the word
+          // Re-reads after modelling — not self-correction, which is unprompted
+          // and recorded as a review tag: how often a second reading, taken after the word
           // was modelled, came out right. Reported apart from accuracy.
           "retries", "retries_correct", "retry_success_pct",
           // Decoding latency: the median milliseconds a correct single-word

@@ -261,6 +261,37 @@ async function main() {
   );
   check("a reading cannot attach to another learner's session", borrowed.n === 0, `${borrowed.n} attached`);
 
+  // The device check scores a real recording through the real pipeline, from
+  // inside a learner's account — and must leave that account as it found it.
+  const before = await one(
+    `SELECT (SELECT COUNT(*) FROM "Attempt" WHERE "learnerId" = $1)::int AS attempts,
+            (SELECT COUNT(*) FROM "PracticeItem" WHERE "learnerId" = $1)::int AS practice`,
+    [other.learnerId]
+  );
+  const probe = await json("/api/attempts", {
+    cookie: other.cookie,
+    method: "POST",
+    body: {
+      diagnostic: true,
+      wordId: word.id,
+      activityType: "READ_ALOUD",
+      target: word.text,
+      browserTranscript: "zzzz",
+      responseMs: 3000,
+    },
+  });
+  const after = await one(
+    `SELECT (SELECT COUNT(*) FROM "Attempt" WHERE "learnerId" = $1)::int AS attempts,
+            (SELECT COUNT(*) FROM "PracticeItem" WHERE "learnerId" = $1)::int AS practice`,
+    [other.learnerId]
+  );
+  check(
+    "a device-check reading is scored but leaves nothing in the learner's record",
+    probe.status === 200 && probe.body.diagnostic === true && probe.body.correct === false &&
+      after.attempts === before.attempts && after.practice === before.practice,
+    `HTTP ${probe.status}, attempts ${before.attempts}→${after.attempts}, practice ${before.practice}→${after.practice}`
+  );
+
   report("Stale-session audit");
 }
 

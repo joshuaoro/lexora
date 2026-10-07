@@ -36,10 +36,14 @@ function Row({
   goodDirection: "up" | "down" | null;
   hint: string;
 }) {
+  // A change of zero carries no sign and is neither good nor bad. Testing only
+  // for "−" coloured it green as an improvement whenever the good direction was
+  // up — "0 pts" in green, on the table the study's conclusion is read from.
+  const sign = change?.[0];
   const tone =
-    change === null || goodDirection === null
+    (sign !== "+" && sign !== "−") || goodDirection === null
       ? "text-ink-muted"
-      : change.startsWith("−") === (goodDirection === "down")
+      : (sign === "−") === (goodDirection === "down")
         ? "text-green"
         : "text-orange";
 
@@ -81,16 +85,14 @@ export default function PhaseComparison({
 
       {!c.enoughData ? (
         <div className="mt-4 rounded-2xl border border-line bg-cream/60 p-5">
-          <p className="text-sm font-extrabold text-ink">Not enough tagged readings yet</p>
+          <p className="text-sm font-extrabold text-ink">{t.phaseNotEnough}</p>
           <p className="mt-1.5 max-w-2xl text-sm font-semibold text-ink-soft">
-            Each phase needs {MIN_PHASE_READINGS} readings before a comparison is drawn. So far:{" "}
-            <strong>{c.baseline.readings}</strong> tagged baseline and{" "}
-            <strong>{c.endline.readings}</strong> tagged endline.
+            {t.phaseNeeds(MIN_PHASE_READINGS, c.baseline.readings, c.endline.readings)}
             {c.missing === "both"
-              ? " Neither phase has been tagged yet."
+              ? t.phaseMissingBoth
               : c.missing === "BASELINE"
-                ? " The baseline is the one still short."
-                : " The endline is the one still short."}
+                ? t.phaseMissingBaseline
+                : t.phaseMissingEndline}
           </p>
         </div>
       ) : (
@@ -108,7 +110,7 @@ export default function PhaseComparison({
               <tbody>
                 <Row
                   label={t.phaseAccuracy}
-                  hint={`${c.baseline.correct}/${c.baseline.readings} → ${c.endline.correct}/${c.endline.readings} readings`}
+                  hint={t.phaseReadingsHint(c.baseline.correct, c.baseline.readings, c.endline.correct, c.endline.readings)}
                   before={c.baseline.accuracyPct === null ? "—" : `${c.baseline.accuracyPct}%`}
                   after={c.endline.accuracyPct === null ? "—" : `${c.endline.accuracyPct}%`}
                   change={c.accuracyChange === null ? null : signed(c.accuracyChange, " pts")}
@@ -116,7 +118,7 @@ export default function PhaseComparison({
                 />
                 <Row
                   label={t.phaseDecodeTime}
-                  hint="Faster is the improvement — in a transparent orthography, speed is the sensitive marker"
+                  hint={t.phaseDecodeHint}
                   before={
                     c.baseline.medianDecodeMs === null
                       ? "—"
@@ -137,8 +139,8 @@ export default function PhaseComparison({
                   hint={
                     c.baseline.probeReviewed >= MIN_PHASE_PROBES &&
                     c.endline.probeReviewed >= MIN_PHASE_PROBES
-                      ? `${c.baseline.probeCorrect}/${c.baseline.probeReviewed} → ${c.endline.probeCorrect}/${c.endline.probeReviewed} scored by ear`
-                      : `Needs ${MIN_PHASE_PROBES} reviewed probe readings per phase — one full run (${c.baseline.probeReviewed} and ${c.endline.probeReviewed} so far)`
+                      ? t.phaseProbeHint(c.baseline.probeCorrect, c.baseline.probeReviewed, c.endline.probeCorrect, c.endline.probeReviewed)
+                      : t.phaseProbeNeeds(MIN_PHASE_PROBES, c.baseline.probeReviewed, c.endline.probeReviewed)
                   }
                   before={c.baseline.probePct === null ? "—" : `${c.baseline.probePct}%`}
                   after={c.endline.probePct === null ? "—" : `${c.endline.probePct}%`}
@@ -151,27 +153,18 @@ export default function PhaseComparison({
 
           {c.probeChange !== null && (
             <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-sm font-semibold text-ink-soft">
-              <strong className="text-ink">The probe is the one that answers the question.</strong>{" "}
-              Real words can be learned by sight, so a rise there is ambiguous. Made-up words
-              cannot, so a rise on the probe is evidence that decoding itself improved — and a
-              flat probe alongside rising real-word accuracy suggests the word bank was learned
-              rather than the skill.
+              <strong className="text-ink">{t.phaseProbeNoteTitle}</strong> {t.phaseProbeNote}
             </p>
           )}
 
           {c.thin && (
             <p className="mt-3 flex items-start gap-2 rounded-xl bg-orange-soft px-4 py-3 text-xs font-bold text-orange">
               <AlertTriangle size={15} className="mt-px shrink-0" />
-              Fewer than {THIN_PHASE} readings in at least one phase. Read the direction rather
-              than the size of the change.
+              {t.phaseThin(THIN_PHASE)}
             </p>
           )}
 
-          <p className="mt-3 text-xs font-semibold text-ink-muted">
-            Descriptive figures only. Whether a change is distinguishable from chance is a
-            question for the statistical analysis, using the exported data and a test chosen
-            for this design — not something this page can answer for five learners.
-          </p>
+          <p className="mt-3 text-xs font-semibold text-ink-muted">{t.phaseDescriptive}</p>
         </>
       )}
 
@@ -186,14 +179,7 @@ export default function PhaseComparison({
       {c.untaggedReadings > 0 && (
         <p className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-cream/60 px-4 py-3 text-xs font-semibold text-ink-soft">
           <Info size={15} className="mt-px shrink-0 text-primary" />
-          <span>
-            {c.untaggedReadings} reading{c.untaggedReadings === 1 ? " is" : "s are"} not linked to
-            a session, so {c.untaggedReadings === 1 ? "it has" : "they have"} no phase and{" "}
-            {c.untaggedReadings === 1 ? "is" : "are"} left out of this comparison only. Nothing is
-            wrong with {c.untaggedReadings === 1 ? "it" : "them"} — the score, the recording and
-            the timing are all there, and {c.untaggedReadings === 1 ? "it is" : "they are"}{" "}
-            included in every other figure on this page.
-          </span>
+          <span>{t.phaseUntagged(c.untaggedReadings)}</span>
         </p>
       )}
     </section>

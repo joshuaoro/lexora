@@ -9,7 +9,7 @@ import LearnerControls from "@/components/specialist/LearnerControls";
 import LearnerDataControls from "@/components/specialist/LearnerDataControls";
 import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
 import SessionPhases, { type PhaseSession } from "@/components/specialist/SessionPhases";
-import SelfCorrection, { type CorrectionPair } from "@/components/specialist/SelfCorrection";
+import Rereads, { type RereadPair } from "@/components/specialist/Rereads";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
 import { isScoredActivity } from "@/lib/activity";
@@ -205,7 +205,7 @@ export default async function LearnerDetailPage({
       })
     : [];
 
-  const corrections: CorrectionPair[] = retryRows.map((r) => {
+  const rereads: RereadPair[] = retryRows.map((r) => {
     const first = firstReadings.find(
       (f) => f.target === r.target && f.sessionId === r.sessionId && f.createdAt <= r.createdAt
     );
@@ -434,7 +434,7 @@ export default async function LearnerDetailPage({
         lang={lang}
       />
 
-      <SelfCorrection pairs={corrections} />
+      <Rereads pairs={rereads} lang={lang} />
 
       <PhaseComparison c={learnerPhases} scope="learner" lang={lang} />
 

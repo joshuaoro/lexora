@@ -8,7 +8,7 @@
 import bcrypt from "bcryptjs";
 import {
   BASE, PASSWORD, api, json, check, section, report, query, one,
-  requireSpecialistLogin, createTestLearner, deleteTestLearner, endSuite,
+  requireSpecialistLogin, createTestLearner, deleteTestLearner, endSuite, ENROLMENT_CODE,
 } from "./helpers.mjs";
 
 console.log(`API audit against ${BASE}`);
@@ -89,9 +89,19 @@ check("the owner can close it", own.status === 200, String(own.status));
 section("[5] authentication validation");
 check("wrong password rejected", (await api("/api/auth/login", { method: "POST", body: { email: "specialist@lexora.ph", password: "nope" } })).status === 401);
 check("unknown email rejected", (await api("/api/auth/login", { method: "POST", body: { email: "ghost@x.ph", password: "lexora123" } })).status === 401);
-check("duplicate email rejected", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: alice.email, password: "abcdef", role: "LEARNER" } })).status === 409);
+check("duplicate email rejected", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: alice.email, password: "abcdef", role: "LEARNER", code: ENROLMENT_CODE } })).status === 409);
 check("short password rejected", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `s-${Date.now()}@lexora.test`, password: "123", role: "LEARNER" } })).status === 400);
 check("specialist role needs the access code", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `sp-${Date.now()}@lexora.test`, password: "abcdef", role: "SPECIALIST" } })).status === 403);
+// A learner account is gated only when the deployment sets ENROLMENT_CODE;
+// unset, registration is open on purpose (local runs, this suite).
+if (ENROLMENT_CODE) {
+  check(
+    "learner registration needs the enrolment code once one is set",
+    (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `en-${Date.now()}@lexora.test`, password: "abcdef", role: "LEARNER" } })).status === 403
+  );
+} else {
+  check("SKIP: ENROLMENT_CODE is not set, so learner registration is open by design", true);
+}
 check("blank access code never matches", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `sp2-${Date.now()}@lexora.test`, password: "abcdef", role: "SPECIALIST", code: "" } })).status === 403);
 
 /* ── 6. input validation ───────────────────────────────────────────────── */

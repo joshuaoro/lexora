@@ -34,6 +34,9 @@ export const PASSWORD = "lexora123";
 export const SPECIALIST_PASSWORD = process.env.AUDIT_SPECIALIST_PASSWORD ?? PASSWORD;
 export const DEMO_PASSWORD = process.env.AUDIT_DEMO_PASSWORD ?? PASSWORD;
 
+/** Sent with every learner registration; undefined (so omitted) when unset. */
+export const ENROLMENT_CODE = process.env.ENROLMENT_CODE || undefined;
+
 /**
  * Which password belongs to an account, worked out from its address.
  *
@@ -213,9 +216,15 @@ export async function createTestLearner(prefix = "audit") {
   const email = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@lexora.test`;
   const res = await api("/api/auth/register", {
     method: "POST",
-    body: { name: "AuditBot", email, password: PASSWORD, role: "LEARNER" },
+    // ENROLMENT_CODE gates learner registration when the server has it set.
+    body: { name: "AuditBot", email, password: PASSWORD, role: "LEARNER", code: ENROLMENT_CODE },
   });
-  if (!res.ok) throw new Error(`could not create test learner: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `could not create test learner: HTTP ${res.status}` +
+        (res.status === 403 ? " — set ENROLMENT_CODE in .env to the server's value" : "")
+    );
+  }
   const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   const row = await one(
     `SELECT lp.id FROM "LearnerProfile" lp JOIN "User" u ON u.id = lp."userId" WHERE u.email = $1`,

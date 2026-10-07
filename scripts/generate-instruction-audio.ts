@@ -24,7 +24,12 @@ const EXERCISE_TYPES = [
   "RHYME",
   "FIRST_SOUND",
   "PRACTICE",
+  // Spoken automatically the moment a probe starts, like any oral activity.
+  "PSEUDO_PROBE",
 ] as const;
+
+/** Streak lengths warmed for the dashboard greeting; longer ones synthesize on first use. */
+const STREAK_DAYS = 14;
 
 /** Every phrase a SpeakButton is wired to, for one language. */
 function phrasesFor(lang: Lang): string[] {
@@ -41,7 +46,15 @@ function phrasesFor(lang: Lang): string[] {
 
   out.push(`${d.session.leaveTitle} ${d.session.leaveBody}`);
   out.push(d.session.nowYouTry);
-  out.push(d.dashboard.streakNone);
+  out.push(d.settingsPage.voiceSample);
+
+  // The dashboard says the greeting and the streak together, exactly as built in
+  // dashboard/page.tsx — and without the child's name, which is why every
+  // learner shares these few clips.
+  out.push(`${d.dashboard.helloSpoken} ${d.dashboard.streakNone}`);
+  for (let n = 1; n <= STREAK_DAYS; n++) {
+    out.push(`${d.dashboard.helloSpoken} ${d.dashboard.streak(n)}`);
+  }
 
   return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
 }

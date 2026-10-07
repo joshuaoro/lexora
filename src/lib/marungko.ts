@@ -14,9 +14,9 @@ export const STAGE_LETTERS = [
  *
  * `STAGE_LETTERS` above is written to be read by a person — it carries "+"
  * signs and a Filipino phrase for the last stage — so anything that needs to
- * *reason* about which letters a learner has met must come here instead. This
- * mirrors LETTER_STAGE in prisma/marungko-stage.ts, which derives a word's
- * stage during seeding; the two must agree.
+ * *reason* about which letters a learner has met must come here instead.
+ * `stageForWord` below is built from it, so there is one table, not two that
+ * must be kept in step.
  */
 export const STAGE_LETTER_SETS: readonly (readonly string[])[] = [
   ["m", "s", "a"],
@@ -27,6 +27,39 @@ export const STAGE_LETTER_SETS: readonly (readonly string[])[] = [
   ["p", "r", "d", "h", "w"],
   ["c", "f", "j", "q", "v", "x", "z", "ñ"],
 ] as const;
+
+/** Digraphs read as one sound, introduced with "ng" in the final stage. */
+const STAGE_7_DIGRAPHS = ["ng", "ts", "dy", "ny", "sy", "ly", "ky", "py", "by", "my"];
+
+const LETTER_STAGE = new Map<string, number>(
+  STAGE_LETTER_SETS.flatMap((letters, i) => letters.map((letter) => [letter, i + 1] as const))
+);
+
+/**
+ * The Marungko stage a word belongs to: the latest stage among its letters.
+ *
+ * Derived, never chosen. A word may only be shown once every letter in it has
+ * been taught, and a stage typed by hand is how one gets in early — the word
+ * bank's add form used to offer a stage picker defaulting to 1, so "kalabaw"
+ * (stage 6 letters) added in a hurry would have reached a child who knew only
+ * m, s and a. The seed, `words:sync` and the add-word route all call this.
+ */
+export function stageForWord(text: string): number {
+  const word = text.toLowerCase();
+
+  // "ng" and the borrowed digraphs belong to the final stage regardless of
+  // the individual letters, which are introduced earlier.
+  if (STAGE_7_DIGRAPHS.some((d) => word.includes(d))) return 7;
+
+  let stage = 1;
+  for (const ch of word) {
+    if (ch === "-" || ch === " ") continue;
+    const s = LETTER_STAGE.get(ch);
+    if (!s) throw new Error(`"${text}": no Marungko stage known for the letter "${ch}"`);
+    stage = Math.max(stage, s);
+  }
+  return stage;
+}
 
 /** Every letter the Marungko sequence has introduced by the end of `stage`. */
 export function lettersUpToStage(stage: number): string[] {

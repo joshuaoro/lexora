@@ -1,8 +1,9 @@
 "use client";
 
 import { Undo2, Play, Check, X } from "lucide-react";
+import { getDict, type Lang } from "@/lib/i18n";
 
-export type CorrectionPair = {
+export type RereadPair = {
   id: string;
   word: string;
   date: string;
@@ -17,20 +18,25 @@ export type CorrectionPair = {
 };
 
 /**
- * Self-correction: a missed word, and the child's second go at it after hearing
- * it pronounced.
+ * Re-reads after modelling: a missed word, and the child's second go at it
+ * after hearing it pronounced.
+ *
+ * Not self-correction. In running-record practice a self-correction is a child
+ * fixing their own error unprompted, and LEXORA records that separately, as the
+ * "Self-corrected in the recording" observation on a review. This panel shows
+ * the prompted kind: the app has just said the word. It was titled
+ * "Self-correction" until the two were found sharing one name — the confusion
+ * a reading specialist would raise first.
  *
  * These re-reads are excluded from accuracy, decoding time and the agreement
  * sample, because a reading taken straight after the answer was given measures
- * repetition rather than decoding. That is the right call for the statistics
- * and it left the recordings with nowhere to be heard.
- *
- * They are worth hearing. Whether a child can reproduce a word once it has been
- * modelled — and whether the two takes sound different at all — says something
- * about whether the miss was a decoding failure or a moment of hesitation, and
- * that distinction is invisible in an accuracy figure.
+ * repetition rather than decoding. They are still worth hearing: whether a
+ * child can reproduce a word once it has been modelled — and whether the two
+ * takes sound different at all — says something about whether the miss was a
+ * decoding failure or a moment of hesitation, which no accuracy figure shows.
  */
-export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
+export default function Rereads({ pairs, lang = "en" }: { pairs: RereadPair[]; lang?: Lang }) {
+  const t = getDict(lang).specialist;
   const succeeded = pairs.filter((p) => p.retryCorrect).length;
 
   function play(attemptId: string | null) {
@@ -42,32 +48,22 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-            <Undo2 size={20} className="text-primary" /> Self-correction
+            <Undo2 size={20} className="text-primary" /> {t.rereadTitle}
           </h2>
-          <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
-            A missed word, then the same word read again after the child heard it. Compare the two
-            takes. These re-reads are deliberately kept out of accuracy and the reliability
-            check — the child had just been told the answer — so nothing here affects the reported
-            figures.
-          </p>
+          <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">{t.rereadSub}</p>
         </div>
         {pairs.length > 0 && (
           <div className="rounded-2xl bg-primary-soft px-5 py-3 text-center">
             <p className="text-2xl font-extrabold text-primary">
               {Math.round((succeeded / pairs.length) * 100)}%
             </p>
-            <p className="text-xs font-bold text-ink-soft">
-              corrected ({succeeded} of {pairs.length})
-            </p>
+            <p className="text-xs font-bold text-ink-soft">{t.rereadChip(succeeded, pairs.length)}</p>
           </div>
         )}
       </div>
 
       {pairs.length === 0 ? (
-        <p className="mt-4 text-sm text-ink-soft">
-          Nothing yet. A pair appears here each time the learner misses a word in a read-aloud
-          activity and takes the &ldquo;Now you try it!&rdquo; turn that follows.
-        </p>
+        <p className="mt-4 text-sm text-ink-soft">{t.rereadEmpty}</p>
       ) : (
         <ul className="mt-4 divide-y divide-line">
           {pairs.map((p) => (
@@ -80,9 +76,9 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
               <div className="flex-1 min-w-56 space-y-1">
                 <p className="flex items-center gap-2 text-sm font-semibold text-ink-soft">
                   <X size={14} className="shrink-0 text-red" />
-                  First try:{" "}
+                  {t.rereadFirst}:{" "}
                   <span className="font-bold text-ink">
-                    {p.firstHeard ? `“${p.firstHeard}”` : "nothing heard"}
+                    {p.firstHeard ? `“${p.firstHeard}”` : t.rereadNothing}
                   </span>
                   {p.firstAudioId && (
                     <button
@@ -100,9 +96,9 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
                   ) : (
                     <X size={14} className="shrink-0 text-red" />
                   )}
-                  After hearing it:{" "}
+                  {t.rereadAfter}:{" "}
                   <span className="font-bold text-ink">
-                    {p.retryHeard ? `“${p.retryHeard}”` : "nothing heard"}
+                    {p.retryHeard ? `“${p.retryHeard}”` : t.rereadNothing}
                   </span>
                   {p.retryAudioId && (
                     <button
@@ -121,7 +117,7 @@ export default function SelfCorrection({ pairs }: { pairs: CorrectionPair[] }) {
                   p.retryCorrect ? "bg-green-soft text-green" : "bg-orange-soft text-orange"
                 }`}
               >
-                {p.retryCorrect ? "corrected" : "still tricky"}
+                {p.retryCorrect ? t.rereadGot : t.rereadStill}
               </span>
             </li>
           ))}

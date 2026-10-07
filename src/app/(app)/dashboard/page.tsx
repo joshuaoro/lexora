@@ -75,8 +75,14 @@ export default async function DashboardPage() {
               <span className="ml-1 text-sm font-bold text-ink-soft">{streakLine}</span>
             </div>
           </div>
+          {/* The name stays on screen and out of the audio. Any phrase not yet
+              spoken is synthesized by Microsoft's speech service and kept in
+              SpeechClip, so speaking "Hello, Juan!" sent a child's name to a third
+              party — which the privacy notice and the consent form both say does
+              not happen — and stored it in a table that erasing the learner does
+              not touch. */}
           <SpeakButton
-            text={`${greeting} ${streakLine}`}
+            text={`${t.helloSpoken} ${streakLine}`}
             lang={lang}
             label={dict.session.listen}
           />

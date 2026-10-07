@@ -1011,6 +1011,13 @@ for (const [component, fil, en] of [
   // Not "Blind review": that phrase is deliberately identical in both
   // languages, so asserting on it would pass whatever the toggle did.
   ["ReviewList", "nakatago ang hatol ng sistema", "the system's verdict is hidden"],
+  // A second string from each panel's body. One heading per component was all
+  // this checked, and headings were the part that had been translated: the
+  // explanations under them stayed English with their Filipino sitting unused
+  // in the dictionary, and the check passed throughout.
+  ["SessionPhases body", "Markahan kung aling mga session", "Mark which sessions form"],
+  ["ThresholdCalibration body", "Mga pagbasang nakakuha ng", "Readings that scored between"],
+  ["Rereads", "Muling pagbasa matapos marinig ang salita", "Re-reads after hearing the word"],
 ]) {
   check(
     `${component} follows the toggle`,
@@ -1026,7 +1033,9 @@ check(
 check(
   "and the cohort page itself does too",
   filCohortText.includes("Pangkalahatang tanaw ng cohort") &&
-    !filCohortText.includes("Cohort overview"),
+    !filCohortText.includes("Cohort overview") &&
+    filCohortText.includes("Accuracy ayon sa istruktura ng pantig") &&
+    !filCohortText.includes("Accuracy by syllable pattern"),
   "in Filipino"
 );
 

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Volume2, Mic, Square, Trash2, Sparkles, Play, Check, X } from "lucide-react";
-import { STAGE_LETTERS } from "@/lib/marungko";
+import { STAGE_LETTERS, stageForWord } from "@/lib/marungko";
 import { playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
 import { tryFetch } from "@/lib/net";
 
@@ -31,7 +31,6 @@ const EMPTY_FORM = {
   text: "",
   syllables: "",
   pattern: "",
-  stage: 1,
   level: 1,
   meaningEn: "",
   isPseudo: false,
@@ -43,6 +42,16 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
   const [stageFilter, setStageFilter] = useState<number | 0>(0);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+  // What the server will store, shown as the specialist types.
+  const derivedStage = useMemo(() => {
+    const text = form.text.trim().toLowerCase();
+    if (!/^[a-zñ-]+$/.test(text)) return null;
+    try {
+      return stageForWord(text);
+    } catch {
+      return null;
+    }
+  }, [form.text]);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -120,7 +129,6 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        stage: Number(form.stage),
         level: Number(form.level),
         meaningEn: form.isPseudo ? undefined : form.meaningEn || undefined,
         isPseudo: form.isPseudo,
@@ -371,17 +379,13 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
               Marungko stage
             </span>
-            <select
-              value={form.stage}
-              onChange={(e) => setForm({ ...form, stage: Number(e.target.value) })}
-              className={`${input} w-full`}
-            >
-              {STAGE_LETTERS.map((letters, i) => (
-                <option key={i} value={i + 1}>
-                  Stage {i + 1} ({letters})
-                </option>
-              ))}
-            </select>
+            {/* Shown, not chosen: the server derives it from the letters, so a
+                word can never reach a child before its letters are taught. */}
+            <p className={`${input} w-full bg-cream text-ink-soft`} aria-live="polite">
+              {derivedStage === null
+                ? "from the letters"
+                : `Stage ${derivedStage} (${STAGE_LETTERS[derivedStage - 1]})`}
+            </p>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
@@ -479,7 +483,6 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                               syllables: c.syllables,
                               pattern: c.pattern,
                               level: c.level,
-                              stage: suggestStage,
                               meaningEn: "",
                               isPseudo: true,
                             })

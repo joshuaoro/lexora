@@ -203,7 +203,8 @@ model Attempt {
   // was modelled. Instructionally the point of the exercise; statistically it
   // is not an independent measure of decoding, because the child has just been
   // told the answer. Excluded from accuracy, adaptive level, error patterns,
-  // decoding time and mastery — reported only as self-correction.
+  // decoding time and mastery — reported only as a re-read after modelling
+  // (not self-correction, which is unprompted and recorded as a review tag).
   isRetry      Boolean  @default(false)
   createdAt    DateTime @default(now())
 

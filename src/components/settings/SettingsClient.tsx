@@ -157,13 +157,7 @@ export default function SettingsClient({
               // preview. This used to call the browser's own engine, which
               // demonstrated a voice the app no longer uses anywhere.
               onClick={() =>
-                speakUi(
-                  lang === "fil"
-                    ? "Kumusta! Ako si LEXORA. Sabay tayong magbasa."
-                    : "Hello! I am LEXORA. Let us read together.",
-                  lang,
-                  s.ttsRate
-                )
+                speakUi(t.voiceSample, lang, s.ttsRate)
               }
               className="flex items-center gap-2 rounded-xl bg-peach px-4 py-2 text-sm font-bold text-peach-deep transition hover:opacity-90"
             >

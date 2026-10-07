@@ -41,9 +41,7 @@ export default function ThresholdCalibration({
             <Scale size={20} className="text-primary" /> {t.borderlineTitle}
           </h2>
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
-            Readings that scored between {lower.toFixed(2)} and {threshold.toFixed(2)} — just
-            below the line for being accepted. Play each one. If the child actually read the word
-            correctly, the system is being too strict.
+            {t.borderlineSub(lower.toFixed(2), threshold.toFixed(2))}
           </p>
         </div>
         <div className="rounded-2xl bg-primary-soft px-5 py-3 text-center">
@@ -54,26 +52,17 @@ export default function ThresholdCalibration({
 
       <div className="mt-4">
         {attempts.length === 0 ? (
-          <p className="text-sm text-ink-soft">
-            No borderline readings yet. They appear once the learner has recorded readings that
-            fall just short of the threshold — those are the ones worth listening to.
-          </p>
+          <p className="text-sm text-ink-soft">{t.borderlineEmpty}</p>
         ) : (
           <>
-            <p className="mb-3 text-sm font-bold text-ink">
-              {attempts.length} reading{attempts.length === 1 ? "" : "s"} to check
-            </p>
-            <ReviewList attempts={attempts} />
+            <p className="mb-3 text-sm font-bold text-ink">{t.borderlineCount(attempts.length)}</p>
+            <ReviewList attempts={attempts} lang={lang} />
             <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-xs font-semibold text-ink-soft">
-              Every verdict you record here becomes a labelled example. Once enough have been
-              collected across all learners,{" "}
+              {t.borderlineFeeds}{" "}
               <Link href="/specialist/calibration" className="font-bold text-primary hover:underline">
-                Threshold calibration
+                {t.borderlineFeedsLink}
               </Link>{" "}
-              fits the acceptance line to those judgements and reports how far the current
-              setting is from where the evidence puts it. These borderline readings are the most
-              valuable ones to review, because they are the only ones whose verdict actually
-              changes as the line moves.
+              {t.borderlineFeedsRest}
             </p>
           </>
         )}

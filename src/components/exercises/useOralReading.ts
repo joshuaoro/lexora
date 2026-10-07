@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { similarity, normalizeWord } from "@/lib/scoring";
 
 /* Minimal typings for the Web Speech API (used only as a fallback recognizer). */
 type SpeechRecognitionResultLike = { transcript: string };
@@ -124,7 +123,7 @@ export function useOralReading() {
     }
   }
 
-  async function start(target: string): Promise<OralReadingResult> {
+  async function start(): Promise<OralReadingResult> {
     setMicError(null);
 
     let stream: MediaStream;
@@ -156,17 +155,18 @@ export function useOralReading() {
       rec = new Ctor();
       rec.lang = "fil-PH";
       rec.interimResults = false;
-      rec.maxAlternatives = 5;
+      // The recogniser's own best guess, and only that. This used to request
+      // five alternatives and keep whichever was closest to the target word —
+      // so a child who said "dola" for *bola* was scored correct whenever
+      // "bola" appeared among the five. That is the bias src/lib/asr.ts refuses
+      // for Whisper ("biasing the recognizer toward the expected word would mask
+      // the very misreadings the system needs to detect"), and this fallback is
+      // what scores a reading when Whisper cannot be reached — under group
+      // rate limits, exactly when several children are reading at once.
+      rec.maxAlternatives = 1;
       rec.continuous = false;
       rec.onresult = (e) => {
-        const alternatives: string[] = [];
-        const result = e.results[0];
-        for (let i = 0; i < result.length; i++) alternatives.push(result[i].transcript);
-        const t = normalizeWord(target);
-        alternatives.sort(
-          (a, b) => similarity(t, normalizeWord(b)) - similarity(t, normalizeWord(a))
-        );
-        browserTranscript = alternatives[0] ?? null;
+        browserTranscript = e.results[0]?.[0]?.transcript ?? null;
         browserDone = true;
       };
       rec.onerror = () => {

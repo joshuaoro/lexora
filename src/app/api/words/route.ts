@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { stageForWord } from "@/lib/marungko";
 
 const schema = z.object({
   text: z.string().min(1).max(30).regex(/^[a-zA-ZñÑ-]+$/, "Letters only, no spaces."),
   syllables: z.string().min(1).max(40),
   pattern: z.string().min(1).max(20),
-  stage: z.number().int().min(1).max(7),
+  // Validated if sent, but never used: the stage is derived from the letters
+  // below. Accepting one from the client is how a word reached children who
+  // had not been taught its letters.
+  stage: z.number().int().min(1).max(7).optional(),
   level: z.number().int().min(1).max(5),
   meaningEn: z.string().max(60).optional(),
   /** Add this as a decoding-probe non-word rather than an instructional word. */
@@ -56,6 +60,7 @@ export async function POST(req: Request) {
     data: {
       ...parsed.data,
       text,
+      stage: stageForWord(text),
       isPseudo,
       // A probe word has no meaning to gloss, and giving it one would invite
       // someone to teach it.

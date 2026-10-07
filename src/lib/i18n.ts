@@ -15,8 +15,6 @@ const en = {
     // the next child on a shared tablet inside this one's account.
     signOutFailed: "Could not sign out — you are still signed in. Check your connection and try again.",
     welcomeBack: "Welcome back",
-    learnerBadge: "Learner",
-    specialistBadge: "Reading specialist",
     levelChip: (l: number, s: number) => `Level ${l} · Marungko stage ${s}`,
     menu: "Menu",
     close: "Close",
@@ -45,11 +43,11 @@ const en = {
     PSEUDO_PROBE: "Silly words",
   } as Record<string, string>,
   dashboard: {
-    startReading: "Start reading",
-    practiceAloud: "Practice aloud",
     // Child-facing copy: short, second person, no percentages. The analytics
     // below keep their own wording — a specialist reads those.
     hello: (name: string) => `Hi, ${name}!`,
+    // Spoken without the name: see the note on the dashboard's SpeakButton.
+    helloSpoken: "Hi!",
     streak: (n: number) => (n === 1 ? "1 day in a row" : `${n} days in a row`),
     streakNone: "Read some words today to start a streak.",
     bigRead: "Read out loud",
@@ -69,9 +67,6 @@ const en = {
     typicalWordTimeEmpty: "—",
     chartTitle: "Accuracy over the last 14 days",
     chartSub: "How reliably you read words correctly.",
-    tricky: "Trickiest words",
-    trickySub: "Practice these to grow fastest.",
-    trickyEmpty: "No tricky words yet — start with an exercise to fill this list.",
     missed: (n: number) => `missed ×${n}`,
     openPractice: "Open practice list →",
     recent: "Recent activity",
@@ -301,8 +296,20 @@ const en = {
     borderlineFeedsRest:
       "fits the acceptance line to those judgements once enough have been collected across all learners. These borderline readings are the most valuable to review, because they are the only ones whose verdict changes as the line moves.",
 
-    /* ── Self-correction ────────────────────────────────────────────── */
-    selfCorrectionTitle: "Self-correction",
+    /* ── Re-reads after modelling ───────────────────────────────────── */
+    // Not "self-correction": that is a child fixing an error unprompted, and is
+    // recorded as an observation on a review. These follow the app saying the word.
+    rereadTitle: "Re-reads after hearing the word",
+    rereadSub:
+      "A missed word, then the same word read again after the child heard it said. Compare the two takes. This is not self-correction — the child had just been told the answer — so these re-reads are kept out of accuracy and the reliability check, and nothing here affects the reported figures.",
+    rereadChip: (n: number, total: number) => `right on the re-read (${n} of ${total})`,
+    rereadEmpty:
+      "Nothing yet. A pair appears here each time the learner misses a word in a read-aloud activity and takes the “Now you try it!” turn that follows.",
+    rereadFirst: "First try",
+    rereadAfter: "After hearing it",
+    rereadNothing: "nothing heard",
+    rereadGot: "right the second time",
+    rereadStill: "still tricky",
 
     /* ── Blind review ───────────────────────────────────────────────── */
     blindOn: "Blind review",
@@ -332,6 +339,54 @@ const en = {
     divergenceRealSub: "From the word bank — can be recognised on sight",
     divergenceProbe: "Probe non-words",
     divergenceProbeSub: "Made up — can only be decoded",
+    /* ── Decoding vs recall: body ───────────────────────────────────── */
+    divergenceSub:
+      "Real words can be read from memory; made-up words cannot. A learner who reads real words far better than non-words is recognising this word bank rather than decoding it — which needs a different intervention, not more of the same practice. Both figures are the specialist's own verdicts, so the two sides are marked the same way.",
+    divergenceNotEnough: "Not enough reviewed readings yet",
+    divergenceNeeds: (real: number, probe: number, haveReal: number, haveProbe: number) =>
+      `Needs ${real} reviewed real words and ${probe} reviewed probe words — one full probe run. So far: ${haveReal} real and ${haveProbe} probe.`,
+    divergenceMinNote:
+      "The probe minimum is lower than the calibration's 30 on purpose: a run is 8 items behind a 7-day cooldown, so 30 would mean four sittings per child before this could ever be drawn.",
+    divergenceGapReal: (n: number) => `Real words ${n} points higher — consistent with sight-word recall`,
+    divergenceGapProbe: (n: number) =>
+      `Non-words ${n} points higher — unusual; worth listening to both sets`,
+    divergenceGapEven: (n: number) =>
+      `Within ${n} points — decoding and recall are tracking together`,
+    divergenceGapNote:
+      "A large gap in favour of real words suggests the word bank has been learned. A small gap suggests the accuracy reflects decoding that should transfer to words the child has not met.",
+    divergenceThin: (n: number) =>
+      `Fewer than ${n} readings on at least one side. At this size a single item moves the figure by several points, so read the direction rather than the number, and do not quote the gap on its own.`,
+    divergenceBlind: (blindReal: number, real: number, blindProbe: number, probe: number) =>
+      `Judged blind: ${blindReal}/${real} real words, ${blindProbe}/${probe} probe words.`,
+    divergenceAnchored:
+      " Verdicts made with the system's answer visible may have been pulled toward it, and the system is more reliable on real words than on non-words — so anchoring could affect the two sides unequally. Worth naming as a limitation.",
+
+    /* ── Baseline to endline: body ──────────────────────────────────── */
+    phaseNotEnough: "Not enough tagged readings yet",
+    phaseNeeds: (min: number, baseline: number, endline: number) =>
+      `Each phase needs ${min} readings before a comparison is drawn. So far: ${baseline} tagged baseline and ${endline} tagged endline.`,
+    phaseMissingBoth: " Neither phase has been tagged yet.",
+    phaseMissingBaseline: " The baseline is the one still short.",
+    phaseMissingEndline: " The endline is the one still short.",
+    phaseReadingsHint: (bc: number, bn: number, ec: number, en: number) =>
+      `${bc}/${bn} → ${ec}/${en} readings`,
+    phaseDecodeHint:
+      "Faster is the improvement — in a transparent orthography, speed is the sensitive marker",
+    phaseProbeHint: (bc: number, bn: number, ec: number, en: number) =>
+      `${bc}/${bn} → ${ec}/${en} scored by ear`,
+    phaseProbeNeeds: (min: number, baseline: number, endline: number) =>
+      `Needs ${min} reviewed probe readings per phase — one full run (${baseline} and ${endline} so far)`,
+    phaseProbeNoteTitle: "The probe is the one that answers the question.",
+    phaseProbeNote:
+      "Real words can be learned by sight, so a rise there is ambiguous. Made-up words cannot, so a rise on the probe is evidence that decoding itself improved — and a flat probe alongside rising real-word accuracy suggests the word bank was learned rather than the skill.",
+    phaseThin: (n: number) =>
+      `Fewer than ${n} readings in at least one phase. Read the direction rather than the size of the change.`,
+    phaseDescriptive:
+      "Descriptive figures only. Whether a change is distinguishable from chance is a question for the statistical analysis, using the exported data and a test chosen for this design — not something this page can answer for five learners.",
+    phaseUntagged: (n: number) =>
+      n === 1
+        ? "1 reading is not linked to a session, so it has no phase and is left out of this comparison only. Nothing is wrong with it — the score, the recording and the timing are all there, and it is included in every other figure on this page."
+        : `${n} readings are not linked to a session, so they have no phase and are left out of this comparison only. Nothing is wrong with them — the score, the recording and the timing are all there, and they are included in every other figure on this page.`,
 
     /* ── Baseline to endline ────────────────────────────────────────── */
     phaseTitle: "Baseline to endline",
@@ -347,14 +402,24 @@ const en = {
     phaseProbe: "Non-word probe",
 
     /* ── Word bank ──────────────────────────────────────────────────── */
-    wordBankTitle: "Word bank",
-    addWord: "Add word",
-    acceptedSpellings: "Accepted spellings",
-    pronunciation: "Pronunciation",
 
     /* ── Cohort ─────────────────────────────────────────────────────── */
-    cohortMinutes: "Minutes",
+    cohortSub: (n: number, readings: number) =>
+      `All ${n} learners side by side, over ${readings} scored readings. First readings only — re-reads taken after a word was modelled are excluded.`,
+    cohortDemoIncluded:
+      " Demo learners are included: their reading history is fabricated and must not be reported.",
+    cohortDemoExcluded: (n: number) => ` ${n} demo learner${n === 1 ? "" : "s"} excluded.`,
+    cohortProgress: "Progress",
+    cohortGroupAccuracy: (pct: string) => `group accuracy ${pct}%`,
+    cohortReadings: "Readings",
+    cohortTopError: "Commonest error",
     cohortCompleted: "Completed",
+    cohortMinutes: "Minutes",
+    cohortPractice: "Practice / mastered",
+    cohortPatternTitle: "Accuracy by syllable pattern",
+    cohortPatternSub:
+      "A pattern that is weak across every learner is a gap in the teaching, not in the child. Blank means the learner has not met that pattern yet.",
+    cohortPattern: "Pattern",
     showDemo: (n: number) => `Show demo data (${n})`,
     hideDemo: (n: number) => `Hide demo data (${n})`,
   },
@@ -390,6 +455,22 @@ const en = {
     activity: "Activity",
     score: "Score",
     attempts: (n: number) => `${n} attempts`,
+    // Display labels only. The export keeps the English family names as values,
+    // so an analysis never depends on the interface language.
+    errorTypes: {
+      substitution: "Substitution",
+      omission: "Omission",
+      insertion: "Insertion",
+      no_response: "No response",
+    } as Record<string, string>,
+    families: {
+      "Open (CV·CV)": "Open (CV·CV)",
+      "Closed syllable": "Closed syllable",
+      "Vowel pair": "Vowel pair",
+      "Consonant cluster": "Consonant cluster",
+      "ng words": "ng words",
+      "Long (4+ syllables)": "Long (4+ syllables)",
+    } as Record<string, string>,
   },
   settingsPage: {
     title: "Display settings",
@@ -406,6 +487,7 @@ const en = {
     rulerLabel: "Focus ruler (highlights one line at a time)",
     voiceSpeed: "Reading voice speed",
     testVoice: "Test the voice",
+    voiceSample: "Hello! I am LEXORA. Let us read together.",
     preview: "Preview",
     save: "Save settings",
     saving: "Saving…",
@@ -440,6 +522,8 @@ const en = {
     roleSpecialist: "Reading specialist",
     accessCode: "Specialist access code",
     accessCodePlaceholder: "Provided by your institution",
+    enrolCode: "Enrolment code",
+    enrolCodePlaceholder: "From the reading centre, if it gave you one",
     create: "Create account",
     creating: "Creating account…",
     haveAccount: "Already have an account?",
@@ -486,6 +570,17 @@ const en = {
     footerNote: "LEXORA is a reading support tool for word-level practice. It does not diagnose dyslexia and is not a substitute for the professional services of licensed educators, reading specialists, or health-care professionals.",
     privacyLink: "Privacy Notice",
   },
+  // The two screens a signed-in child can land on when something fails. They sit
+  // inside the app's layout, so they know the child's language like any page.
+  fallback: {
+    errorTitle: "Something went wrong",
+    errorBody: "That page could not load. This is usually a connection problem — please try again.",
+    tryAgain: "Try again",
+    backToDashboard: "Back to dashboard",
+    reference: (digest: string) => `If you need to report this, the reference is ${digest}`,
+    notFoundTitle: "We couldn't find that page",
+    notFoundBody: "The link may be out of date. Everything else is still here.",
+  },
 };
 
 export type Dict = typeof en;
@@ -495,8 +590,6 @@ const fil: Dict = {
     signOut: "Mag-sign out",
     signOutFailed: "Hindi ka na-sign out — naka-sign in ka pa rin. Tingnan ang koneksyon at subukan ulit.",
     welcomeBack: "Kumusta ulit",
-    learnerBadge: "Mag-aaral",
-    specialistBadge: "Reading specialist",
     levelChip: (l, s) => `Level ${l} · Marungko stage ${s}`,
     menu: "Menu",
     close: "Isara",
@@ -525,9 +618,8 @@ const fil: Dict = {
     PSEUDO_PROBE: "Mga salitang imbento",
   },
   dashboard: {
-    startReading: "Simulan ang pagbasa",
-    practiceAloud: "Magbasa nang malakas",
     hello: (name: string) => `Kumusta, ${name}!`,
+    helloSpoken: "Kumusta!",
     streak: (n: number) => (n === 1 ? "1 araw na sunod-sunod" : `${n} araw na sunod-sunod`),
     streakNone: "Magbasa ngayon para magsimula ang streak mo.",
     bigRead: "Magbasa nang malakas",
@@ -547,9 +639,6 @@ const fil: Dict = {
     typicalWordTimeEmpty: "—",
     chartTitle: "Accuracy sa nakaraang 14 na araw",
     chartSub: "Gaano katama ang pagbasa mo ng mga salita.",
-    tricky: "Pinakamahirap na salita",
-    trickySub: "I-praktis ang mga ito para mas mabilis matuto.",
-    trickyEmpty: "Wala pang mahirap na salita — magsimula ng ehersisyo para mapunan ang listahang ito.",
     missed: (n) => `namali ×${n}`,
     openPractice: "Buksan ang listahan ng praktis →",
     recent: "Mga nakaraang aktibidad",
@@ -755,7 +844,17 @@ const fil: Dict = {
     borderlineFeedsRest:
       "ang mag-aakma ng linya ng pagtanggap sa mga hatol na iyon kapag sapat na ang naipon mula sa lahat ng mag-aaral. Ang mga borderline na pagbasa ang pinakamahalagang suriin, dahil sila lang ang nagbabago ng hatol habang gumagalaw ang linya.",
 
-    selfCorrectionTitle: "Kusang pagtatama",
+    rereadTitle: "Muling pagbasa matapos marinig ang salita",
+    rereadSub:
+      "Isang salitang namali, at ang muling pagbasa nito matapos marinig ng bata ang tamang bigkas. Paghambingin ang dalawa. Hindi ito kusang pagtatama — narinig na ng bata ang sagot — kaya hindi ito kasama sa accuracy at sa pagsusuri ng scoring, at walang epekto ito sa mga iniuulat na bilang.",
+    rereadChip: (n, total) => `tama sa muling pagbasa (${n} sa ${total})`,
+    rereadEmpty:
+      "Wala pa. Lilitaw rito ang isang pares tuwing mamamali ang mag-aaral sa isang salita sa Basahin nang malakas at gagawin ang kasunod na “Ngayon, subukan mo!”.",
+    rereadFirst: "Unang subok",
+    rereadAfter: "Matapos marinig",
+    rereadNothing: "walang narinig",
+    rereadGot: "tama sa ikalawa",
+    rereadStill: "mahirap pa rin",
 
     blindOn: "Blind review",
     blindOnSub: "nakatago ang hatol ng sistema hanggang magdesisyon ka",
@@ -783,6 +882,51 @@ const fil: Dict = {
     divergenceRealSub: "Mula sa word bank — puwedeng makilala agad",
     divergenceProbe: "Mga salitang imbento",
     divergenceProbeSub: "Imbento — kailangang tunugin",
+    divergenceSub:
+      "Puwedeng basahin sa memorya ang tunay na salita; hindi ang salitang imbento. Kapag mas mahusay na nababasa ng mag-aaral ang tunay na salita kaysa sa imbento, kinikilala niya ang word bank na ito sa halip na dinedekowd — at ibang interbensyon ang kailangan doon, hindi dagdag na parehong praktis. Parehong hatol ng specialist ang dalawang bilang, kaya pareho ang paraan ng pagmamarka sa dalawa.",
+    divergenceNotEnough: "Kulang pa ang nasuring pagbasa",
+    divergenceNeeds: (real, probe, haveReal, haveProbe) =>
+      `Kailangan ng ${real} nasuring tunay na salita at ${probe} nasuring probe na salita — isang buong probe run. Sa ngayon: ${haveReal} tunay at ${haveProbe} probe.`,
+    divergenceMinNote:
+      "Sinadyang mas mababa ang minimum ng probe kaysa sa 30 ng calibration: 8 aytem ang isang run at may 7-araw na pahinga, kaya ang 30 ay mangangahulugang apat na upuan bawat bata bago ito maipakita.",
+    divergenceGapReal: (n) =>
+      `Mas mataas ng ${n} puntos ang tunay na salita — tugma sa pagkilala ng kabisadong salita`,
+    divergenceGapProbe: (n) =>
+      `Mas mataas ng ${n} puntos ang salitang imbento — hindi karaniwan; sulit pakinggan ang dalawang set`,
+    divergenceGapEven: (n) =>
+      `Hanggang ${n} puntos lang ang agwat — magkasabay ang pagdedekowd at ang pagkabisado`,
+    divergenceGapNote:
+      "Kapag malaki ang agwat pabor sa tunay na salita, malamang natutunan na ang word bank. Kapag maliit, malamang pagdedekowd ang nasa likod ng accuracy, at dapat itong magamit din sa mga salitang hindi pa nakikita ng bata.",
+    divergenceThin: (n) =>
+      `Kulang sa ${n} na pagbasa sa kahit isang panig. Sa ganitong laki, ilang puntos ang galaw ng bilang sa iisang aytem, kaya basahin ang direksyon at hindi ang laki, at huwag banggitin ang agwat nang mag-isa.`,
+    divergenceBlind: (blindReal, real, blindProbe, probe) =>
+      `Hatol na blind: ${blindReal}/${real} tunay na salita, ${blindProbe}/${probe} probe na salita.`,
+    divergenceAnchored:
+      " Maaaring nahila papunta sa sagot ng sistema ang mga hatol na ginawa habang nakikita ito, at mas maaasahan ang sistema sa tunay na salita kaysa sa imbento — kaya maaaring hindi pantay ang epekto ng anchoring sa dalawang panig. Sulit itong banggitin bilang limitasyon.",
+
+    phaseNotEnough: "Kulang pa ang naka-tag na pagbasa",
+    phaseNeeds: (min, baseline, endline) =>
+      `Kailangan ng ${min} pagbasa sa bawat phase bago maghambing. Sa ngayon: ${baseline} naka-tag na baseline at ${endline} naka-tag na endline.`,
+    phaseMissingBoth: " Wala pang phase na naka-tag.",
+    phaseMissingBaseline: " Ang baseline ang kulang pa.",
+    phaseMissingEndline: " Ang endline ang kulang pa.",
+    phaseReadingsHint: (bc, bn, ec, en) => `${bc}/${bn} → ${ec}/${en} na pagbasa`,
+    phaseDecodeHint:
+      "Ang pagbilis ang pag-unlad — sa wikang binabasa kung paano binabaybay, bilis ang sensitibong palatandaan",
+    phaseProbeHint: (bc, bn, ec, en) => `${bc}/${bn} → ${ec}/${en} na sinuri sa pakikinig`,
+    phaseProbeNeeds: (min, baseline, endline) =>
+      `Kailangan ng ${min} nasuring probe na pagbasa sa bawat phase — isang buong run (${baseline} at ${endline} sa ngayon)`,
+    phaseProbeNoteTitle: "Ang probe ang sumasagot sa tanong.",
+    phaseProbeNote:
+      "Puwedeng makilala sa paningin ang tunay na salita, kaya malabo ang kahulugan kapag tumaas ito. Hindi ganoon ang salitang imbento, kaya ang pagtaas sa probe ay ebidensya na umunlad ang pagdedekowd mismo — at kapag patag ang probe habang tumataas ang accuracy sa tunay na salita, malamang ang word bank ang natutunan at hindi ang kasanayan.",
+    phaseThin: (n) =>
+      `Kulang sa ${n} na pagbasa sa kahit isang phase. Basahin ang direksyon, hindi ang laki ng pagbabago.`,
+    phaseDescriptive:
+      "Mga deskriptibong bilang lamang. Kung masasabing hindi nagkataon ang isang pagbabago ay tanong para sa statistical analysis, gamit ang na-export na data at test na pinili para sa disenyong ito — hindi ito masasagot ng page na ito para sa limang mag-aaral.",
+    phaseUntagged: (n) =>
+      n === 1
+        ? "1 pagbasa ang hindi naka-link sa isang session, kaya wala itong phase at hindi lang kasama sa paghahambing na ito. Walang problema rito — kumpleto ang score, ang recording at ang oras, at kasama ito sa lahat ng iba pang bilang sa page na ito."
+        : `${n} pagbasa ang hindi naka-link sa isang session, kaya wala silang phase at hindi lang sila kasama sa paghahambing na ito. Walang problema sa kanila — kumpleto ang score, ang recording at ang oras, at kasama sila sa lahat ng iba pang bilang sa page na ito.`,
 
     phaseTitle: "Baseline hanggang endline",
     phaseSubCohort:
@@ -797,13 +941,23 @@ const fil: Dict = {
     phaseDecodeTime: "Oras kada tamang salita",
     phaseProbe: "Probe na salitang imbento",
 
-    wordBankTitle: "Word bank",
-    addWord: "Magdagdag ng salita",
-    acceptedSpellings: "Tinatanggap na baybay",
-    pronunciation: "Bigkas",
 
-    cohortMinutes: "Minuto",
+    cohortSub: (n, readings) =>
+      `Magkakatabi ang lahat ng ${n} mag-aaral, mula sa ${readings} na na-score na pagbasa. Unang pagbasa lamang — hindi kasama ang muling pagbasa matapos marinig ang salita.`,
+    cohortDemoIncluded:
+      " Kasama ang mga demo learner: imbento ang kanilang kasaysayan sa pagbasa at hindi ito dapat iulat.",
+    cohortDemoExcluded: (n) => ` Hindi kasama ang ${n} demo learner.`,
+    cohortProgress: "Progreso",
+    cohortGroupAccuracy: (pct) => `accuracy ng grupo ${pct}%`,
+    cohortReadings: "Pagbasa",
+    cohortTopError: "Pinakamadalas na mali",
     cohortCompleted: "Natapos",
+    cohortMinutes: "Minuto",
+    cohortPractice: "Praktis / na-master",
+    cohortPatternTitle: "Accuracy ayon sa istruktura ng pantig",
+    cohortPatternSub:
+      "Kapag mahina ang isang istruktura sa lahat ng mag-aaral, puwang ito sa pagtuturo, hindi sa bata. Walang laman kung hindi pa ito nasusubukan ng mag-aaral.",
+    cohortPattern: "Istruktura",
     showDemo: (n) => `Ipakita ang demo data (${n})`,
     hideDemo: (n) => `Itago ang demo data (${n})`,
   },
@@ -839,6 +993,20 @@ const fil: Dict = {
     activity: "Aktibidad",
     score: "Iskor",
     attempts: (n) => `${n} pagsubok`,
+    errorTypes: {
+      substitution: "Napalitan",
+      omission: "May nawala",
+      insertion: "May nadagdag",
+      no_response: "Walang sagot",
+    },
+    families: {
+      "Open (CV·CV)": "Bukas na pantig (KP·KP)",
+      "Closed syllable": "Saradong pantig",
+      "Vowel pair": "Magkasunod na patinig",
+      "Consonant cluster": "Magkasunod na katinig",
+      "ng words": "Mga salitang may ng",
+      "Long (4+ syllables)": "Mahaba (4+ pantig)",
+    },
   },
   settingsPage: {
     title: "Mga Display Setting",
@@ -855,6 +1023,7 @@ const fil: Dict = {
     rulerLabel: "Focus ruler (isang linya lang ang naka-highlight)",
     voiceSpeed: "Bilis ng boses sa pagbasa",
     testVoice: "Subukan ang boses",
+    voiceSample: "Kumusta! Ako si LEXORA. Sabay tayong magbasa.",
     preview: "Preview",
     save: "I-save ang mga setting",
     saving: "Sine-save…",
@@ -888,6 +1057,8 @@ const fil: Dict = {
     roleSpecialist: "Reading specialist",
     accessCode: "Access code ng specialist",
     accessCodePlaceholder: "Mula sa inyong institusyon",
+    enrolCode: "Enrolment code",
+    enrolCodePlaceholder: "Mula sa reading centre, kung binigyan ka",
     create: "Gumawa ng account",
     creating: "Ginagawa ang account…",
     haveAccount: "May account ka na?",
@@ -933,6 +1104,15 @@ const fil: Dict = {
     specCta: "Gumawa ng specialist account",
     footerNote: "Ang LEXORA ay kasangkapang pansuporta sa pagbasa ng salita. Hindi ito nagdadayagnos ng dyslexia at hindi kapalit ng serbisyo ng mga lisensyadong guro, reading specialist, o propesyonal sa kalusugan.",
     privacyLink: "Paunawa sa Privacy",
+  },
+  fallback: {
+    errorTitle: "Nagkaproblema",
+    errorBody: "Hindi ma-load ang page na ito. Kadalasan, problema ito sa koneksyon — pakisubukan ulit.",
+    tryAgain: "Subukan ulit",
+    backToDashboard: "Balik sa dashboard",
+    reference: (digest) => `Kung kailangan mo itong i-report, ang reference ay ${digest}`,
+    notFoundTitle: "Hindi namin makita ang page na iyon",
+    notFoundBody: "Maaaring luma na ang link. Nandito pa rin ang lahat ng iba.",
   },
 };
 

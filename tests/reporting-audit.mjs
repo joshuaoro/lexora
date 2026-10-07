@@ -455,14 +455,14 @@ async function main() {
 
     const summary = await (await api("/api/export?what=summary", { cookie: specCookie })).text();
     check(
-      "summary CSV reports self-correction separately",
+      "summary CSV reports re-reads separately",
       summary.includes("retry_success_pct"),
       summary.split("\r\n")[0].slice(-60)
     );
 
     /* ── 7. the re-reads are audible somewhere ────────────────────────── */
 
-    section("[7] self-correction recordings are reachable");
+    section("[7] re-read recordings are reachable");
 
     // Retries are excluded from accuracy and from the reliability sample, which
     // left their audio stored but unplayable. It has its own panel now — audio
@@ -479,9 +479,9 @@ async function main() {
 
     const spage2 = await (await contextWithCookie(specCookie)).newPage();
     await spage2.goto(`${BASE}/specialist/learner/${id}`, { waitUntil: "networkidle" });
-    const panel2 = await panelText(spage2, "Self-correction");
+    const panel2 = await panelText(spage2, "Re-reads after hearing the word");
 
-    check("the self-correction panel is shown", panel2.length > 0, "section present");
+    check("the re-reads panel is shown", panel2.length > 0, "section present");
     check("the re-read word is listed", panel2.includes("zzcorrected"), "");
     check(
       "the re-read has a play control",

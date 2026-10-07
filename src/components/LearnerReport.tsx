@@ -116,7 +116,7 @@ export default async function LearnerReport({
           <BarBlock
             ariaLabel={t.byPattern}
             data={byPattern.map((d) => ({
-              label: d.family,
+              label: t.families[d.family] ?? d.family,
               value: d.accuracy,
               hint: t.attempts(d.attempts),
             }))}
@@ -132,7 +132,7 @@ export default async function LearnerReport({
           <p className="mb-4 text-sm font-semibold text-ink-muted">{t.errorsSub}</p>
           <BarBlock
             ariaLabel={t.errors}
-            data={errors.map((d) => ({ label: d.type, value: d.count }))}
+            data={errors.map((d) => ({ label: t.errorTypes[d.key] ?? d.type, value: d.count }))}
           />
         </section>
 
@@ -162,7 +162,7 @@ export default async function LearnerReport({
                       {/* A probe session has no score until a specialist has
                           listened, so showing 0/8 would read as eight failures. */}
                       {s.type === "READER"
-                        ? `${s.total} heard`
+                        ? dict.dashboard.wordsHeard(s.total)
                         : s.type === "PSEUDO_PROBE"
                           ? dict.dashboard.probeReadCount(s.total)
                           : `${s.correct}/${s.total}`}

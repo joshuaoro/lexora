@@ -120,6 +120,7 @@ export default async function CohortPage({
       level: l.level,
       stage: l.stage,
       total,
+      correct,
       accuracy: pct(correct, total),
       topError: topError?.errorType ?? null,
       completed: done,
@@ -142,11 +143,9 @@ export default async function CohortPage({
     families.set(family, byLearner);
   }
 
+  // From the counts, not rebuilt from each learner's rounded percentage.
   const cohortTotal = rows.reduce((n, r) => n + r.total, 0);
-  const cohortCorrect = rows.reduce(
-    (n, r) => n + Math.round(((r.accuracy ?? 0) / 100) * r.total),
-    0
-  );
+  const cohortCorrect = rows.reduce((n, r) => n + r.correct, 0);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -163,12 +162,11 @@ export default async function CohortPage({
             <Users size={26} className="text-primary" /> {t.cohortOverview}
           </h1>
           <p className="mt-1 max-w-2xl text-sm font-semibold text-ink-muted">
-            All {learners.length} learners side by side, over {cohortTotal} scored readings.
-            First readings only — re-reads taken after a word was modelled are excluded.
+            {t.cohortSub(learners.length, cohortTotal)}
             {includeDemo
-              ? " Demo learners are included: their reading history is fabricated and must not be reported."
+              ? t.cohortDemoIncluded
               : demoCount > 0
-                ? ` ${demoCount} demo learner${demoCount === 1 ? "" : "s"} excluded.`
+                ? t.cohortDemoExcluded(demoCount)
                 : ""}
           </p>
         </div>
@@ -185,23 +183,23 @@ export default async function CohortPage({
 
       <section className="mt-6 rounded-2xl border border-line bg-card shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-6 py-4">
-          <h2 className="text-lg font-extrabold text-ink">Progress</h2>
+          <h2 className="text-lg font-extrabold text-ink">{t.cohortProgress}</h2>
           <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
-            group accuracy {pct(cohortCorrect, cohortTotal) ?? "—"}%
+            {t.cohortGroupAccuracy(String(pct(cohortCorrect, cohortTotal) ?? "—"))}
           </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-200 text-left text-sm">
             <thead>
               <tr className="text-xs font-bold uppercase tracking-wide text-ink-muted">
-                <th className="px-6 py-3">Learner</th>
-                <th className="px-3 py-3">Level</th>
-                <th className="px-3 py-3">Accuracy</th>
-                <th className="px-3 py-3">Readings</th>
-                <th className="px-3 py-3">Commonest error</th>
-                <th className="px-3 py-3">Completed</th>
-                <th className="px-3 py-3">Minutes</th>
-                <th className="px-3 py-3">Practice / mastered</th>
+                <th className="px-6 py-3">{t.colLearner}</th>
+                <th className="px-3 py-3">{t.colLevel}</th>
+                <th className="px-3 py-3">{t.colAccuracy}</th>
+                <th className="px-3 py-3">{t.cohortReadings}</th>
+                <th className="px-3 py-3">{t.cohortTopError}</th>
+                <th className="px-3 py-3">{t.cohortCompleted}</th>
+                <th className="px-3 py-3">{t.cohortMinutes}</th>
+                <th className="px-3 py-3">{t.cohortPractice}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -245,17 +243,14 @@ export default async function CohortPage({
 
       <section className="mt-5 rounded-2xl border border-line bg-card shadow-sm">
         <div className="border-b border-line px-6 py-4">
-          <h2 className="text-lg font-extrabold text-ink">Accuracy by syllable pattern</h2>
-          <p className="mt-0.5 text-sm font-semibold text-ink-muted">
-            A column that is weak across the row is a gap in the teaching, not in the child.
-            Blank means the learner has not met that pattern yet.
-          </p>
+          <h2 className="text-lg font-extrabold text-ink">{t.cohortPatternTitle}</h2>
+          <p className="mt-0.5 text-sm font-semibold text-ink-muted">{t.cohortPatternSub}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-200 text-left text-sm">
             <thead>
               <tr className="text-xs font-bold uppercase tracking-wide text-ink-muted">
-                <th className="px-6 py-3">Pattern</th>
+                <th className="px-6 py-3">{t.cohortPattern}</th>
                 {rows.map((r) => (
                   <th key={r.id} className="px-3 py-3">
                     {r.name}

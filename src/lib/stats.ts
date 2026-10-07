@@ -12,7 +12,7 @@ const READ_TYPES = ["READ_ALOUD", "PRACTICE"];
  * measures repetition rather than decoding. Counting retries would inflate
  * accuracy, shorten decoding time, and hide the very errors the study exists to
  * describe — so they are excluded from every figure here and reported
- * separately as self-correction.
+ * separately as re-reads after modelling.
  */
 const MEASURED = { activityType: { in: READ_TYPES }, isRetry: false };
 
@@ -231,6 +231,9 @@ export async function errorPatterns(learnerId: string) {
     no_response: "No response",
   };
   return order.map((key) => ({
+    // The stored value, so a screen can label it in its own language; `type` is
+    // the English label, kept for anything that prints this as-is.
+    key,
     type: labels[key],
     count: groups.find((g) => g.errorType === key)?._count ?? 0,
   }));

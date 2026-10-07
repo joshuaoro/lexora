@@ -125,21 +125,24 @@ export default function RegisterPage() {
               </div>
             </fieldset>
 
-            {form.role === "SPECIALIST" && (
-              <div>
-                <label htmlFor="code" className="mb-1.5 block text-sm font-bold text-ink-soft">
-                  {t.accessCode}
-                </label>
-                <input
-                  id="code"
-                  required
-                  value={form.code}
-                  onChange={(e) => set("code", e.target.value)}
-                  className={input}
-                  placeholder={t.accessCodePlaceholder}
-                />
-              </div>
-            )}
+            {/* Required for a specialist. For a learner it is optional here and
+                required only when the deployment sets ENROLMENT_CODE — the page
+                cannot know which, so the server's refusal says so if it is. */}
+            <div>
+              <label htmlFor="code" className="mb-1.5 block text-sm font-bold text-ink-soft">
+                {form.role === "SPECIALIST" ? t.accessCode : t.enrolCode}
+              </label>
+              <input
+                id="code"
+                required={form.role === "SPECIALIST"}
+                value={form.code}
+                onChange={(e) => set("code", e.target.value)}
+                className={input}
+                placeholder={
+                  form.role === "SPECIALIST" ? t.accessCodePlaceholder : t.enrolCodePlaceholder
+                }
+              />
+            </div>
 
             {error && (
               <p role="alert" className="rounded-xl bg-red-soft px-4 py-2.5 text-sm font-semibold text-red">

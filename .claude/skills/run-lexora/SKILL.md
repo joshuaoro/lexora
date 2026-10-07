@@ -79,7 +79,7 @@ driver.
 ## Test
 
 ```bash
-npm run audit                                     # 8 suites against localhost:3000
+npm run audit                                     # 10 suites, 440 checks, against localhost:3000
 npm run audit -- https://lexora-snowy-six.vercel.app
 npm run audit:prod -- <url>                       # post-deploy smoke
 ```
@@ -89,7 +89,14 @@ npm run audit:prod -- <url>                       # post-deploy smoke
 them at a scratch database if that matters.
 
 Individual suites: `audit:api`, `audit:logic`, `audit:ui`, `audit:links`,
-`audit:stale`, `audit:reporting`, `audit:integrity`, `audit:a11y`, `audit:perf`.
+`audit:stale`, `audit:reporting`, `audit:decoding`, `audit:calibration`,
+`audit:integrity`, `audit:a11y`, `audit:perf`.
+
+**On a machine with about 8 GB of RAM, run the suites one at a time** rather than
+`npm run audit`, which keeps a server, Node and headless Edge alive across all ten.
+Near the end of a full run the browser starts crashing (`Target crashed`,
+`net::ERR_INSUFFICIENT_RESOURCES`) and Git Bash stops being able to fork. Those
+read as test failures but are not; re-run the suite alone before believing one.
 
 ## Gotchas
 
