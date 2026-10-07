@@ -64,6 +64,7 @@ export default function ReviewList({
   lang?: Lang;
 }) {
   const t = getDict(lang).specialist;
+  const errorTypes: Record<string, string> = getDict(lang).reports.errorTypes;
   const isProbe = mode === "probe";
 
   /**
@@ -309,14 +310,14 @@ export default function ReviewList({
                         ? "bg-green-soft text-green"
                         : "bg-red-soft text-red"
                   }`}
-                  title={
-                    isProbe
-                      ? "The recogniser is transcribing a word that exists in no language. Decide from the recording, not from this."
-                      : undefined
-                  }
+                  title={isProbe ? t.probeVerdictTitle : undefined}
                 >
-                  system: {a.correct ? "correct" : (a.errorType ?? "incorrect")}
-                  {isProbe && " (decide by ear)"}
+                  {t.systemChip(
+                    a.correct
+                      ? t.systemCorrect
+                      : ((a.errorType && errorTypes[a.errorType]?.toLowerCase()) ?? a.errorType ?? t.systemIncorrect)
+                  )}
+                  {isProbe && t.decideByEar}
                 </span>
                 )}
                 {/* The app scores letters; this word's meaning is carried by
@@ -325,7 +326,7 @@ export default function ReviewList({
                 {a.stressNote && (
                   <span
                     className="inline-flex items-center gap-1 rounded-full bg-orange-soft px-2 py-0.5 text-xs font-bold text-orange"
-                    title="Stress is not written in Filipino and not captured by the transcript — check this reading by ear."
+                    title={t.stressChipTitle}
                   >
                     <AudioLines size={12} /> {a.stressNote}
                   </span>
@@ -341,7 +342,7 @@ export default function ReviewList({
                 {show && (
                   <span
                     className="inline-block rounded-full bg-cream px-2 py-0.5 text-xs font-bold text-ink-muted"
-                    title="Similarity to the target word"
+                    title={t.similarityTitle}
                   >
                     {a.score.toFixed(2)}
                   </span>
@@ -352,7 +353,7 @@ export default function ReviewList({
             {a.hasAudio && (
               <button
                 onClick={() => playAudio(a.id)}
-                aria-label={`Play recording of ${a.target}`}
+                aria-label={t.playRecordingOf(a.target)}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-peach text-peach-deep transition hover:opacity-90"
               >
                 <Play size={16} />
@@ -362,11 +363,7 @@ export default function ReviewList({
             <div
               className="flex items-center gap-1.5"
               role="group"
-              aria-label={
-                isProbe
-                  ? "Did the learner read this non-word correctly?"
-                  : "Do you agree with the system's scoring?"
-              }
+              aria-label={isProbe ? t.probeQuestion : t.agreeQuestion}
             >
               {/*
                 In probe mode the buttons ask about the child, not the machine,
@@ -380,7 +377,7 @@ export default function ReviewList({
                 onClick={() => review(a.id, isProbe ? a.correct === true : true)}
                 disabled={busy === a.id}
                 aria-pressed={isProbe ? readCorrectly === true : reviewed === true}
-                title={isProbe ? "The learner read this non-word correctly" : "I agree with the system's scoring"}
+                title={isProbe ? t.probeReadTitle : t.agreeTitle}
                 className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
                   (isProbe ? readCorrectly === true : reviewed === true)
                     ? "border-green bg-green-soft text-green"
@@ -394,7 +391,7 @@ export default function ReviewList({
                 onClick={() => review(a.id, isProbe ? a.correct === false : false)}
                 disabled={busy === a.id}
                 aria-pressed={isProbe ? readCorrectly === false : reviewed === false}
-                title={isProbe ? "The learner did not read this non-word correctly" : "I disagree with the system's scoring"}
+                title={isProbe ? t.probeMisreadTitle : t.disagreeTitle}
                 className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
                   (isProbe ? readCorrectly === false : reviewed === false)
                     ? "border-red bg-red-soft text-red"
@@ -407,7 +404,7 @@ export default function ReviewList({
               <button
                 onClick={() => setNoteOpen(noteOpen === a.id ? null : a.id)}
                 aria-pressed={noteOpen === a.id}
-                title="Add an observation about this reading"
+                title={t.addObservationTitle}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
                   notes[a.id]
                     ? "border-primary bg-primary-soft text-primary"

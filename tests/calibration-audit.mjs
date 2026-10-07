@@ -77,7 +77,7 @@ check(
 );
 check(
   "and none of the calibration reaches them",
-  !/Scoring threshold calibration|Matthews|Best by MCC/i.test(deniedBody),
+  !/Scoring threshold calibration|Matthews|Best-fitting threshold/i.test(deniedBody),
   "no figures in the response"
 );
 
@@ -193,7 +193,7 @@ if (reviewed.n >= 30) {
   check("with enough reviewed readings, an operating point is recommended", hasFit, `n=${reviewed.n}`);
   check(
     "and the page reports the fitted point rather than a bare number",
-    /Best by MCC/i.test(html),
+    /Best-fitting threshold/i.test(html),
     "shown"
   );
 } else {
@@ -275,7 +275,14 @@ check(
 );
 
 const fittedPage = await (await api("/specialist/calibration", { cookie: specialist })).text();
-check("the page shows the fitted point", /Best by MCC/i.test(fittedPage), "shown");
+check("the page shows the fitted point", /Best-fitting threshold/i.test(fittedPage), "shown");
+// The proposal's Objective 2 statistic is the percentage of agreement; κ and
+// MCC only help choose the threshold. The page must lead with the former.
+check(
+  "and leads with the percentage of agreement at the threshold in force",
+  /Percentage of agreement now/.test(fittedPage),
+  "shown"
+);
 check(
   "and reports the bootstrap interval rather than a bare number",
   /95% CI/i.test(fittedPage),
@@ -1000,6 +1007,12 @@ await filPage.goto(`${BASE}/specialist/learner/${anyLearner.id}?demo=1`, {
 const filLearnerText = await filPage.locator("main").innerText();
 await filPage.goto(`${BASE}/specialist/cohort?demo=1`, { waitUntil: "networkidle" });
 const filCohortText = await filPage.locator("main").innerText();
+// The word bank and the calibration report were English whatever the toggle
+// said until 8 October — the last two specialist screens to follow it.
+await filPage.goto(`${BASE}/specialist/words`, { waitUntil: "networkidle" });
+const filWordsText = await filPage.locator("main").innerText();
+await filPage.goto(`${BASE}/specialist/calibration`, { waitUntil: "networkidle" });
+const filCalText = await filPage.locator("main").innerText();
 await filBrowser.close();
 
 // One representative string per newly translated component.
@@ -1026,6 +1039,20 @@ for (const [component, fil, en] of [
     filLearnerText.includes(fil) ? "in Filipino" : `still English: ${en}`
   );
 }
+check(
+  "the word bank follows the toggle",
+  filWordsText.includes("Bangko ng Salita") &&
+    filWordsText.includes("Tinatanggap na baybay") &&
+    !filWordsText.includes("Accepted spellings"),
+  "in Filipino"
+);
+check(
+  "and so does the calibration report",
+  filCalText.includes("Kalibrasyon ng threshold") &&
+    filCalText.includes("Kailan babaguhin ang threshold") &&
+    !filCalText.includes("When to change the threshold"),
+  "in Filipino"
+);
 check(
   "DemoToggle follows the toggle",
   /Itago ang demo data|Ipakita ang demo data/.test(filCohortText),

@@ -1,6 +1,9 @@
 import { Scale, AlertTriangle, Download } from "lucide-react";
 import type { Calibration, ThresholdMetrics } from "@/lib/calibration";
 import { MIN_SAMPLE } from "@/lib/calibration";
+import { getDict, type Dict, type Lang } from "@/lib/i18n";
+
+type T = Dict["calibrationPage"];
 
 /**
  * What the acceptance threshold should be, according to the specialists.
@@ -17,9 +20,9 @@ import { MIN_SAMPLE } from "@/lib/calibration";
  * reporting rather than a failure to hide.
  */
 const BENCHMARKS = [
-  { label: "Cohen's κ, children's oral reading", value: "0.54", note: "Frontiers in Education" },
-  { label: "MCC, best of six ASR systems (Dutch)", value: "0.63", note: "arXiv:2306.03444" },
-];
+  { key: "benchKappa", value: "0.54", note: "Frontiers in Education" },
+  { key: "benchMcc", value: "0.63", note: "arXiv:2306.03444" },
+] as const;
 
 function pct(n: number) {
   return `${Math.round(n * 100)}%`;
@@ -35,36 +38,36 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-function Matrix({ m, title }: { m: ThresholdMetrics; title: string }) {
+function Matrix({ m, title, t }: { m: ThresholdMetrics; title: string; t: T }) {
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
       <p className="text-sm font-extrabold text-ink">{title}</p>
       <p className="mb-3 text-xs font-semibold text-ink-muted">
-        threshold {m.threshold.toFixed(2)} · κ {m.kappa.toFixed(2)} · MCC {m.mcc.toFixed(2)}
+        {t.matrixThreshold} {m.threshold.toFixed(2)} · κ {m.kappa.toFixed(2)} · MCC {m.mcc.toFixed(2)}
       </p>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="text-ink-muted">
             <th className="pb-1" />
-            <th className="pb-1 font-bold">Specialist: correct</th>
-            <th className="pb-1 font-bold">Specialist: misread</th>
+            <th className="pb-1 font-bold">{t.specCorrect}</th>
+            <th className="pb-1 font-bold">{t.specMisread}</th>
           </tr>
         </thead>
         <tbody className="font-bold text-ink">
           <tr>
-            <td className="py-1 pr-3 font-semibold text-ink-muted">System accepted</td>
+            <td className="py-1 pr-3 font-semibold text-ink-muted">{t.sysAccepted}</td>
             <td className="py-1 text-green">{m.tp}</td>
             <td className="py-1 text-red">{m.fp}</td>
           </tr>
           <tr>
-            <td className="py-1 pr-3 font-semibold text-ink-muted">System rejected</td>
+            <td className="py-1 pr-3 font-semibold text-ink-muted">{t.sysRejected}</td>
             <td className="py-1 text-red">{m.fn}</td>
             <td className="py-1 text-green">{m.tn}</td>
           </tr>
         </tbody>
       </table>
       <p className="mt-3 text-xs font-semibold text-ink-soft">
-        {m.fp} reading{m.fp === 1 ? "" : "s"} wrongly accepted · {m.fn} wrongly rejected
+        {t.matrixFoot(m.fp, m.fn)}
       </p>
     </div>
   );
@@ -77,7 +80,7 @@ function Matrix({ m, title }: { m: ThresholdMetrics; title: string }) {
  * and a plateau is easier to see as a run of equal-height bars than as a nearly
  * horizontal line.
  */
-function Curve({ cal }: { cal: Calibration }) {
+function Curve({ cal, t }: { cal: Calibration; t: T }) {
   const peak = Math.max(...cal.curve.map((m) => Math.max(m.mcc, 0)), 0.01);
 
   return (
@@ -93,7 +96,7 @@ function Curve({ cal }: { cal: Calibration }) {
               key={m.threshold}
               className="group relative flex-1"
               style={{ height: "100%" }}
-              title={`threshold ${m.threshold.toFixed(2)} — MCC ${m.mcc.toFixed(3)}, κ ${m.kappa.toFixed(3)}, ${m.fp} wrongly accepted, ${m.fn} wrongly rejected`}
+              title={t.barTitle(m.threshold.toFixed(2), m.mcc.toFixed(3), m.kappa.toFixed(3), m.fp, m.fn)}
             >
               <div
                 className={`absolute bottom-0 w-full rounded-t-sm ${
@@ -118,20 +121,21 @@ function Curve({ cal }: { cal: Calibration }) {
       </div>
       <p className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-ink-muted">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-primary" /> best by MCC
+          <span className="inline-block h-3 w-3 rounded-sm bg-primary" /> {t.legendBest}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-peach-deep" /> in force now
+          <span className="inline-block h-3 w-3 rounded-sm bg-peach-deep" /> {t.legendCurrent}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-primary/45" /> as good as the best
+          <span className="inline-block h-3 w-3 rounded-sm bg-primary/45" /> {t.legendPlateau}
         </span>
       </p>
     </div>
   );
 }
 
-export default function CalibrationReport({ cal }: { cal: Calibration }) {
+export default function CalibrationReport({ cal, lang = "en" }: { cal: Calibration; lang?: Lang }) {
+  const t = getDict(lang).calibrationPage;
   const wideplateau = cal.plateau !== null && cal.plateau.to - cal.plateau.from >= 0.1;
 
   return (
@@ -139,56 +143,50 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl">
           <h1 className="flex items-center gap-2 text-3xl font-extrabold text-ink">
-            <Scale size={26} className="text-primary" /> Scoring threshold calibration
+            <Scale size={26} className="text-primary" /> {t.title}
           </h1>
+          <p className="mt-2 text-sm font-semibold text-ink-muted">{t.intro}</p>
           <p className="mt-2 text-sm font-semibold text-ink-muted">
-            LEXORA accepts a reading when the recogniser&apos;s transcript is similar enough to
-            the target word. That cut-point began as a reasoned default chosen against clear
-            synthesized speech; every reading a specialist has reviewed is a labelled example
-            of whether it was set right. This fits the cut-point to those judgements and shows
-            the evidence.
+            {t.measureBefore}
+            <strong>{t.measureStrong}</strong>
+            {t.measureAfter}
           </p>
-          <p className="mt-2 text-sm font-semibold text-ink-muted">
-            The acoustic model is not changed by any of this — Whisper is pre-trained, nothing
-            is fine-tuned, and no recording is ever used as training data. What is calibrated
-            is the decision made on top of it.
-          </p>
+          <p className="mt-2 text-sm font-semibold text-ink-muted">{t.notAdapted}</p>
         </div>
         <a
           href="/api/export?what=calibration"
           className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
         >
-          <Download size={16} /> Calibration CSV
+          <Download size={16} /> {t.csv}
         </a>
       </div>
 
       {!cal.enoughData ? (
         <section className="rounded-2xl border border-orange/40 bg-orange-soft p-6">
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-orange">
-            <AlertTriangle size={20} /> Not enough reviewed readings yet
+            <AlertTriangle size={20} /> {t.notEnoughTitle}
           </h2>
           <p className="mt-2 max-w-2xl text-sm font-semibold text-ink-soft">
-            {cal.sampleSize} of {MIN_SAMPLE} needed. A threshold fitted to fewer than this is a
-            number with a decimal point and very little behind it — it would move with the next
-            handful of readings, and it would be quoted in a paper as though it were settled.
+            {t.notEnoughBody(cal.sampleSize, MIN_SAMPLE)}
           </p>
           <p className="mt-3 max-w-2xl text-sm font-semibold text-ink-soft">
-            Review more readings on each learner&apos;s page — the <strong>Borderline
-            readings</strong> panel is the most useful place to start, because those are the
-            ones whose verdict actually depends on where the line sits.
+            {t.notEnoughHintBefore}
+            <strong>{t.notEnoughHintStrong}</strong>
+            {t.notEnoughHintAfter}
           </p>
         </section>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <Stat label="Reviewed readings" value={`${cal.sampleSize}`} />
+            <Stat label={t.statReviewed} value={`${cal.sampleSize}`} />
+            {/* The proposal's Objective 2 figure, first: agreement as things stand. */}
             <Stat
-              label="Threshold in force"
-              value={cal.current.threshold.toFixed(2)}
-              hint={`κ ${cal.current.kappa.toFixed(2)} · MCC ${cal.current.mcc.toFixed(2)}`}
+              label={t.statAgreementNow}
+              value={pct(cal.current.accuracy)}
+              hint={`${t.atThreshold(cal.current.threshold.toFixed(2))} · κ ${cal.current.kappa.toFixed(2)} · MCC ${cal.current.mcc.toFixed(2)}`}
             />
             <Stat
-              label="Best by MCC"
+              label={t.statBest}
               value={cal.bestByMcc!.threshold.toFixed(2)}
               hint={
                 cal.interval
@@ -197,7 +195,7 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
               }
             />
             <Stat
-              label="Agreement at that point"
+              label={t.statAgreementBest}
               value={pct(cal.bestByMcc!.accuracy)}
               hint={`κ ${cal.bestByMcc!.kappa.toFixed(2)} · MCC ${cal.bestByMcc!.mcc.toFixed(2)}`}
             />
@@ -206,39 +204,32 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
           {wideplateau && (
             <section className="rounded-2xl border border-orange/40 bg-orange-soft p-5">
               <h2 className="flex items-center gap-2 text-sm font-extrabold text-orange">
-                <AlertTriangle size={18} /> The optimum is weakly identified
+                <AlertTriangle size={18} /> {t.plateauTitle}
               </h2>
               <p className="mt-1.5 max-w-3xl text-sm font-semibold text-ink-soft">
-                Every threshold from {cal.plateau!.from.toFixed(2)} to {cal.plateau!.to.toFixed(2)}{" "}
-                scores within 0.01 MCC of the best. On this sample the data cannot distinguish
-                between them, so report the range rather than the single value —
-                quoting {cal.bestByMcc!.threshold.toFixed(2)} on its own would claim a precision
-                the evidence does not support.
+                {t.plateauBody(
+                  cal.plateau!.from.toFixed(2),
+                  cal.plateau!.to.toFixed(2),
+                  cal.bestByMcc!.threshold.toFixed(2)
+                )}
               </p>
             </section>
           )}
 
           <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-            <h2 className="text-lg font-extrabold text-ink">Agreement across the sweep</h2>
-            <p className="mb-4 text-sm font-semibold text-ink-muted">
-              Matthews correlation at each candidate threshold. MCC rather than plain accuracy,
-              because most readings are correct: a scorer that accepted everything would post a
-              high accuracy and be useless.
-            </p>
-            <Curve cal={cal} />
+            <h2 className="text-lg font-extrabold text-ink">{t.sweepTitle}</h2>
+            <p className="mb-4 text-sm font-semibold text-ink-muted">{t.sweepSub}</p>
+            <Curve cal={cal} t={t} />
           </section>
 
           <div className="grid gap-4 xl:grid-cols-2">
-            <Matrix m={cal.current} title="At the threshold in force" />
-            <Matrix m={cal.bestByMcc!} title="At the best-fitting threshold" />
+            <Matrix m={cal.current} title={t.matrixAtCurrent} t={t} />
+            <Matrix m={cal.bestByMcc!} title={t.matrixAtBest} t={t} />
           </div>
 
           {cal.bestByYouden && cal.bestByYouden.threshold !== cal.bestByMcc!.threshold && (
             <p className="rounded-2xl border border-line bg-card px-5 py-4 text-sm font-semibold text-ink-soft shadow-sm">
-              Youden&apos;s J peaks at {cal.bestByYouden.threshold.toFixed(2)} rather than{" "}
-              {cal.bestByMcc!.threshold.toFixed(2)}. J weights missing a correct reading and
-              accepting a wrong one equally; MCC also accounts for how lopsided the sample is.
-              Where they disagree, say which you chose and why.
+              {t.youden(cal.bestByYouden.threshold.toFixed(2), cal.bestByMcc!.threshold.toFixed(2))}
             </p>
           )}
 
@@ -255,35 +246,26 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
           */}
           {(cal.byCondition.blind || cal.byCondition.anchored) && (
             <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-extrabold text-ink">
-                Blind versus anchored judgements
-              </h2>
-              <p className="mb-4 max-w-3xl text-sm font-semibold text-ink-muted">
-                Agreement at the threshold in force, split by whether the machine&apos;s verdict
-                was hidden when the specialist decided. Reviews recorded before blind review
-                existed are all anchored: the verdict, the transcript and the similarity were on
-                screen above the play button.
-              </p>
+              <h2 className="text-lg font-extrabold text-ink">{t.blindTitle}</h2>
+              <p className="mb-4 max-w-3xl text-sm font-semibold text-ink-muted">{t.blindSub}</p>
               <div className="grid gap-4 sm:grid-cols-2">
                 {(
                   [
-                    ["Judged blind", cal.byCondition.blind],
-                    ["Judged with the verdict visible", cal.byCondition.anchored],
+                    [t.judgedBlind, cal.byCondition.blind],
+                    [t.judgedAnchored, cal.byCondition.anchored],
                   ] as const
                 ).map(([label, c]) => (
                   <div key={label} className="rounded-2xl border border-line bg-cream/50 px-5 py-4">
                     <p className="text-sm font-extrabold text-ink">{label}</p>
                     {c === null ? (
-                      <p className="mt-1 text-sm font-semibold text-ink-muted">
-                        Too few to report yet.
-                      </p>
+                      <p className="mt-1 text-sm font-semibold text-ink-muted">{t.tooFew}</p>
                     ) : (
                       <>
                         <p className="mt-1 text-2xl font-extrabold text-ink">
                           {pct(c.atCurrent.accuracy)}
                         </p>
                         <p className="text-sm font-semibold text-ink-muted">
-                          agreement over {c.n} reading{c.n === 1 ? "" : "s"}
+                          {t.agreementOver(c.n)}
                         </p>
                         <p className="mt-1 text-xs font-semibold text-ink-soft">
                           κ {c.atCurrent.kappa.toFixed(2)} · MCC {c.atCurrent.mcc.toFixed(2)}
@@ -298,32 +280,26 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
                   {Math.abs(
                     cal.byCondition.anchored.atCurrent.kappa - cal.byCondition.blind.atCurrent.kappa
                   ) >= 0.1
-                    ? `Anchored judgements agree with the system ${
-                        cal.byCondition.anchored.atCurrent.kappa > cal.byCondition.blind.atCurrent.kappa
-                          ? "more"
-                          : "less"
-                      } than blind ones — a difference of ${Math.abs(
-                        cal.byCondition.anchored.atCurrent.kappa - cal.byCondition.blind.atCurrent.kappa
-                      ).toFixed(2)} in κ. Report both figures and say which condition each came from.`
-                    : "The two conditions agree closely, which is evidence that seeing the verdict first did not pull the judgements. Worth stating explicitly rather than leaving implied."}
+                    ? t.anchoredDiffers(
+                        cal.byCondition.anchored.atCurrent.kappa > cal.byCondition.blind.atCurrent.kappa,
+                        Math.abs(
+                          cal.byCondition.anchored.atCurrent.kappa - cal.byCondition.blind.atCurrent.kappa
+                        ).toFixed(2)
+                      )
+                    : t.anchoredSame}
                 </p>
               )}
             </section>
           )}
 
           <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-            <h2 className="text-lg font-extrabold text-ink">How this compares</h2>
-            <p className="mb-4 text-sm font-semibold text-ink-muted">
-              Published figures for automatic scoring of children&apos;s oral reading. Both were
-              measured on typically-developing readers in other languages, and agreement is
-              known to fall for readers with disabilities — so treat these as context, not as a
-              target to hit.
-            </p>
+            <h2 className="text-lg font-extrabold text-ink">{t.compareTitle}</h2>
+            <p className="mb-4 text-sm font-semibold text-ink-muted">{t.compareSub}</p>
             <ul className="space-y-2">
               {BENCHMARKS.map((b) => (
-                <li key={b.label} className="flex flex-wrap items-baseline gap-2 text-sm">
+                <li key={b.key} className="flex flex-wrap items-baseline gap-2 text-sm">
                   <span className="font-extrabold text-ink">{b.value}</span>
-                  <span className="font-semibold text-ink-soft">{b.label}</span>
+                  <span className="font-semibold text-ink-soft">{t[b.key]}</span>
                   <span className="text-xs font-semibold text-ink-muted">({b.note})</span>
                 </li>
               ))}
@@ -332,7 +308,7 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
                   {cal.bestByMcc!.mcc.toFixed(2)}
                 </span>
                 <span className="font-semibold text-ink-soft">
-                  MCC — LEXORA at its best-fitting threshold, {cal.sampleSize} reviewed readings
+                  {t.lexoraMcc(cal.sampleSize)}
                 </span>
               </li>
             </ul>
@@ -340,16 +316,12 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
 
           {cal.pseudo && (
             <section className="rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-extrabold text-ink">Probe non-words, separately</h2>
+              <h2 className="text-lg font-extrabold text-ink">{t.probeTitle}</h2>
               <p className="mb-3 text-sm font-semibold text-ink-muted">
-                {cal.pseudoSampleSize} reviewed probe readings. These are excluded from the fit
-                above and shown on their own: they are scored by ear precisely because the
-                recogniser is transcribing words that exist in no language, so its verdict on
-                them is a measurement of the recogniser rather than a basis for tuning it.
-                Comparing this agreement against the figure for real words is itself a finding.
+                {t.probeBody(cal.pseudoSampleSize)}
               </p>
               <div className="max-w-md">
-                <Matrix m={cal.pseudo} title="Machine vs specialist on non-words" />
+                <Matrix m={cal.pseudo} title={t.probeMatrix} t={t} />
               </div>
             </section>
           )}
@@ -357,15 +329,11 @@ export default function CalibrationReport({ cal }: { cal: Calibration }) {
       )}
 
       <section className="rounded-2xl border border-line bg-cream/60 p-5 text-sm font-semibold text-ink-soft">
-        <p className="font-extrabold text-ink">When to change the threshold</p>
+        <p className="font-extrabold text-ink">{t.whenTitle}</p>
         <p className="mt-1.5 max-w-3xl">
-          This page recommends; it never changes the setting. The study uses the
-          disagreements between your verdicts and the system&apos;s to refine the threshold,
-          so a change is expected — once, when validation ends, not repeatedly while children
-          are being tested. Moving{" "}
-          <code className="font-mono text-xs">SCORE_THRESHOLD</code> partway means the readings
-          either side were scored by different rules. The similarity is stored on every attempt,
-          so the percentage of agreement can be reported at both the old and the new threshold.
+          {t.whenBefore}
+          <code className="font-mono text-xs">SCORE_THRESHOLD</code>
+          {t.whenAfter}
         </p>
       </section>
     </div>

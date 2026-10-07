@@ -358,7 +358,7 @@ export default async function LearnerDetailPage({
         <div>
           <h1 className="text-3xl font-extrabold text-ink">{profile.user.name}</h1>
           <p className="mt-1 text-sm font-semibold text-ink-muted">
-            {profile.user.email} · Level {profile.level} · Marungko stage {profile.stage}
+            {profile.user.email} · {t.levelStage(profile.level, profile.stage)}
           </p>
         </div>
         <div className="no-print flex flex-wrap gap-2.5">
@@ -378,9 +378,9 @@ export default async function LearnerDetailPage({
             <a
               href={`/api/export?what=iep&learnerId=${profile.id}`}
               className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark"
-              title="Plain-text reading summary to paste into an IEP. Observations only — the recommendations remain the teacher's."
+              title={t.iepDraftTitle}
             >
-              <FileText size={16} /> IEP draft
+              <FileText size={16} /> {t.iepDraft}
             </a>
           )}
           <PrintButton />
@@ -493,11 +493,8 @@ export default async function LearnerDetailPage({
         learnerId={profile.id}
         learnerName={profile.user.name}
         recordingCount={recordingCount}
-        retentionNote={
-          retentionDays() === 0
-            ? "Automatic deletion is switched off, so recordings are kept until you clear them."
-            : `Recordings are also deleted automatically once they are ${retentionDays()} days old.`
-        }
+        retentionDays={retentionDays()}
+        lang={lang}
       />
     </div>
   );

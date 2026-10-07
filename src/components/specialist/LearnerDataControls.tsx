@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldAlert, Trash2, MicOff } from "lucide-react";
 import { tryFetch } from "@/lib/net";
+import { getDict, type Lang } from "@/lib/i18n";
 
 /**
  * Data-protection actions for one learner (RA 10173): clear stored voice
@@ -14,14 +15,17 @@ export default function LearnerDataControls({
   learnerId,
   learnerName,
   recordingCount,
-  retentionNote,
+  retentionDays,
+  lang = "en",
 }: {
   learnerId: string;
   learnerName: string;
   recordingCount: number;
-  /** Stated by the server so this matches the policy actually enforced. */
-  retentionNote: string;
+  /** Stated by the server so this matches the policy actually enforced. 0 = off. */
+  retentionDays: number;
+  lang?: Lang;
 }) {
+  const t = getDict(lang).specialist;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -29,7 +33,7 @@ export default function LearnerDataControls({
   const [typedName, setTypedName] = useState("");
 
   async function clearRecordings() {
-    if (!window.confirm(`Delete ${recordingCount} stored recording(s) for ${learnerName}? Scores and progress are kept.`)) {
+    if (!window.confirm(t.dataClearConfirm(recordingCount, learnerName))) {
       return;
     }
     setBusy(true);
@@ -39,10 +43,10 @@ export default function LearnerDataControls({
     setBusy(false);
     setMessage(
       res?.ok
-        ? `Deleted ${data.cleared} recording(s). Scores kept.`
+        ? t.dataCleared(data.cleared)
         : res
-          ? (data.error ?? "Could not clear recordings.")
-          : "No internet connection. Check it and try again."
+          ? (data.error ?? t.dataClearFailed)
+          : t.offlineRetry
     );
     if (res?.ok) router.refresh();
   }
@@ -58,7 +62,7 @@ export default function LearnerDataControls({
     const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusy(false);
     if (!res?.ok) {
-      setMessage(res ? (data.error ?? "Could not delete this learner.") : "No internet connection. Check it and try again.");
+      setMessage(res ? (data.error ?? t.dataEraseFailed) : t.offlineRetry);
       return;
     }
     router.push("/specialist");
@@ -68,15 +72,11 @@ export default function LearnerDataControls({
   return (
     <section className="no-print mt-5 rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
       <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
-        <ShieldAlert size={20} className="text-orange" /> Data protection
+        <ShieldAlert size={20} className="text-orange" /> {t.dataTitle}
       </h2>
+      <p className="mt-1 text-sm font-semibold text-ink-muted">{t.dataSub}</p>
       <p className="mt-1 text-sm font-semibold text-ink-muted">
-        Voice recordings are kept only so you can replay a reading during the scoring
-        reliability check. Clear them once you are done, and erase a participant entirely if
-        their parent or guardian withdraws consent.
-      </p>
-      <p className="mt-1 text-sm font-semibold text-ink-muted">
-        {retentionNote}
+        {retentionDays === 0 ? t.dataRetentionOff : t.dataRetentionDays(retentionDays)}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
@@ -86,9 +86,7 @@ export default function LearnerDataControls({
           className="flex items-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-cream-dark disabled:opacity-40"
         >
           <MicOff size={16} />
-          {recordingCount === 0
-            ? "No stored recordings"
-            : `Clear ${recordingCount} stored recording${recordingCount === 1 ? "" : "s"}`}
+          {recordingCount === 0 ? t.dataNoRecordings : t.dataClear(recordingCount)}
         </button>
 
         {!confirmDelete ? (
@@ -97,12 +95,12 @@ export default function LearnerDataControls({
             disabled={busy}
             className="flex items-center gap-2 rounded-xl border border-red/40 bg-red-soft px-4 py-2.5 text-sm font-bold text-red transition hover:bg-red hover:text-white disabled:opacity-40"
           >
-            <Trash2 size={16} /> Erase learner and all data
+            <Trash2 size={16} /> {t.dataErase}
           </button>
         ) : (
           <div className="flex flex-wrap items-center gap-2 rounded-xl bg-red-soft p-2.5">
             <span className="text-sm font-bold text-red">
-              Type “{learnerName}” to confirm permanent deletion:
+              {t.dataEraseConfirm(learnerName)}
             </span>
             <input
               autoFocus
@@ -116,7 +114,7 @@ export default function LearnerDataControls({
               disabled={busy || typedName.trim().toLowerCase() !== learnerName.trim().toLowerCase()}
               className="rounded-lg bg-red px-3 py-1.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40"
             >
-              {busy ? "Deleting…" : "Delete permanently"}
+              {busy ? t.dataDeleting : t.dataDeletePermanently}
             </button>
             <button
               onClick={() => {
@@ -125,13 +123,17 @@ export default function LearnerDataControls({
               }}
               className="rounded-lg px-2 py-1.5 text-sm font-bold text-ink-soft hover:text-ink"
             >
-              Cancel
+              {t.cancel}
             </button>
           </div>
         )}
       </div>
 
-      {message && <p className="mt-3 text-sm font-bold text-ink-soft">{message}</p>}
+      {message && (
+        <p role="status" className="mt-3 text-sm font-bold text-ink-soft">
+          {message}
+        </p>
+      )}
     </section>
   );
 }

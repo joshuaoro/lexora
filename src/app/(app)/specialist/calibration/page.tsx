@@ -1,6 +1,7 @@
 import { requireSpecialist } from "@/lib/guards";
 import { calibrationReport } from "@/lib/calibration";
 import CalibrationReport from "@/components/specialist/CalibrationReport";
+import { getLang } from "@/lib/lang";
 
 /**
  * Cohort-wide, not per-learner: SCORE_THRESHOLD is one global setting, so
@@ -8,5 +9,6 @@ import CalibrationReport from "@/components/specialist/CalibrationReport";
  */
 export default async function CalibrationPage() {
   await requireSpecialist();
-  return <CalibrationReport cal={await calibrationReport()} />;
+  const [cal, lang] = await Promise.all([calibrationReport(), getLang()]);
+  return <CalibrationReport cal={cal} lang={lang} />;
 }

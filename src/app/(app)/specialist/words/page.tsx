@@ -1,13 +1,14 @@
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import WordBankClient from "@/components/specialist/WordBankClient";
+import { getLang } from "@/lib/lang";
 
 export default async function WordBankPage() {
   await requireSpecialist();
 
   // The audio columns hold base64 clips, so they are never selected directly —
   // only which of them exist, via id lookups.
-  const [words, withTts, withHuman] = await Promise.all([
+  const [words, withTts, withHuman, lang] = await Promise.all([
     prisma.word.findMany({
       orderBy: [{ stage: "asc" }, { level: "asc" }, { text: "asc" }],
       select: {
@@ -26,6 +27,7 @@ export default async function WordBankPage() {
     }),
     prisma.word.findMany({ where: { audioWord: { not: null } }, select: { id: true } }),
     prisma.word.findMany({ where: { audioWordHuman: { not: null } }, select: { id: true } }),
+    getLang(),
   ]);
 
   const ttsIds = new Set(withTts.map((w) => w.id));
@@ -38,6 +40,7 @@ export default async function WordBankPage() {
         hasTts: ttsIds.has(w.id),
         hasHuman: humanIds.has(w.id),
       }))}
+      lang={lang}
     />
   );
 }

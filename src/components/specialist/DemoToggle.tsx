@@ -44,11 +44,7 @@ export default function DemoToggle({ count, lang = "en" }: { count: number; lang
           ? "border-orange bg-orange-soft text-orange"
           : "border-line bg-card text-ink-soft hover:bg-cream-dark"
       }`}
-      title={
-        on
-          ? "Demo learners are included in these figures. Their reading history is fabricated."
-          : "Demo learners are excluded, as they should be for any reported figure."
-      }
+      title={on ? t.demoIncludedTitle : t.demoExcludedTitle}
     >
       <FlaskConical size={16} />
       {on ? t.hideDemo(count) : t.showDemo(count)}

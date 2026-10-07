@@ -48,23 +48,21 @@ export default function LearnerControls({
     });
     setBusy(false);
     if (res?.ok) {
-      setMessage({ tone: "ok", text: `Saved — level ${next}.` });
+      setMessage({ tone: "ok", text: t.levelSaved(next) });
       router.refresh();
       return;
     }
     setLevel(previous);
     setMessage({
       tone: "bad",
-      text: res
-        ? "Could not change the level — it is unchanged."
-        : "No internet connection — the level is unchanged.",
+      text: res ? t.levelSaveFailed : t.levelOffline,
     });
   }
 
   async function addPracticeWord() {
     const match = words.find((w) => w.text === wordQuery.trim().toLowerCase());
     if (!match) {
-      setMessage({ tone: "bad", text: "Pick a word from the word bank list." });
+      setMessage({ tone: "bad", text: t.pickFromBank });
       return;
     }
     setBusy(true);
@@ -77,11 +75,8 @@ export default function LearnerControls({
     setBusy(false);
     setMessage(
       res?.ok
-        ? { tone: "ok", text: `Saved — “${match.text}” added to the practice list.` }
-        : {
-            tone: "bad",
-            text: res ? "Could not add the word." : "No internet connection. Check it and try again.",
-          }
+        ? { tone: "ok", text: t.practiceAdded(match.text) }
+        : { tone: "bad", text: res ? t.practiceAddFailed : t.offlineRetry }
     );
     if (res?.ok) {
       setWordQuery("");
@@ -103,7 +98,7 @@ export default function LearnerControls({
         >
           {[1, 2, 3, 4, 5].map((l) => (
             <option key={l} value={l}>
-              Level {l}
+              {t.levelOption(l)}
             </option>
           ))}
         </select>

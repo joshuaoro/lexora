@@ -145,9 +145,9 @@ export default async function SpecialistPage({
                       {l.isDemo && (
                         <span
                           className="ml-2 rounded-full bg-orange-soft px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide text-orange"
-                          title="Demonstration account. Its reading history is fabricated by the seed script and must never appear in a reported result."
+                          title={t.demoBadgeTitle}
                         >
-                          demo
+                          {t.demoBadge}
                         </span>
                       )}
                       <p className="text-xs font-semibold text-ink-muted">{l.user.email}</p>

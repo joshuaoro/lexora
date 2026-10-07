@@ -6,6 +6,7 @@ import { Plus, Volume2, Mic, Square, Trash2, Sparkles, Play, Check, X } from "lu
 import { STAGE_LETTERS, stageForWord } from "@/lib/marungko";
 import { playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
 import { tryFetch } from "@/lib/net";
+import { getDict, type Lang } from "@/lib/i18n";
 
 type WordRow = {
   id: string;
@@ -37,7 +38,8 @@ const EMPTY_FORM = {
 };
 const MAX_RECORD_MS = 6000;
 
-export default function WordBankClient({ words }: { words: WordRow[] }) {
+export default function WordBankClient({ words, lang = "en" }: { words: WordRow[]; lang?: Lang }) {
+  const t = getDict(lang).wordBankPage;
   const router = useRouter();
   const [stageFilter, setStageFilter] = useState<number | 0>(0);
   const [query, setQuery] = useState("");
@@ -82,12 +84,12 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     const data = (await res?.json().catch(() => ({}))) ?? {};
     setSuggesting(false);
     if (!res?.ok) {
-      setMessage(res ? "Could not fetch suggestions." : "No internet connection. Check it and try again.");
+      setMessage(res ? t.suggestFailed : t.offlineRetry);
       return;
     }
     setCandidates(data.candidates ?? []);
     if ((data.candidates ?? []).length === 0) {
-      setMessage(`No new combinations left at stage ${suggestStage} — try a later stage.`);
+      setMessage(t.noCombinations(suggestStage));
     }
   }
 
@@ -137,7 +139,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     const data = (await res?.json().catch(() => ({}))) ?? {};
     if (!res?.ok) {
       setBusy(false);
-      setMessage(res ? (data.error ?? "Could not add the word.") : "No internet connection. Check it and try again.");
+      setMessage(res ? (data.error ?? t.addFailed) : t.offlineRetry);
       return;
     }
 
@@ -146,7 +148,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     // that stops it being a probe.
     if (form.isPseudo) {
       setBusy(false);
-      setMessage(`“${data.text}” added as a probe non-word — no audio, and it will never appear in practice.`);
+      setMessage(t.addedProbe(data.text));
       setForm(EMPTY_FORM);
       router.refresh();
       return;
@@ -154,13 +156,11 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
     // Give the new word a pronunciation immediately — otherwise learners would
     // hear it read with English phonics.
-    setMessage(`“${data.text}” added — generating pronunciation…`);
+    setMessage(t.addedGenerating(data.text));
     const gen = await tryFetch(`/api/words/${data.id}/audio/generate`, { method: "POST" });
     setBusy(false);
     setMessage(
-      gen?.ok
-        ? `“${data.text}” added with Filipino audio.`
-        : `“${data.text}” added, but audio generation failed — use the ✨ button to retry.`
+      gen?.ok ? t.addedWithAudio(data.text) : t.addedAudioFailed(data.text)
     );
     setForm(EMPTY_FORM);
     router.refresh();
@@ -175,10 +175,10 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     setBusyId(null);
     setMessage(
       res?.ok
-        ? `Generated audio for “${word.text}”.`
+        ? t.generated(word.text)
         : res
-          ? (data.error ?? "Could not generate.")
-          : "No internet connection. Check it and try again."
+          ? (data.error ?? t.generateFailed)
+          : t.offlineRetry
     );
     if (res?.ok) router.refresh();
   }
@@ -196,7 +196,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      setMessage("Microphone access was blocked. Allow the microphone and try again.");
+      setMessage(t.micBlocked);
       return;
     }
 
@@ -211,7 +211,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
       const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
       if (blob.size === 0) {
-        setMessage("Nothing was recorded — please try again.");
+        setMessage(t.nothingRecorded);
         return;
       }
       const audio = await new Promise<string | null>((resolve) => {
@@ -221,7 +221,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         reader.readAsDataURL(blob);
       });
       if (!audio) {
-        setMessage("Could not read the recording — please try again.");
+        setMessage(t.readFailed);
         return;
       }
       // Hold it for review instead of saving blind.
@@ -246,12 +246,12 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusyId(null);
     if (!res?.ok) {
-      setMessage(res ? (data.error ?? "Could not save the recording.") : "No internet connection. Check it and try again.");
+      setMessage(res ? (data.error ?? t.saveRecordingFailed) : t.offlineRetry);
       return;
     }
     URL.revokeObjectURL(draft.url);
     setDraft(null);
-    setMessage(`Saved your voice for “${word.text}”. Learners will hear this recording.`);
+    setMessage(t.savedVoice(word.text));
     router.refresh();
   }
 
@@ -269,13 +269,11 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     // played to a child has been lied to by the interface.
     if (!res?.ok) {
       setMessage(
-        res
-          ? `Could not remove the recording of “${word.text}” — it is still in use.`
-          : "No internet connection. Check it and try again."
+        res ? t.removeFailed(word.text) : t.offlineRetry
       );
       return;
     }
-    setMessage(`Removed your recording of “${word.text}” — the generated voice is back.`);
+    setMessage(t.removed(word.text));
     router.refresh();
   }
 
@@ -289,11 +287,11 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     const data = (await res?.json().catch(() => ({}))) ?? {};
     setBusyId(null);
     if (!res?.ok) {
-      setMessage(res ? (data.error ?? "Could not save.") : "No internet connection. Check it and try again.");
+      setMessage(res ? (data.error ?? t.saveFailed) : t.offlineRetry);
       return;
     }
     setEditingVariants(null);
-    setMessage(`Updated accepted spellings for “${word.text}”.`);
+    setMessage(t.spellingsUpdated(word.text));
     router.refresh();
   }
 
@@ -306,32 +304,27 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-ink">Word bank</h1>
+          <h1 className="text-3xl font-extrabold text-ink">{t.title}</h1>
           <p className="mt-1 max-w-3xl text-sm font-semibold text-ink-muted">
-            {realWords.length} Filipino words, sequenced by the Marungko Approach and tagged by
-            syllable pattern and difficulty
-            {probeWords > 0 && `, plus ${probeWords} probe non-words`}.{" "}
+            {t.summary(realWords.length, probeWords)}{" "}
             {missingAudio > 0 ? (
-              <span className="text-orange">
-                {missingAudio} still need pronunciation audio — use the ✨ button.
-              </span>
+              <span className="text-orange">{t.missingAudio(missingAudio)}</span>
             ) : (
-              "All words have pronunciation audio."
+              t.allAudio
             )}{" "}
-            Record a word in your own voice with the mic; learners hear your recording instead of
-            the generated voice.
+            {t.recordHint}
           </p>
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
           className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-bold text-white shadow-sm transition hover:bg-primary-dark"
         >
-          <Plus size={18} /> Add word
+          <Plus size={18} /> {t.addWord}
         </button>
       </div>
 
       {message && (
-        <p className="mt-4 rounded-xl bg-primary-soft px-4 py-2.5 text-sm font-bold text-ink">
+        <p role="status" className="mt-4 rounded-xl bg-primary-soft px-4 py-2.5 text-sm font-bold text-ink">
           {message}
         </p>
       )}
@@ -342,7 +335,9 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
           className="mt-5 grid gap-3 rounded-2xl border border-line bg-card p-6 shadow-sm sm:grid-cols-2 lg:grid-cols-3"
         >
           <label className="block">
-            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">Word</span>
+            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
+              {t.fieldWord}
+            </span>
             <input
               required
               value={form.text}
@@ -353,7 +348,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Syllables (use “-”)
+              {t.fieldSyllables}
             </span>
             <input
               required
@@ -365,7 +360,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Pattern
+              {t.fieldPattern}
             </span>
             <input
               required
@@ -380,17 +375,17 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
               not a label — there is no control here to label. */}
           <div>
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Marungko stage
+              {t.fieldStage}
             </span>
             <p className={`${input} w-full bg-cream text-ink-soft`} aria-live="polite">
               {derivedStage === null
-                ? "from the letters"
-                : `Stage ${derivedStage} (${STAGE_LETTERS[derivedStage - 1]})`}
+                ? t.stageFromLetters
+                : t.stageLabel(derivedStage, STAGE_LETTERS[derivedStage - 1])}
             </p>
           </div>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Difficulty level
+              {t.fieldLevel}
             </span>
             <select
               value={form.level}
@@ -399,14 +394,14 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
             >
               {[1, 2, 3, 4, 5].map((l) => (
                 <option key={l} value={l}>
-                  Level {l}
+                  {t.levelOption(l)}
                 </option>
               ))}
             </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
-              English gloss {form.isPseudo ? "(not used for probe words)" : "(optional)"}
+              {t.fieldGloss(form.isPseudo)}
             </span>
             <input
               value={form.meaningEn}
@@ -428,14 +423,12 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
               />
               <span>
                 <span className="block text-sm font-extrabold text-ink">
-                  This is a probe non-word
+                  {t.probeCheckbox}
                 </span>
                 <span className="mt-0.5 block text-xs font-semibold text-ink-muted">
-                  A made-up word for the decoding probe. It gets no audio and no meaning, never
-                  appears in practice, and never affects a learner&apos;s level or accuracy — it
-                  exists only to check whether a child can decode letters they have not memorised.
-                  It must not be a real word in <strong>Tagalog or Cebuano</strong>, or a local
-                  name.
+                  {t.probeExplainBefore}
+                  <strong>{t.probeExplainLangs}</strong>
+                  {t.probeExplainAfter}
                 </span>
               </span>
             </label>
@@ -449,10 +442,10 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                     disabled={suggesting}
                     className="flex items-center gap-2 rounded-xl bg-peach px-4 py-2 text-sm font-bold text-peach-deep transition hover:opacity-90 disabled:opacity-50"
                   >
-                    <Sparkles size={16} /> {suggesting ? "Thinking…" : "Suggest non-words"}
+                    <Sparkles size={16} /> {suggesting ? t.thinking : t.suggest}
                   </button>
                   <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
-                    for stage
+                    {t.forStage}
                     <select
                       value={suggestStage}
                       onChange={(e) => setSuggestStage(Number(e.target.value))}
@@ -466,8 +459,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                     </select>
                   </label>
                   <span className="text-xs font-semibold text-ink-muted">
-                    Suggestions are only letter combinations — you decide which are genuinely not
-                    words.
+                    {t.suggestNote}
                   </span>
                 </div>
 
@@ -505,10 +497,10 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
               disabled={busy}
               className="rounded-xl bg-primary px-6 py-2.5 font-bold text-white transition hover:bg-primary-dark disabled:opacity-50"
             >
-              {busy ? "Adding…" : "Add to word bank"}
+              {busy ? t.adding : t.addToBank}
             </button>
             <span className="text-xs font-semibold text-ink-muted">
-              Filipino audio is generated automatically.
+              {t.audioAuto}
             </span>
           </div>
         </form>
@@ -522,7 +514,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
             stageFilter === 0 ? "bg-primary text-white" : "bg-card text-ink-soft border border-line hover:bg-cream-dark"
           }`}
         >
-          All stages
+          {t.allStages}
         </button>
         {STAGE_LETTERS.map((letters, i) => (
           <button
@@ -541,7 +533,7 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search…"
+          placeholder={t.search}
           className={`${input} ml-auto w-44`}
         />
       </div>
@@ -550,18 +542,18 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
         <table className="w-full min-w-200 text-left text-sm">
           <thead>
             <tr className="border-b border-line text-xs font-bold uppercase tracking-wide text-ink-muted">
-              <th className="px-5 py-3">Word</th>
-              <th className="px-3 py-3">Syllables</th>
-              <th className="px-3 py-3">Stage</th>
-              <th className="px-3 py-3">Level</th>
-              <th className="px-3 py-3">Meaning</th>
-              <th
-                className="px-3 py-3"
-                title="Spellings the speech recognizer may return for a correct reading"
-              >
-                Accepted spellings
+              <th className="px-5 py-3">{t.colWord}</th>
+              <th className="px-3 py-3">{t.colSyllables}</th>
+              {/* The proposal's data set tags every word with its syllable
+                  pattern; it was stored but never shown. */}
+              <th className="px-3 py-3">{t.colPattern}</th>
+              <th className="px-3 py-3">{t.colStage}</th>
+              <th className="px-3 py-3">{t.colLevel}</th>
+              <th className="px-3 py-3">{t.colMeaning}</th>
+              <th className="px-3 py-3" title={t.colSpellingsTitle}>
+                {t.colSpellings}
               </th>
-              <th className="px-3 py-3">Pronunciation</th>
+              <th className="px-3 py-3">{t.colPronunciation}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -576,13 +568,14 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                     {w.isPseudo && (
                       <span
                         className="ml-2 inline-block rounded-full bg-peach-soft px-2 py-0.5 align-middle text-xs font-bold text-peach-deep"
-                        title="A made-up word used only in the decoding probe. Never appears in practice and never gets audio."
+                        title={t.probeBadgeTitle}
                       >
-                        probe
+                        {t.probeBadge}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">{w.syllables}</td>
+                  <td className="px-3 py-3 font-mono text-xs font-semibold text-ink-soft">{w.pattern}</td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">S{w.stage}</td>
                   <td className="px-3 py-3 font-semibold text-ink-soft">L{w.level}</td>
                   <td className="px-3 py-3 font-semibold text-ink-muted">
@@ -590,9 +583,9 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                     {w.stressNote && (
                       <span
                         className="mt-1 block text-xs font-bold text-orange"
-                        title="Filipino does not write stress and the transcript does not capture it, so the app scores both readings the same. Judge this word by ear."
+                        title={t.stressTitle}
                       >
-                        stress: {w.stressNote}
+                        {t.stress(w.stressNote)}
                       </span>
                     )}
                   </td>
@@ -617,13 +610,13 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                           disabled={rowBusy}
                           className="rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white transition hover:bg-primary-dark"
                         >
-                          Save
+                          {t.save}
                         </button>
                         <button
                           onClick={() => setEditingVariants(null)}
                           className="rounded-lg px-1.5 py-1 text-xs font-bold text-ink-muted hover:text-ink"
                         >
-                          Cancel
+                          {t.cancel}
                         </button>
                       </div>
                     ) : (
@@ -632,14 +625,14 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                           setEditingVariants(w.id);
                           setVariantDraft(w.variants);
                         }}
-                        title="Spellings the recognizer may return for a correct reading"
+                        title={t.colSpellingsTitle}
                         className="rounded-lg px-2 py-1 text-left text-xs font-semibold text-ink-muted transition hover:bg-cream-dark hover:text-ink"
                       >
                         {/* Not dimmed. The palette's ink-muted is chosen to
                             clear 4.5:1 on this background; knocking it to 70%
                             opacity took it to 3.0:1 and failed AA on every word
                             in the bank at once — 256 nodes from one class. */}
-                        {w.variants || <span className="text-ink-muted">+ add</span>}
+                        {w.variants || <span className="text-ink-muted">{t.addSpelling}</span>}
                       </button>
                     )}
                   </td>
@@ -652,17 +645,17 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                          hands the child the answer. Saying so beats offering
                          buttons that fail. */
                       <span className="text-xs font-semibold text-ink-muted">
-                        never voiced — probe item
+                        {t.neverVoiced}
                       </span>
                     ) : rowDraft ? (
                       /* Preview the take before it replaces what learners hear */
                       <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-primary-soft/60 p-1.5">
                         <span className="px-1 text-xs font-bold text-ink">
-                          New {rowDraft.kind === "syll" ? "syllables" : "word"} take:
+                          {t.newTake(rowDraft.kind === "syll")}
                         </span>
                         <button
                           onClick={() => new Audio(rowDraft.url).play().catch(() => {})}
-                          aria-label="Play the recording you just made"
+                          aria-label={t.playTake}
                           className={`${iconBtn} bg-white text-primary hover:bg-cream`}
                         >
                           <Play size={15} />
@@ -672,18 +665,18 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                           disabled={rowBusy}
                           className="flex items-center gap-1 rounded-lg bg-green px-2.5 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-40"
                         >
-                          <Check size={14} /> Use this
+                          <Check size={14} /> {t.useThis}
                         </button>
                         <button
                           onClick={() => toggleRecord(w, rowDraft.kind)}
                           disabled={rowBusy}
                           className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-bold text-ink transition hover:bg-cream"
                         >
-                          Redo
+                          {t.redo}
                         </button>
                         <button
                           onClick={discardDraft}
-                          aria-label="Discard this recording"
+                          aria-label={t.discardTake}
                           className={`${iconBtn} text-ink-muted hover:bg-white hover:text-ink`}
                         >
                           <X size={15} />
@@ -693,16 +686,16 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <button
                           onClick={() => preview(w)}
-                          aria-label={`Hear ${w.text}`}
-                          title="Hear what learners hear"
+                          aria-label={t.hearAria(w.text)}
+                          title={t.hearTitle}
                           className={`${iconBtn} text-primary hover:bg-primary-soft`}
                         >
                           <Volume2 size={16} />
                         </button>
                         <button
                           onClick={() => preview(w, "syll")}
-                          aria-label={`Hear ${w.text} by syllables`}
-                          title="Hear the syllables"
+                          aria-label={t.hearSyllAria(w.text)}
+                          title={t.hearSyllTitle}
                           className={`${iconBtn} text-primary hover:bg-primary-soft`}
                         >
                           <span className="text-[11px] font-extrabold">ba·hay</span>
@@ -711,10 +704,8 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                         <button
                           onClick={() => toggleRecord(w, "word")}
                           disabled={rowBusy || (recording !== null && !isRecording)}
-                          aria-label={
-                            isRecording ? `Stop recording ${w.text}` : `Record ${w.text} in your voice`
-                          }
-                          title={isRecording ? "Tap to stop" : "Record the word in your own voice"}
+                          aria-label={t.recordAria(w.text, isRecording)}
+                          title={t.recordTitle(isRecording)}
                           className={`${iconBtn} ${
                             isRecording
                               ? "animate-pulse bg-red text-white"
@@ -728,8 +719,8 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                           <button
                             onClick={() => generateAudio(w)}
                             disabled={rowBusy}
-                            title="Generate Filipino pronunciation"
-                            aria-label={`Generate audio for ${w.text}`}
+                            title={t.generateTitle}
+                            aria-label={t.generateAria(w.text)}
                             className={`${iconBtn} text-orange hover:bg-orange-soft`}
                           >
                             <Sparkles size={16} />
@@ -739,13 +730,13 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                         {w.hasHuman && (
                           <>
                             <span className="rounded-full bg-green-soft px-2 py-0.5 text-[10px] font-bold text-green">
-                              your voice
+                              {t.yourVoice}
                             </span>
                             <button
                               onClick={() => removeRecording(w)}
                               disabled={rowBusy}
-                              title="Remove your recording (generated voice returns)"
-                              aria-label={`Remove your recording of ${w.text}`}
+                              title={t.removeTitle}
+                              aria-label={t.removeAria(w.text)}
                               className={`${iconBtn} text-ink-muted hover:bg-red-soft hover:text-red`}
                             >
                               <Trash2 size={14} />
@@ -754,11 +745,11 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
                         )}
                         {!w.hasHuman && !w.hasTts && (
                           <span className="rounded-full bg-orange-soft px-2 py-0.5 text-[10px] font-bold text-orange">
-                            no audio
+                            {t.noAudio}
                           </span>
                         )}
                         {rowBusy && (
-                          <span className="text-[10px] font-bold text-ink-muted">working…</span>
+                          <span className="text-[10px] font-bold text-ink-muted">{t.working}</span>
                         )}
                       </div>
                     )}
@@ -768,8 +759,8 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-ink-muted">
-                  No words match.
+                <td colSpan={8} className="px-5 py-8 text-center text-ink-muted">
+                  {t.noMatch}
                 </td>
               </tr>
             )}
