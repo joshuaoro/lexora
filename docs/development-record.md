@@ -1615,7 +1615,12 @@ there is nothing left":
   eight suites.
 - *The database logs.* Switching the Data API off made PostgREST log an ERROR every
   ~32 s (a known Supabase issue); quieted by `20261007120000`. The only other
-  errors in the logs were the audit's own refused anon reads — the door working.
+  errors in the logs were the audit's own refused anon reads — the door working —
+  and `relation "supabase_migrations.schema_migrations" does not exist`, twice per
+  push: Supabase's own tooling looking for Supabase-CLI migration history. This
+  project's migrations are Prisma's, in `_prisma_migrations`. Expected; leave it —
+  an empty table there would invite that tooling to manage migrations it does not
+  own.
 - *Housekeeping.* Two 9 MB SQLite files from the first day (`dev.db`,
   `dev.db.backup`, seed data only) moved to the Recycle Bin.
 

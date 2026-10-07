@@ -375,18 +375,19 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
               className={`${input} w-full`}
             />
           </label>
-          <label className="block">
+          {/* Shown, not chosen: the server derives it from the letters, so a
+              word can never reach a child before its letters are taught. A div,
+              not a label — there is no control here to label. */}
+          <div>
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
               Marungko stage
             </span>
-            {/* Shown, not chosen: the server derives it from the letters, so a
-                word can never reach a child before its letters are taught. */}
             <p className={`${input} w-full bg-cream text-ink-soft`} aria-live="polite">
               {derivedStage === null
                 ? "from the letters"
                 : `Stage ${derivedStage} (${STAGE_LETTERS[derivedStage - 1]})`}
             </p>
-          </label>
+          </div>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-muted">
               Difficulty level
