@@ -323,7 +323,7 @@ for (const col of [
 
 const attemptsCsv = await (await api("/api/export?what=attempts", { cookie: specialist })).text();
 const attemptsHeader = attemptsCsv.split("\r\n")[0];
-for (const col of ["is_pseudoword", "specialist_correct", "stress_pair", "review_blind", "review_tags"]) {
+for (const col of ["is_pseudoword", "specialist_correct", "stress_pair", "review_blind", "review_tags", "learner_id"]) {
   check(`attempts export carries ${col}`, attemptsHeader.includes(col));
 }
 

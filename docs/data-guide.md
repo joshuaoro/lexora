@@ -81,7 +81,7 @@ tell you the aircon was being repaired that afternoon.
 
 ## 2. Data dictionary — every column
 
-Six CSV exports (103 columns) plus one plain-text export. All are UTF-8 with a
+Six CSV exports (105 columns) plus one plain-text export. All are UTF-8 with a
 BOM, so Excel and SPSS open them without mangling Filipino characters.
 
 Download from the specialist dashboard, or:
@@ -134,7 +134,7 @@ Tagging is optional by design — a blank is honest missing data. So a tag
 distribution describes only the misreadings someone tagged. Always report
 "categories recorded for N of M reviewed misreadings (X%)" beside it.
 
-### 2.1 `attempts` — 27 columns, one row per word reading
+### 2.1 `attempts` — 28 columns, one row per word reading
 
 The raw data. Everything else can be recomputed from this.
 
@@ -166,6 +166,7 @@ The raw data. Everything else can be recomputed from this.
 | `specialist_correct` | The specialist's own verdict, 1/0, blank if unreviewed. **This is the ground truth**, on both real and probe words |
 | `stress_pair` | Non-empty where meaning depends on unwritten stress — `correct` on these rows is not evidence about stress |
 | `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets §5.5 be recomputed from the rows |
+| `learner_id` | A stable, meaningless id for the child — the join key across `attempts`, `sessions` and `summary`. Join on this, never on `learner`: two children can share a first name |
 | `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.7. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
 
 **`specialist_review` vs `specialist_correct`.** The first stores whether the
@@ -173,10 +174,11 @@ specialist *agreed with the machine*; the second is their own verdict, already
 converted for you. Use `specialist_correct`. Confusing the two inverts your
 results on every reading the machine got wrong.
 
-### 2.2 `sessions` — 11 columns, one row per activity
+### 2.2 `sessions` — 12 columns, one row per activity
 
 `session_id`, `learner`, `timestamp_iso`, `activity_type`, `items`, `correct`,
-`accuracy_pct`, `duration_ms`, `level_at_time`, `study_phase`, `completed`.
+`accuracy_pct`, `duration_ms`, `level_at_time`, `study_phase`, `completed`,
+`learner_id`.
 
 - `completed = 0` — the child started and left partway. The words they read are
   real data; the session is just unfinished. Exclude these when counting
@@ -190,7 +192,14 @@ results on every reading the machine got wrong.
 Pre-aggregated, and every figure already applies filter ①. This is the
 convenient file; `attempts` is the authoritative one.
 
-**Identity** `learner`, `email`, `level`, `marungko_stage`
+**Identity** `learner`, `learner_id`, `level`, `marungko_stage` — no email: an
+analysis needs a join key, not a way to contact the family
+
+**Pseudonymising before the data leaves the research team.** `learner` is the
+display name the child was registered under. Map each `learner_id` to its
+participant code (`L1`…`L5`) using the intake sheet, replace `learner` with that
+code in every file, and only then share. The id itself identifies no one — it is
+a random string — but it must not be published next to anything that does.
 
 **Accuracy** `oral_attempts`, `oral_correct`, `oral_accuracy_pct`
 

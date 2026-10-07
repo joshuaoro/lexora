@@ -67,7 +67,7 @@ corpus large enough to hold out a test set, and consent that covers training.
 
 ### Stress detection from audio
 Filipino does not write stress, so *búkas* and *bukás* reach the scorer as the
-same five letters. Six words in the bank are flagged for this
+same five letters. Eight words in the bank are flagged for this
 (`STRESS_NOTES` in `prisma/word-bank.ts`) and a specialist can tag it by ear.
 
 **Why not automated:** detecting it requires pitch and duration analysis of the
@@ -128,8 +128,12 @@ terminal.
   children; it would not be for fifty.
 - **Cohort print view.** Per-learner reports print
   (`src/components/PrintButton.tsx`); the cohort page does not.
-- **Filipino for the learner-facing exercise internals.** Complete for
-  everything a child sees; the specialist workspace was finished at the freeze.
+- **Filipino for the researcher's tools.** Every screen a child sees follows the
+  language toggle, as do the specialist's learner list, learner page panels,
+  review list, cohort view and the two headline comparisons (completed on
+  7 October; see §8.16 of the development record). Still English: the word bank,
+  the threshold-calibration page, the data-protection and level controls, and the
+  device check — tools for the people running the study, who work in English.
 
 ---
 

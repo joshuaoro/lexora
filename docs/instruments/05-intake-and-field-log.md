@@ -27,11 +27,14 @@ findings apply to.
 |---|---|
 | Child's name | `_________________________` |
 | LEXORA account email | `_________________________` |
+| LEXORA learner ID (the last part of the learner page's address, `/specialist/learner/…`) | `_________________________` |
 
 > **Keep the code-to-name mapping on paper, or in one file held separately from
 > the study data — never in the repository, the database, or a synced folder.**
 > Everything else in the study refers to `L1`…`L5` and nothing else. That
-> separation is what makes the pseudonymisation real rather than nominal.
+> separation is what makes the pseudonymisation real rather than nominal. The
+> exports carry the learner ID and the display name; before sharing them, replace
+> both with the code from this sheet (see the data guide, §2.3).
 
 ### Characteristics — these go into Table 1
 

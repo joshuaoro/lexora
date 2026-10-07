@@ -141,6 +141,7 @@ export async function GET(req: Request) {
           responseMs: true,
           levelAtTime: true,
           isRetry: true,
+          learnerId: true,
           learner: { select: { user: { select: { name: true } } } },
           word: {
             select: {
@@ -196,6 +197,7 @@ export async function GET(req: Request) {
       // Sorted so the same set always prints the same way, and joined with a
       // semicolon so the cell never needs quoting.
       a.review ? a.review.tags.map((t) => t.tag).sort().join(";") : "",
+      a.learnerId,
     ]);
 
     return csvResponse(
@@ -232,6 +234,12 @@ export async function GET(req: Request) {
           // spelling. Blank means reviewed but untagged — honest missing data,
           // so report coverage with any distribution built from it.
           "review_tags",
+          // A stable, meaningless id for the child — the join key across the
+          // three per-learner exports, where joining on `learner` (a first
+          // name) breaks the day two children share one. Map it to the
+          // participant code on the intake sheet, and drop `learner` before the
+          // data leaves the research team.
+          "learner_id",
         ],
         rows
       ),
@@ -258,6 +266,7 @@ export async function GET(req: Request) {
       s.levelAtTime,
       s.phase,
       s.completedAt ? 1 : 0,
+      s.learnerId,
     ]);
 
     return csvResponse(
@@ -265,7 +274,7 @@ export async function GET(req: Request) {
         // completed = 0 marks an activity the learner started and left partway.
         // The words they read are real data; the session is just not a finished
         // one, so exclude these when counting activities completed.
-        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase", "completed"],
+        ["session_id", "learner", "timestamp_iso", "activity_type", "items", "correct", "accuracy_pct", "duration_ms", "level_at_time", "study_phase", "completed", "learner_id"],
         rows
       ),
       exportName("sessions", scopedTo)
@@ -275,7 +284,7 @@ export async function GET(req: Request) {
   if (what === "summary") {
     const learners = await prisma.learnerProfile.findMany({
       where: learnerScope(includeDemo),
-      include: { user: { select: { name: true, email: true } } },
+      include: { user: { select: { name: true } } },
       orderBy: { user: { name: "asc" } },
     });
 
@@ -354,7 +363,10 @@ export async function GET(req: Request) {
 
       rows.push([
         l.user.name,
-        l.user.email,
+        // In the column that held the email address. A statistician needs a
+        // join key, not a way to contact the family — RA 10173 asks for the
+        // data the purpose needs and no more.
+        l.id,
         l.level,
         l.stage,
         total,
@@ -387,7 +399,7 @@ export async function GET(req: Request) {
     return csvResponse(
       toCsv(
         [
-          "learner", "email", "level", "marungko_stage",
+          "learner", "learner_id", "level", "marungko_stage",
           "oral_attempts", "oral_correct", "oral_accuracy_pct",
           "substitution", "omission", "insertion", "no_response",
           "sessions_completed", "sessions_partial", "minutes_practiced",

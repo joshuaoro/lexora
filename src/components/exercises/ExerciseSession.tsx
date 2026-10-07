@@ -314,6 +314,7 @@ export default function ExerciseSession({
         total: answeredRef.current.total + 1,
         correct: answeredRef.current.correct,
       };
+      void flushProgress(false);
       setResults((r) => [...r, true]);
       setFeedback({ correct: true, heard: null, chosen: null });
       setPhase("feedback");
@@ -326,6 +327,13 @@ export default function ExerciseSession({
       total: answeredRef.current.total + 1,
       correct: answeredRef.current.correct + (correct ? 1 : 0),
     };
+    // Saved after every answer, not only on the way out. The exit flush cannot
+    // cover every exit: signing out from the sidebar clears the session cookie
+    // before this screen unmounts, so its last save was refused and the
+    // activity's minutes were lost — on a tablet shared by several children,
+    // the ordinary way a turn ends. The server ignores a save older than the
+    // one it already holds, so these may arrive in any order.
+    void flushProgress(false);
     setResults((r) => [...r, correct]);
     setFeedback({ correct, heard: data.heard || null, chosen: payload.chosen ?? null });
     setPhase("feedback");

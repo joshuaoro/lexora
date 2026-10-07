@@ -475,7 +475,7 @@ await parity(
 // read: comparing a query against itself would be exactly the vacuous check
 // this section exists to rule out.
 const summaryHeader = sumCsv.trim().split("\n")[0].replace(/^﻿/, "").split(",");
-const emailCol = summaryHeader.indexOf("email");
+const idCol = summaryHeader.indexOf("learner_id");
 const activeCol = summaryHeader.indexOf("practice_words_active");
 const masteredCol = summaryHeader.indexOf("practice_words_mastered");
 const ourRow = sumCsv
@@ -483,9 +483,9 @@ const ourRow = sumCsv
   .split("\n")
   .slice(1)
   .map((line) => line.split(","))
-  .find((cells) => cells[emailCol] === rls.email);
+  .find((cells) => cells[idCol] === rls.learnerId);
 
-if (!ourRow || emailCol === -1 || activeCol === -1) {
+if (!ourRow || idCol === -1 || activeCol === -1) {
   check("PracticeItem: summary export exposes the test learner's row", false, "row not found");
 } else {
   await parity(

@@ -261,6 +261,30 @@ async function main() {
   );
   check("a reading cannot attach to another learner's session", borrowed.n === 0, `${borrowed.n} attached`);
 
+  // Progress is saved after every answer, so saves can overtake each other.
+  // An older one — fewer items — must not walk the totals back.
+  const save = (body) =>
+    api(`/api/sessions/${theirs.body.id}`, { cookie: other.cookie, method: "PATCH", body });
+  await save({ total: 3, correct: 2, durationMs: 9000 });
+  const stale = await json(`/api/sessions/${theirs.body.id}`, {
+    cookie: other.cookie,
+    method: "PATCH",
+    body: { total: 2, correct: 1, durationMs: 6000 },
+  });
+  const afterStale = await one(`SELECT total, "durationMs" FROM "ActivitySession" WHERE id = $1`, [
+    theirs.body.id,
+  ]);
+  await save({ total: 4, correct: 3, durationMs: 12000, completed: true });
+  const done = await one(`SELECT total, "completedAt" FROM "ActivitySession" WHERE id = $1`, [
+    theirs.body.id,
+  ]);
+  check(
+    "a save that arrives late cannot walk a session's totals back",
+    afterStale.total === 3 && afterStale.durationMs === 9000 && Boolean(stale.body.ignored) &&
+      done.total === 4 && done.completedAt !== null,
+    `3 then stale 2 → ${afterStale.total}; completed at ${done.total}`
+  );
+
   // The device check scores a real recording through the real pipeline, from
   // inside a learner's account — and must leave that account as it found it.
   const before = await one(

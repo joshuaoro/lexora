@@ -128,8 +128,9 @@ list can repair this — the application cannot hear the difference. Since
 misplaced stress is a documented marker of dyslexia in Filipino, being blind to
 it is exactly the wrong blindness to have.
 
-The response was threefold: six bank words carry a `stressNote` (`bukas`,
-`tubo`, `pito`, `puto`, `buhay`, `hapon`); the specialist reviewing one of them
+The response was threefold: eight bank words carry a `stressNote` (`bukas`,
+`tubo`, `pito`, `puto`, `buhay`, `hapon`, and since 7 October `basa` and `gabi`,
+whose glosses had listed both meanings all along); the specialist reviewing one of them
 sees a caveat telling them to judge by ear; and `stress` exists as a tag in the
 observation vocabulary specifically because a specialist's ear is the only
 instrument the study has for it. The rows are marked `stress_pair` in the
@@ -1621,6 +1622,19 @@ there is nothing left":
   project's migrations are Prisma's, in `_prisma_migrations`. Expected; leave it —
   an empty table there would invite that tooling to manage migrations it does not
   own.
+- *Minutes lost on sign-out.* An exercise saved its progress on the way out,
+  but signing out from the sidebar clears the cookie before the screen
+  unmounts, so that last save was refused and the activity's minutes vanished —
+  the ordinary end of a turn on a shared tablet. Progress is now saved after
+  every answer, and the route ignores a save older than the one it holds, since
+  saves may now overtake each other.
+- *Exports named the children and nothing else.* The CSVs could be joined only on
+  `learner`, a display name — two children called Ana would merge — and the
+  summary carried each family's email, which no analysis needs. Every
+  per-learner export now carries a meaningless `learner_id`; the summary's email
+  column became that id. The data guide and the intake sheet say how to swap
+  names for participant codes before the data leaves the team, which is what
+  the intake sheet's "pseudonymisation" had assumed was already happening.
 - *Housekeeping.* Two 9 MB SQLite files from the first day (`dev.db`,
   `dev.db.backup`, seed data only) moved to the Recycle Bin.
 

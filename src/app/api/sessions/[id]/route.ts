@@ -36,8 +36,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   // land, and the partial one then overwrite the final totals — the very thing
   // the check exists to stop. And a learner erased between the two steps made
   // the write throw, answering 500 for a session that was simply gone.
+  //
+  // Progress is now also saved after every answer, so saves can overtake each
+  // other in flight. `total` only ever grows within an activity, so a save
+  // carrying fewer items than the row already holds is a stale one and must not
+  // walk the totals back.
   const { count } = await prisma.activitySession.updateMany({
-    where: { id, learnerId: session.learnerId, completedAt: null },
+    where: { id, learnerId: session.learnerId, completedAt: null, total: { lte: totals.total } },
     data: {
       ...totals,
       ...(completed ? { completedAt: new Date() } : {}),
@@ -45,12 +50,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   });
   if (count === 1) return NextResponse.json({ ok: true, id });
 
-  // Nothing written: either it is finished already, or it is not this
-  // learner's — or not anyone's any more.
+  // Nothing written: finished already, superseded by a newer save, or not
+  // this learner's — or not anyone's any more.
   const existing = await prisma.activitySession.findFirst({
     where: { id, learnerId: session.learnerId },
-    select: { id: true },
+    select: { completedAt: true },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, id, ignored: "already completed" });
+  return NextResponse.json({
+    ok: true,
+    id,
+    ignored: existing.completedAt ? "already completed" : "older than the saved progress",
+  });
 }
