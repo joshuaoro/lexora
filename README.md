@@ -361,9 +361,14 @@ page, which is what took the learner view from 8.4 s to 2.7 s on a throttled con
 
 Specialists can extend the bank in **Word bank → Add word**.
 
-`npm run words:check` validates both banks before they reach a learner;
-`npm run words:sync` applies word-bank changes to a database that already has study data
-in it, which `prisma db seed` cannot do because seeding wipes every table first.
+`npm run words:check` validates both banks before they reach a learner — and the rhyme and
+first-sound items: every rhyme answer shares the prompt's final syllable, no distractor
+could also be heard as one, every first-sound answer shares the first sound, and every word
+is a bank word that passes the suitability list. It also warns on probe non-words one
+letter away from a real word;
+`npm run words:sync` applies word-bank, stress-note and rhyme/first-sound changes to a
+database that already has study data in it, which `prisma db seed` cannot do because seeding
+wipes every table first.
 
 ### Decoding probe (non-words)
 26 pronounceable Filipino non-words in `prisma/pseudoword-bank.ts`, flagged `isPseudo`.
@@ -377,8 +382,9 @@ it separates letter–sound knowledge from sight-word recall.
   fill a full 8-item run.
 - Checked against **Cebuano as well as Tagalog** — the partner site is in Davao City, and a
   "non-word" that is ordinary Bisaya is a real word to these readers.
-- **Never given audio, never entered into practice, never fed to the adaptive level, never
-  counted in accuracy.** A probe item a child can listen to, or has been taught, has stopped
+- **Never given audio, never listed in the Reader, never entered into practice, never fed
+  to the adaptive level, never counted in accuracy** — each enforced on the server, not only
+  hidden in the interface. A probe item a child can listen to, or has been taught, has stopped
   being one. A 7-day cooldown keeps the activity from being ground down by repetition.
 - **Scored by a specialist, by ear.** Whisper is a language model before it is a
   transcriber, and here it is transcribing words that exist in no language. The first real
@@ -389,7 +395,8 @@ it separates letter–sound knowledge from sight-word recall.
   agreement on unfamiliar items, directly comparable with the same figure on real words.
 
 ### Stress-contrastive words
-Six bank words carry a `stressNote`: `bukas`, `tubo`, `pito`, `puto`, `buhay`, `hapon`.
+Eight bank words carry a `stressNote`: `bukas`, `tubo`, `pito`, `puto`, `buhay`, `hapon`,
+`basa`, `gabi`.
 
 Filipino does not write stress, but it changes meaning — *búkas* "tomorrow" against *bukás*
 "open". Scoring compares the recogniser's transcript against the target text, and a
@@ -459,9 +466,11 @@ Two layers now:
 1. **The Data API is disabled** (Supabase → Settings → Data API). LEXORA uses no PostgREST
    at all — no `@supabase/supabase-js`, no anon key anywhere in the tree — so nothing is
    lost, and it stays correct for tables added later.
-2. **RLS is enabled on all 11 tables with no policies** (migration
-   `20260812010000_enable_rls_all_tables`), which is deny-by-default. Verified safe rather
-   than assumed: Prisma connects as `postgres`, which holds `BYPASSRLS`.
+2. **RLS is enabled on all 11 tables** (migration `20260812010000_enable_rls_all_tables`),
+   each with one explicit `USING (false)` policy for `anon` and `authenticated`
+   (`20260930120000_add_deny_all_policies`), and those roles hold no grants at all
+   (`20260812150000_revoke_anon_grants`). Deny-by-default three times over. Verified safe
+   rather than assumed: Prisma connects as `postgres`, which holds `BYPASSRLS`.
 
 Both are asserted in `npm run audit:api` — that the endpoint stays shut, and that the app
 can still read every table, comparing counts over HTTP against the database rather than
@@ -471,9 +480,12 @@ trusting that the site renders. To check the endpoint by hand:
 curl -s -o /dev/null -w "%{http_code}\n" https://<ref>.supabase.co/rest/v1/
 ```
 
-A connection failure or `404` is what you want. `401 No API key found` means PostgREST is
-still answering. Setting `SUPABASE_ANON_KEY` in `.env` upgrades the audit to the stronger
-form: it presents the key the way an attacker would and asserts no row comes back.
+This keyless probe cannot settle it: `401 No API key found` comes from Supabase's API
+gateway, which checks for a key before routing anywhere, and it answers that way with the
+Data API on or off. Present the anon key instead, for a table
+(`-H "apikey: <anon key>" .../rest/v1/User?select=id`): with the Data API off this returns
+`503 PGRST002` (no schema to serve), and either way no row may come back. Setting
+`SUPABASE_ANON_KEY` in `.env` makes `npm run audit:api` do exactly that.
 
 ## Deploying (Vercel)
 
@@ -550,7 +562,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (423 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (435 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure, RLS  (61)
 npm run audit:logic       # scoring, adaptive difficulty, mastery, review  (22)

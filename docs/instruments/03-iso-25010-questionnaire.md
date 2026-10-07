@@ -228,10 +228,10 @@ challenge than either alone.
 | Performance Efficiency | FCP < 3 s, LCP < 4 s, JS < 400 KB, measured on the study's minimum spec (dual-core 2.0 GHz, 5 Mbps) | `npm run audit:perf` |
 | Compatibility | Chrome, Edge, Safari iOS 14.3+; per-device check | `/diagnostics` |
 | **Interaction Capability** | **WCAG 2.1 AA, 19 checks, every route as every role, zero serious or critical violations** | `npm run audit:a11y` |
-| Reliability | 423 checks passing; stale-session and dropped-connection handling verified | `npm run audit` |
+| Reliability | 435 checks passing; stale-session and dropped-connection handling verified | `npm run audit` |
 | Security | Authorization checks, RLS on 11 tables, credential verification | `npm run audit:api`, `npm run secrets:check` |
 | Safety | Non-diagnostic disclaimers; IEP refuses prescriptive language; every panel states its minimum sample | Code and UI |
-| **Maintainability** | **Not rated by specialists** — 423 automated checks, typed codebase, decisions documented | `docs/development-record.md` |
+| **Maintainability** | **Not rated by specialists** — 435 automated checks, typed codebase, decisions documented | `docs/development-record.md` |
 | **Flexibility** | **Not rated by specialists** — responsive across phone/tablet/desktop; single-command deploy | — |
 
 In Chapter 4, give Table 8 a column for each: the specialists' mean, and the

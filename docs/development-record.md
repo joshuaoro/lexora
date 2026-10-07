@@ -42,7 +42,7 @@ Three companion documents:
 | `tests/` — audit suites | 14 | 4,399 |
 | **Total tracked** | | **~23,200** |
 
-53 commits, 10 migrations, 10 automated audit suites, 423 assertions.
+13 migrations, 10 automated audit suites, 435 assertions (as of 7 October 2026).
 
 ---
 
@@ -1466,25 +1466,132 @@ table aborts the run rather than yielding a partial file that looks complete.
 - **Unclear cooldown copy** — "come back to this one in a few days" replaced with
   a specific date.
 
+### 8.16 The pre-consultation audit, 7 October
+
+A whole-project read before the consultation with a reading specialist, prompted
+by Supabase's performance advisor. Most of what it found the advisor could not
+have seen. In order of what each would have cost the study:
+
+**The Reader taught the probe.** `reader/page.tsx` queried every word in the
+table with no `isPseudo` filter, and `buildReaderSets` adds one set per Marungko
+stage regardless of the child's own stage. So all 26 non-words sat one tap away
+for every learner, and — having no stored clip — were spoken aloud by the
+browser's voice. The design rule (§6.4) was enforced in the exercises and nowhere
+else; the audit's leak check only looked at `/exercises/*`. Two more doors stood
+open on the server: the practice-list pin accepted a probe word, and the audio
+routes would record or generate one. All three now refuse, and
+`decoding-audit` §2 asserts each. **Impact on data: none** — the one non-demo
+learner never opened the Reader, and no probe word was ever on a practice list,
+both checked against the database.
+
+**Seventeen rhyme and first-sound items a specialist would have rejected.** "tren"
+given as rhyming with "krus", "klase" with "mesa", "ngiti" with "pito"; "daga →
+gabi" with the distractor "tasa", which actually rhymes; "oso" given as starting
+like "ubo", though Marungko teaches o and u as separate letters. "suso" appeared
+twice despite being on `words:check`'s own list of words to keep away from
+children — the checker only ever looked at the word bank. All seventeen replaced
+with bank words, and the checker now enforces rhyme, first-sound, bank-membership
+and suitability rules on the items (verified by running it against the old file:
+twenty errors). `words:sync` now carries item changes to a live database, which
+previously only the destructive seed could do.
+
+**Three agreement figures over three different populations.** The learner page's
+reliability chip and `summary.agreement_pct` counted every review — including
+probe items, where Whisper's verdict is wrong by construction because it writes a
+non-word as the nearest real word. A child who decoded every probe item would
+have pulled their own agreement down. Both now cover first readings of real
+words, the population `calibration` fits; the data guide says so and notes when
+the two should match.
+
+**The IEP draft quoted a mismatched figure.** "Accuracy X% over N readings in the
+last 14 days" paired the all-time percentage with the 14-day count. Its error
+profile also selected on the machine's verdict, while the review screen offers
+tags on the specialist's — dropping tags on readings the machine accepted and the
+specialist did not.
+
+Fixing that exposed an older contradiction, caught by `calibration-audit` §13:
+the IEP said a self-correction is a reading where "the correct word was produced",
+but the review screen offered the observation chips only on misreadings. A
+specialist following running-record convention — a self-correction is not an
+error — would mark the reading correct and then have nowhere to record it. Now
+the error categories appear after *Not correct* and the two behaviours after
+either verdict; the IEP counts errors and coverage over the specialist's
+misreadings and self-corrections wherever recorded.
+
+**Production showed UTC.** Every server-rendered date and every day bucket used
+the server's clock, which on Vercel is UTC — eight hours behind Davao. Readings at
+10:58 showed as 2:58 AM on the page a specialist tags baseline sessions from; a
+practice day ran 8am to 8am; a probe done on Tuesday morning reported returning
+"Monday". Invisible locally, because the development machine is in Manila time.
+`src/lib/time.ts` now fixes the zone, and client components use it too so server
+and browser render the same string.
+
+**A new learner's stage was recorded as 1 and taught as 3.** Every activity draws
+from `effectiveStage` = max(stage, min(7, level + 2)); the stored column only
+caught up at the first level change. Migration `20261007091000` backfills it and
+moves the default to 3. Nothing a child sees changed — only the record now matches
+it.
+
+**The advisor's own findings.** Four foreign keys without an index:
+`Attempt.sessionId` and `.wordId`, `AttemptReview.specialistId`,
+`PracticeItem.wordId`. Two of them were scanned in normal use — the stale-session
+sweep nulls `Attempt.sessionId` whenever an activity starts, and every learner
+erasure checks `AttemptReview.specialistId`. Indexed in `20261007090000`, which
+also drops `ReviewErrorTag_tag_idx`: no query filters on tag alone. The other
+lightly-used indexes were each traced to the query that uses them and kept — at a
+few hundred rows Postgres often prefers a scan, so a low count says how small the
+study is, not that an index is dead. All four new indexes registered scans during
+the audit run that followed (11–71 each), so none reads as unused either.
+
+**Smaller.** An attempt naming a swept session or a removed word failed its
+foreign key and lost the reading as a 500 — now saved untagged, and a reading can
+no longer borrow another learner's session (and its phase). The attempts export
+gained `review_blind` and `review_tags`, without which the specialist-heard error
+profile (Objective 5) and the blind/anchored comparison could not be recomputed
+from raw rows at all. `basa` and `gabi` were stress pairs whose glosses already
+listed both meanings but carried no caveat. The "syllable dropped" hint's example,
+"atay" for *tatay*, loses a consonant, not a syllable. An empty
+`RECORDING_RETENTION_DAYS` parsed as 0 — keep forever. `<html lang>` said `en` on
+Filipino screens. The manual's learner-page panel list was out of order and
+omitted the probe panel.
+
+**Found by the audit run itself.** The server log showed three `P2025` errors from
+`api/sessions/[id]`: it read a session, then wrote it, and a learner erased in
+between turned the write into a 500. The same two-step shape meant its own
+guarantee — a late partial flush must not overwrite a completed session's totals —
+held only if the requests did not interleave. Now one conditional write (`WHERE
+completedAt IS NULL`); the phase route likewise. Two Filipino strings were
+ungrammatical ("Mag-Basahin nang malakas", "paglagpas nilang mag-register"). And the
+intake form asked the specialist to set a starting Marungko stage, which the app has
+no control for — the stage follows the level; the form now says so.
+
+**Left for the specialist, deliberately.** Eight probe non-words are one letter
+from a word the child practises (`mesu`/mesa, `sobi`/sabi, `kelo`/kilo…), against
+the bank's own stated rule; replacing a probe item is a measurement decision that
+needs someone who speaks Cebuano, so `words:check` now warns rather than fails.
+Several accepted ASR spellings accept what the error tags call errors — `poblema`
+for *problema* is a cluster simplification. Both are on the consultation agenda
+(`docs/consultation-brief.md`).
+
 ---
 
 ## 9. Verification
 
 ### 9.1 The suites
 
-Ten suites, **423 checks locally**. Run with `npm run audit [url]`.
+Ten suites, **435 checks locally** (7 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 61 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
-| `logic-audit` | 22 | Scoring strictness, adaptive difficulty, mastery, agreement |
+| `logic-audit` | 23 | Scoring strictness, adaptive difficulty, mastery, agreement |
 | `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
-| `links-audit` | 50 | Every route reachable from the navigation, as each role |
-| `stale-session-audit` | 21 | A learner or specialist erased mid-session |
+| `links-audit` | 52 | Every route reachable from the navigation, as each role |
+| `stale-session-audit` | 23 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
-| `decoding-audit` | 64 | Probe walls, latency guard, stress caveat, exports, Filipino |
-| `calibration-audit` | 85 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
-| `session-integrity-audit` | 38 / 36 | Language switch mid-exercise, partial progress |
+| `decoding-audit` | 70 | Probe walls, latency guard, stress caveat, exports, Filipino |
+| `calibration-audit` | 86 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
+| `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress |
 | `a11y-audit` | 19 | WCAG 2.1 AA via axe-core, keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
 | `prod-smoke` | — | Real Groq audio, serverless TTS, live `SPECIALIST_CODE` |
@@ -1779,7 +1886,20 @@ it is written down — and asserted in `api-audit` §11 — because it would oth
 be reported as the rotation having silently failed. If every session ever needs
 ending at once, rotating `AUTH_SECRET` invalidates every issued cookie.
 
-**Outstanding.** The first is a dashboard action, the rest are rotations.
+**Status re-checked 7 October 2026** — `npm run secrets:check` against the
+deployment, plus a sign-in attempt for each demo learner:
+
+| Item | State |
+|---|---|
+| 1. Data API disabled | **Done (7 October).** Switched off in the dashboard. Presenting the anon key for a table now returns 503 `PGRST002` — PostgREST can no longer load the schema at all. A keyless request still gets 401 "No API key found", but that is the API gateway, which checks for a key before routing anywhere, so it is not evidence the Data API is up |
+| 2. `SPECIALIST_CODE` rotated | **Done** — the published code is refused (403) and local and deployed values agree |
+| 3. Specialist password changed | **Done** — the published password is refused (401) |
+| 4. Demo learners re-credentialed | **Not done** — `learner1` and `learner2` still sign in with `lexora123` on the deployment |
+| 5. Never reset the study database | Standing rule |
+
+The original list follows, kept for the reasoning behind each item.
+
+**Outstanding (as first written).** The first is a dashboard action, the rest are rotations.
 
 1. **Disable the Supabase Data API** — Settings → Data API. RLS already denies
    the `anon` role, so this is the second layer rather than the first, but it
@@ -1832,7 +1952,8 @@ assumed: it presents each published value and requires a refusal, and it searche
 the tracked tree *and every commit* for the values now in use, because a new
 secret that gets committed is not a rotation but a slower leak.
 
-As of writing it reports three failures, which is the truthful state:
+When first written it reported three failures, which was the truthful state then; on
+7 October it reports all clear (item 4 is outside what it checks):
 
 ```
 [1] registering a specialist with the published code is rejected   FAIL
@@ -1855,11 +1976,21 @@ They should all read `ok` before the first child reads into the application.
 - Check each tablet at `/diagnostics` before the first session.
 - Back up before and after every session; run `--verify` on each.
 
-### 13.3 Instruments not built in this repository
+### 13.3 Instruments
 
-- The ISO/IEC 25010:2023 questionnaire (5-point Likert, specialists)
-- The 3-point pictorial scale (children)
-- Consent and assent forms
+Drafted in `docs/instruments/` (commit `7cee6c6`): parental consent, child assent,
+the ISO/IEC 25010:2023 questionnaire, the pictorial scale, and the intake form and
+field log. **Drafts, not approved instruments** — each needs the research adviser's
+and the ethics committee's sign-off, and the consent and assent forms very likely
+need a Cebuano version made by a fluent speaker.
+
+### 13.4 Decisions for the reading specialist
+
+Before the first baseline: the agenda in `docs/consultation-brief.md` — whether e↔i
+and o↔u count as errors for Cebuano-speaking children, the eight probe non-words
+one letter from a practice word, the accepted-spelling list, starting placement,
+the rhyme criterion, stress flags, observation categories, adaptive thresholds, the
+word bank, and whether a second specialist scores an overlapping sample.
 
 ---
 

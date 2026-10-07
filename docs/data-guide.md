@@ -81,7 +81,7 @@ tell you the aircon was being repaired that afternoon.
 
 ## 2. Data dictionary — every column
 
-Six CSV exports (101 columns) plus one plain-text export. All are UTF-8 with a
+Six CSV exports (103 columns) plus one plain-text export. All are UTF-8 with a
 BOM, so Excel and SPSS open them without mangling Filipino characters.
 
 Download from the specialist dashboard, or:
@@ -132,7 +132,7 @@ Tagging is optional by design — a blank is honest missing data. So a tag
 distribution describes only the misreadings someone tagged. Always report
 "categories recorded for N of M reviewed misreadings (X%)" beside it.
 
-### 2.1 `attempts` — 25 columns, one row per word reading
+### 2.1 `attempts` — 27 columns, one row per word reading
 
 The raw data. Everything else can be recomputed from this.
 
@@ -157,12 +157,14 @@ The raw data. Everything else can be recomputed from this.
 | `error_type` | `correct`, `substitution`, `omission`, `insertion`, `no_response` |
 | `response_ms` | Time to answer |
 | `has_audio` | Whether a recording is still stored |
-| `specialist_review` | `agrees` / `disputes` / blank |
+| `specialist_review` | `agree` / `disagree` / blank — whether the specialist agreed with the machine. Filter on these exact values |
 | `is_retry` | **Filter ①** |
 | `study_phase` | `BASELINE` / `REGULAR` / `ENDLINE` |
 | `is_pseudoword` | 1 = probe non-word |
 | `specialist_correct` | The specialist's own verdict, 1/0, blank if unreviewed. **This is the ground truth**, on both real and probe words |
 | `stress_pair` | Non-empty where meaning depends on unwritten stress — `correct` on these rows is not evidence about stress |
+| `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets §5.5 be recomputed from the rows |
+| `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.7. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
 
 **`specialist_review` vs `specialist_correct`.** The first stores whether the
 specialist *agreed with the machine*; the second is their own verdict, already
@@ -195,7 +197,12 @@ convenient file; `attempts` is the authoritative one.
 **Engagement** `sessions_completed`, `sessions_partial`, `minutes_practiced`,
 `practice_words_active`, `practice_words_mastered`
 
-**Agreement** `attempts_reviewed`, `reviews_agreed`, `agreement_pct`
+**Agreement** `attempts_reviewed`, `reviews_agreed`, `agreement_pct` — over
+first readings of real words (`READ_ALOUD`, `PRACTICE`, `is_retry = 0`), the same
+population the `calibration` export fits. Probe reviews are *not* in it: on a
+non-word the recogniser returns the nearest real word, so its verdict is wrong
+by construction and would pull agreement down whenever a child decoded well.
+They are reported in the `pseudo_*` columns instead.
 
 **Self-correction** `retries`, `retries_correct`, `retry_success_pct`
 
@@ -355,7 +362,7 @@ three opinions. Present both.
 | Performance Efficiency | Yes | `audit:perf` — FCP < 3 s, LCP < 4 s, JS < 400 KB on the study's own minimum spec (dual-core 2.0 GHz, 5 Mbps) |
 | Compatibility | Yes | Chrome, Edge, Safari iOS 14.3+; `/diagnostics` per device |
 | **Interaction Capability** | **Yes — the main one** | `audit:a11y` — WCAG 2.1 AA, 19 checks, every route as every role |
-| Reliability | Yes | 423 checks; stale-session and dropped-connection handling |
+| Reliability | Yes | 435 checks; stale-session and dropped-connection handling |
 | Security | Partly | `audit:api` authorization, RLS on 11 tables, `secrets:check` |
 | Safety | Yes | Non-diagnostic disclaimers; IEP refuses prescriptive language |
 | Maintainability | **No** | Test suite, typed codebase, documented decisions |
@@ -497,7 +504,11 @@ own question directly.**
 
 ### 5.4 Human–machine agreement — Objective 2
 
-**Source** `summary.agreement_pct`; `calibration` for the full statistics.
+**Source** `summary.agreement_pct`; `calibration` for the full statistics. The
+two describe the same readings — first readings of real words — so percent
+agreement in the summary equals `accuracy` on the calibration row marked
+`current`, as long as the threshold has not changed since the readings were
+scored. If they differ, the threshold moved; say so.
 
 Report three figures at the operating threshold (0.95):
 
@@ -523,7 +534,8 @@ participant group. Treat them as context, never as targets.
 
 ### 5.5 Blind versus anchored agreement — a finding, not a footnote
 
-**Source** `agreement-conditions`, two rows.
+**Source** `agreement-conditions`, two rows — or recompute from `attempts`,
+splitting reviewed first readings of real words on `review_blind`.
 
 Until blind review was built, the review screen showed the machine's transcript,
 verdict and similarity **above the play button** — so a specialist met the answer
@@ -550,7 +562,13 @@ version that describes the child.
 
 ### 5.7 Specialist observation tags — the error profile that describes a child
 
-**Source** `ReviewErrorTag` (via the app's panels; not in a CSV export).
+**Source** `attempts.review_tags`. The **error** categories are offered only on
+readings the specialist judged misread, so build the error profile from rows where
+`specialist_correct = 0`; the denominator for coverage (filter ④) is every such
+row, tagged or not. The two **behaviours** can appear on any reviewed row — a
+self-correction ends in the right word, so it usually sits on a row the specialist
+judged correct. Count those over all reviewed rows. Split the semicolon list; one
+reading can carry several tags.
 
 Ten categories, split by kind:
 
@@ -571,7 +589,7 @@ Counting either as an error overstates how much went wrong.
 misreadings (X%)".
 
 **Stress deserves its own sentence in the results.** Filipino does not write
-stress, so *búkas* and *bukás* reach the scorer as identical letters. Six bank
+stress, so *búkas* and *bukás* reach the scorer as identical letters. Eight bank
 words are flagged for it. A specialist's ear is the only instrument the study has
 for a marker its own literature calls diagnostic.
 

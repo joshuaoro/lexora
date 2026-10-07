@@ -59,7 +59,7 @@ snapshot, and the whole point of rotating is that written-down passwords go stal
 | `specialist@lexora.ph` | **rotated** — password manager | Specialist — "Teacher Maria Santos" | Reviews everything |
 | `joshyadmin@lexora.ph` | **rotated** — password manager | Specialist — "joshy" | Researcher's own account |
 | `learner1@lexora.ph` | `lexora123` ⚠ | Learner — "Juan" | **Level 4, stage 6, 135 readings, 23 sessions** — the account with history |
-| `learner2@lexora.ph` | `lexora123` ⚠ | Learner — "Ana" | Level 1, stage 1, 68 readings, 19 sessions |
+| `learner2@lexora.ph` | `lexora123` ⚠ | Learner — "Ana" | Level 1, stage 3, 68 readings, 19 sessions |
 
 > ⚠ **The two demo learners still accept the password published in git history.** They
 > hold only fabricated data, so this is a demo-account exposure rather than a
@@ -164,7 +164,8 @@ retire it from the list. A specialist can also pin words here manually.
 A text display with all the accessibility settings applied, word-by-word
 text-to-speech, and synchronised highlighting. Tap any word to hear it alone. **Nothing
 here is scored** — reader time counts toward "minutes practised" but produces no
-accuracy figure.
+accuracy figure. Only real words appear: the probe's non-words are never listed or
+spoken here.
 
 ### Reports `/reports`
 
@@ -214,23 +215,34 @@ view, threshold calibration, and the three CSV exports.
 
 ### Learner detail `/specialist/learner/<id>`
 
-The main working screen. Panels, top to bottom:
+The main working screen. Along the top: the learner's attempts and sessions CSVs, the
+**IEP draft** (plain text for pasting into a DepEd IEP; not offered for demo accounts),
+and Print. Then, top to bottom:
 
-1. **Full report** — everything the learner sees in their own report, plus specialist
-   detail.
-2. **Learner controls** — override the adaptive level (1–5) manually.
-3. **Study timeline** — tag each session `BASELINE`, `REGULAR` or `ENDLINE`. **Tagging
+1. **Intervention controls** — override the adaptive level (1–5), and pin a word to the
+   practice list. Probe non-words are not offered: the practice list teaches, and a
+   taught non-word stops measuring decoding.
+2. **Scoring reliability check (Review list)** — the core research instrument; covered
+   below. The agreement percentage beside it is over **first readings of real words
+   only**, the same readings the calibration uses.
+3. **Decoding probe** — the child's non-word readings, which **you score by ear**. The
+   transcript is shown as unreliable on purpose: the recogniser writes a non-word as the
+   nearest real word. The percentage is your count over the items you have scored;
+   unscored items are listed as outstanding, never counted as wrong.
+4. **Decoding vs recall (Divergence)** — real-word accuracy beside non-word accuracy,
+   both from your verdicts.
+5. **Borderline readings (Threshold calibration)** — readings that scored just below the
+   acceptance line, with audio, so you can hear whether the line is set right.
+6. **Self-correction** — the retry pairs, kept apart from accuracy.
+7. **Baseline → endline (Phase comparison)** — whether the child improved.
+8. **Study timeline** — tag each session `BASELINE`, `REGULAR` or `ENDLINE`. **Tagging
    is what makes pre/post comparison possible.** It is retroactive: you can tag sessions
    after the fact.
-4. **Scoring reliability check (Review list)** — the core research instrument. Covered
-   below.
-5. **Self-correction** — the retry pairs, kept apart from accuracy.
-6. **Decoding vs recall (Divergence)** — real-word accuracy beside non-word accuracy.
-7. **Baseline → endline (Phase comparison)** — whether the child improved.
-8. **Borderline readings (Threshold calibration)** — readings that scored just below the
-   acceptance line, with audio, so you can hear whether the line is set right.
-9. **IEP draft** — plain text for pasting into a DepEd IEP.
+9. **Full report** — everything the learner sees in their own report.
 10. **Data controls** — clear recordings, or erase the participant entirely.
+
+Dates and times on every screen are Philippine time (Asia/Manila), whatever machine
+serves the page.
 
 ### The review list — how to score a reading
 
@@ -243,9 +255,11 @@ This is the instrument the study's Objective 2 rests on, so the procedure matter
 3. Answer the question asked: **did the learner read this correctly?** — *Correct* or
    *Not correct*.
 4. Only then does the system's reading appear, so you can see whether it agreed.
-5. Optionally, chips appear: **"What did you observe?"** — vowel, first sound, last
-   sound, digraph, cluster, syllable dropped, syllable added, **stress**, self-corrected,
-   could not tell. Leaving them blank is fine and honest.
+5. Optionally, chips appear: **"What did you observe?"** After *Not correct*: vowel, first
+   sound, last sound, digraph, cluster, syllable dropped, syllable added, **stress**,
+   self-corrected, could not tell. After *Correct*: only self-corrected and could not
+   tell — a self-correction ends in the right word, so mark the reading correct and record
+   the self-correction here. Leaving them blank is fine and honest.
 
 **Why blind by default:** if you see the machine's answer first, your judgement is no
 longer independent of the thing it is measuring, and the agreement percentage, Cohen's κ
@@ -253,7 +267,7 @@ and the fitted threshold all inherit that. The mode is displayed at all times, a
 leaving it takes a deliberate press of *"Switch to quick review"*.
 
 **Stress:** Filipino does not write it, so *búkas* and *bukás* reach the scorer as the
-same letters. Six bank words carry a caveat telling you to judge by ear. The `stress`
+same letters. Eight bank words carry a caveat telling you to judge by ear. The `stress`
 chip is the only instrument the study has for it.
 
 ### Cohort overview `/specialist/cohort`
@@ -274,7 +288,9 @@ baseline and endline were scored by different rules.
 - **🔊 / ba·hay** — hear exactly what learners hear
 - **🎤 Record** — record a word in your own voice, preview, then keep or discard
 - **🗑 Remove** — restores the synthesized voice instantly
-- **✨ Generate** — synthesize audio for a word that has none
+- **✨ Generate** — synthesize audio for a word that has none. Probe non-words show
+  *"never voiced — probe item"* instead: a non-word with a pronunciation hands the child
+  the answer, so the server refuses to record or generate one
 - **Add word** — extend the bank
 - **Accepted spellings** — add ASR spellings that are legitimately correct (`krus` →
   "cross")
@@ -449,7 +465,7 @@ npm run password:set -- learner2@lexora.ph --generate --random
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 423 checks
+npm run audit                  # 435 checks
 npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
 
@@ -653,7 +669,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 423 checks
+npm run audit                  # all 10 suites, 435 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values

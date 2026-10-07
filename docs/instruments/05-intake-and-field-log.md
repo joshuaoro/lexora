@@ -65,9 +65,15 @@ of the child, so nobody begins at level 1 by default:
 
 | | |
 |---|---|
-| Starting difficulty level (1–5) | `______` |
-| Starting Marungko stage (1–7) | `______` |
+| Starting difficulty level (1–5) — set this on the learner's page | `______` |
+| Letters the child already knows securely (from your own assessment) | `_________________________` |
 | Basis for this placement | `_________________________` |
+
+LEXORA has no separate control for the Marungko stage: it follows from the level
+(level 1 → stage 3, 2 → 4, 3 → 5, 4 → 6, 5 → 7) and never goes back down. Level 1
+already uses the letters m, s, a, i, o, b, e, u. If a child does not yet know those,
+note it above — that is a placement the application cannot express, and the field
+log is where it has to be recorded.
 
 ### Devices used
 
