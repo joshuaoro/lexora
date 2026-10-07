@@ -6,6 +6,7 @@ import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import { learnerScope, includeDemoFromParams } from "@/lib/demo";
 import DemoToggle from "@/components/specialist/DemoToggle";
+import { formatDate, dateLocale } from "@/lib/time";
 
 export default async function SpecialistPage({
   searchParams,
@@ -177,7 +178,7 @@ export default async function SpecialistPage({
                     </td>
                     <td className="px-3 py-4 font-semibold text-ink-soft">
                       {s.last
-                        ? s.last.toLocaleDateString(lang === "fil" ? "fil-PH" : "en-US", { month: "short", day: "numeric" })
+                        ? formatDate(s.last, dateLocale(lang), { month: "short", day: "numeric" })
                         : t.never}
                     </td>
                     <td className="px-3 py-4">

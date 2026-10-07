@@ -78,6 +78,57 @@ for (const slug of ["read-aloud", "listen-choose", "syllables"]) {
 }
 check("12 exercise draws at the widest pool contain no probe word", leaked === null, leaked ?? "clean");
 
+// The exercises were never the only door. The Reader listed every word in the
+// table, sorted into one set per Marungko stage whatever the child's own stage,
+// and spoke each one aloud — so every probe item was a tap away for every
+// learner, voiced by the browser because a probe word has no stored clip.
+const readerHtml = await (await api("/reader", { cookie: learner.cookie })).text();
+const inReader = [...pseudoTexts].filter((text) =>
+  new RegExp(`"text":"${text}"|>\\s*${text}\\s*<`).test(readerHtml.replace(/\\"/g, '"'))
+);
+check(
+  "the Reader lists no probe word, in any of its sets",
+  inReader.length === 0,
+  inReader.length ? inReader.slice(0, 5).join(", ") : "clean"
+);
+check(
+  "and the Reader page did render its word sets (so the check above is not vacuous)",
+  /"text":"bahay"|>\s*bahay\s*</.test(readerHtml.replace(/\\"/g, '"'))
+);
+
+// A specialist cannot put one on a practice list, which exists to teach.
+const pinProbe = await api(`/api/learners/${learner.learnerId}/practice`, {
+  cookie: specialist,
+  method: "POST",
+  body: { wordId: pseudo[0].id },
+});
+const pinned = await one(
+  `SELECT COUNT(*)::int AS n FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`,
+  [learner.learnerId, pseudo[0].id]
+);
+check("pinning a probe word to a practice list is refused", pinProbe.status === 409 && pinned.n === 0, `HTTP ${pinProbe.status}`);
+
+// Nor give one a pronunciation: a probe item with audio hands over the answer.
+const recordProbe = await api(`/api/words/${pseudo[0].id}/audio`, {
+  cookie: specialist,
+  method: "PATCH",
+  body: { kind: "word", audio: "data:audio/webm;base64," + "A".repeat(2000) },
+});
+const generateProbe = await api(`/api/words/${pseudo[0].id}/audio/generate`, {
+  cookie: specialist,
+  method: "POST",
+});
+const voiced = await one(
+  `SELECT COUNT(*)::int AS n FROM "Word" WHERE "isPseudo"
+     AND ("audioWord" IS NOT NULL OR "audioSyll" IS NOT NULL
+       OR "audioWordHuman" IS NOT NULL OR "audioSyllHuman" IS NOT NULL)`
+);
+check(
+  "recording or generating audio for a probe word is refused, and none has any",
+  recordProbe.status === 409 && generateProbe.status === 409 && voiced.n === 0,
+  `record ${recordProbe.status}, generate ${generateProbe.status}, voiced ${voiced.n}`
+);
+
 /* ── 3. a probe reading is recorded but changes nothing ────────────────── */
 section("[3] a probe reading is measured, never taught from");
 
@@ -272,7 +323,7 @@ for (const col of [
 
 const attemptsCsv = await (await api("/api/export?what=attempts", { cookie: specialist })).text();
 const attemptsHeader = attemptsCsv.split("\r\n")[0];
-for (const col of ["is_pseudoword", "specialist_correct", "stress_pair"]) {
+for (const col of ["is_pseudoword", "specialist_correct", "stress_pair", "review_blind", "review_tags"]) {
   check(`attempts export carries ${col}`, attemptsHeader.includes(col));
 }
 

@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { dayKey, startOfDay, formatDate } from "./time";
 
 export type DailyAccuracy = { day: string; accuracy: number | null };
 
@@ -36,19 +37,16 @@ export function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
 function dayLabel(d: Date) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDate(d, "en-US", { month: "short", day: "numeric" });
 }
 
-/** Daily reading accuracy for the last `days` calendar days (null = no practice). */
+/**
+ * Daily reading accuracy for the last `days` calendar days (null = no practice).
+ * Days are the children's days, not the server's — see src/lib/time.ts.
+ */
 export async function dailyAccuracy(learnerId: string, days = 14): Promise<DailyAccuracy[]> {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - (days - 1));
+  const start = startOfDay(days - 1);
 
   const attempts = await prisma.attempt.findMany({
     where: { learnerId, ...MEASURED, createdAt: { gte: start } },
@@ -66,8 +64,7 @@ export async function dailyAccuracy(learnerId: string, days = 14): Promise<Daily
 
   const series: DailyAccuracy[] = [];
   for (let i = 0; i < days; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
+    const d = startOfDay(days - 1 - i);
     const b = buckets.get(dayKey(d));
     series.push({
       day: dayLabel(d),
@@ -85,9 +82,7 @@ export async function dailyAccuracy(learnerId: string, days = 14): Promise<Daily
  * morning does not show a streak already broken — the day is not over yet.
  */
 export async function practiceStreak(learnerId: string, lookback = 60): Promise<number> {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - lookback);
+  const start = startOfDay(lookback);
 
   const attempts = await prisma.attempt.findMany({
     where: { learnerId, createdAt: { gte: start } },
@@ -97,15 +92,13 @@ export async function practiceStreak(learnerId: string, lookback = 60): Promise<
 
   const days = new Set(attempts.map((a) => dayKey(a.createdAt)));
 
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
   // Today may simply not have happened yet; start from yesterday if so.
-  if (!days.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let back = days.has(dayKey(startOfDay(0))) ? 0 : 1;
 
   let streak = 0;
-  while (days.has(dayKey(cursor))) {
+  while (back <= lookback && days.has(dayKey(startOfDay(back)))) {
     streak++;
-    cursor.setDate(cursor.getDate() - 1);
+    back++;
   }
   return streak;
 }
@@ -127,9 +120,7 @@ export async function practiceStreak(learnerId: string, lookback = 60): Promise<
  * only add pressure to the readers least able to absorb it.
  */
 export async function learnerSummary(learnerId: string) {
-  const since14 = new Date();
-  since14.setHours(0, 0, 0, 0);
-  since14.setDate(since14.getDate() - 13);
+  const since14 = startOfDay(13);
 
   const [allReads, reads14, sessionAgg, sessionCount, latencies] = await Promise.all([
     prisma.attempt.groupBy({
@@ -161,6 +152,8 @@ export async function learnerSummary(learnerId: string) {
 
   return {
     overallAccuracy: total ? Math.round((correct / total) * 100) : 0,
+    /** The denominator of overallAccuracy: every measured first reading, all time. */
+    measuredReads: total,
     wordsRead14: reads14,
     minutesPracticed: Math.round((sessionAgg._sum.durationMs ?? 0) / 60000),
     activitiesCompleted: sessionCount,

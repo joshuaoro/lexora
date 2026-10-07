@@ -20,6 +20,7 @@ import { divergence } from "@/lib/divergence";
 import DivergencePanel from "@/components/specialist/DivergencePanel";
 import { phaseComparison } from "@/lib/phases";
 import PhaseComparison from "@/components/specialist/PhaseComparison";
+import { formatDate, dateLocale } from "@/lib/time";
 
 /** How far below the threshold still counts as a borderline reading. */
 const BORDERLINE_BAND = 0.15;
@@ -89,12 +90,24 @@ export default async function LearnerDetailPage({
       where: { learnerId: id, audio: { not: null } },
       select: { id: true },
     }),
+    // Agreement over the same readings the list above shows, and the same ones
+    // the calibration fits: first readings of real words. Probe verdicts live in
+    // the same table but are not agreement with anything — Whisper writes a
+    // non-word as the nearest real word, so a child who read every probe item
+    // correctly would drag this figure down for doing well.
     prisma.attemptReview.groupBy({
       by: ["agrees"],
-      where: { attempt: { learnerId: id } },
+      where: {
+        attempt: { learnerId: id, activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false },
+      },
       _count: true,
     }),
-    prisma.word.findMany({ orderBy: { text: "asc" }, select: { id: true, text: true } }),
+    // Words a specialist can pin to the practice list — never probe items.
+    prisma.word.findMany({
+      where: { isPseudo: false },
+      orderBy: { text: "asc" },
+      select: { id: true, text: true },
+    }),
     prisma.practiceItem.findMany({
       where: { learnerId: id, mastered: false },
       orderBy: { missCount: "desc" },
@@ -199,7 +212,7 @@ export default async function LearnerDetailPage({
     return {
       id: r.id,
       word: r.target,
-      date: r.createdAt.toLocaleDateString("en-US", {
+      date: formatDate(r.createdAt, dateLocale(lang), {
         month: "short",
         day: "numeric",
         hour: "numeric",
@@ -215,7 +228,7 @@ export default async function LearnerDetailPage({
 
   const phaseSessions: PhaseSession[] = sessionRows.map((s) => ({
     id: s.id,
-    date: s.createdAt.toLocaleDateString("en-US", {
+    date: formatDate(s.createdAt, dateLocale(lang), {
       month: "short",
       day: "numeric",
       hour: "numeric",

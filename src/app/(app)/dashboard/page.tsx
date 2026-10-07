@@ -8,6 +8,7 @@ import { learnerSummary, dailyAccuracy, practiceStreak } from "@/lib/stats";
 import StatCard from "@/components/StatCard";
 import AccuracyLine from "@/components/charts/AccuracyLine";
 import SpeakButton from "@/components/SpeakButton";
+import { formatDate, dateLocale } from "@/lib/time";
 
 /**
  * The learner's landing screen.
@@ -182,7 +183,7 @@ export default async function DashboardPage() {
                     <div className="min-w-0">
                       <p className="font-bold text-ink">{dict.activity[s.type] ?? s.type}</p>
                       <p className="text-xs font-semibold text-ink-muted">
-                        {s.createdAt.toLocaleDateString("en-US", {
+                        {formatDate(s.createdAt, dateLocale(lang), {
                           weekday: "short",
                           month: "short",
                           day: "numeric",

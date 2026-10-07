@@ -17,7 +17,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { WORDS, ASR_VARIANTS, STRESS_NOTES } from "./word-bank";
 import { PSEUDOWORDS } from "./pseudoword-bank";
-import { RHYMES, FIRST_SOUNDS } from "./phon-items";
+import { RHYMES, FIRST_SOUNDS, phonItemRows } from "./phon-items";
 import { stageForWord } from "./marungko-stage";
 
 // Scripts run outside the request path, so the direct (session) connection is
@@ -93,24 +93,7 @@ async function main() {
   });
 
   console.log(`Seeding ${RHYMES.length} rhyme and ${FIRST_SOUNDS.length} sound-isolation items…`);
-  await prisma.phonItem.createMany({
-    data: [
-      ...RHYMES.map(([prompt, answer, distractors, level]) => ({
-        type: "RHYME",
-        prompt,
-        answer,
-        options: JSON.stringify([answer, ...distractors]),
-        level,
-      })),
-      ...FIRST_SOUNDS.map(([prompt, answer, distractors, level]) => ({
-        type: "FIRST_SOUND",
-        prompt,
-        answer,
-        options: JSON.stringify([answer, ...distractors]),
-        level,
-      })),
-    ],
-  });
+  await prisma.phonItem.createMany({ data: phonItemRows() });
 
   console.log("Seeding demo accounts…");
   const password = await bcrypt.hash("lexora123", 10);

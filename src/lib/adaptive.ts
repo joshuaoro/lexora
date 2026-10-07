@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { PLAUSIBLE, median } from "./stats";
+import { effectiveStage } from "./marungko";
 
 /**
  * Adaptive difficulty: the learner's level (1–5) is recomputed from the most
@@ -88,7 +89,7 @@ export async function updateAdaptiveLevel(
   if (changed) {
     // The Marungko letter coverage widens as the learner levels up, but never
     // shrinks below what the learner has already reached.
-    const stage = Math.max(profile.stage, Math.min(7, level + 2));
+    const stage = effectiveStage(level, profile.stage);
     await prisma.learnerProfile.update({ where: { id: learnerId }, data: { level, stage } });
   }
 

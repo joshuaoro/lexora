@@ -33,8 +33,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
-  const word = await prisma.word.findUnique({ where: { id }, select: { id: true } });
+  const word = await prisma.word.findUnique({ where: { id }, select: { id: true, isPseudo: true } });
   if (!word) return NextResponse.json({ error: "Word not found" }, { status: 404 });
+  // A probe item with a pronunciation attached hands the child the answer the
+  // moment anything plays it — and a non-word heard is one learned.
+  if (word.isPseudo) {
+    return NextResponse.json(
+      { error: "Decoding-probe words never have audio — hearing one would teach it." },
+      { status: 409 }
+    );
+  }
 
   await prisma.word.update({
     where: { id },

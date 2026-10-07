@@ -5,10 +5,15 @@
  * shares one public IP, so counting successes would let a class of children
  * signing in one after another lock each other out.
  *
- * In-memory by design: LEXORA runs as a single small instance for one
- * institution, so a shared store would be more moving parts than the threat
- * warrants. A multi-instance deployment would need Redis or a database table,
- * since each instance would otherwise keep its own counter.
+ * In-memory, and that is a known limit rather than an oversight. Vercel can run
+ * several instances of a function at once and each keeps its own counter, so
+ * the ceilings below hold per instance, not globally — the same reason the
+ * speech budget in src/lib/speech.ts counts from the database instead. Here the
+ * trade is judged acceptable: Fluid Compute routes most traffic through warm
+ * instances that are reused, and bcrypt makes every guess slow regardless. Give
+ * specialist accounts — the ones that can read every child's records — long
+ * passphrases (`npm run password:set`). A deployment facing real
+ * credential-stuffing should move this counter to a database table.
  */
 
 type Window = { count: number; resetAt: number };

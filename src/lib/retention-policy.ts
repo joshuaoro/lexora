@@ -18,7 +18,12 @@
 export const DEFAULT_RETENTION_DAYS = 180;
 
 export function retentionDays(): number {
-  const raw = Number(process.env.RECORDING_RETENTION_DAYS);
+  const value = process.env.RECORDING_RETENTION_DAYS?.trim();
+  // An empty value is "not set", not zero. Number("") is 0, and 0 means "keep
+  // forever" — so a variable created blank in a hosting dashboard would have
+  // silently switched off the deletion the privacy notice promises families.
+  if (!value) return DEFAULT_RETENTION_DAYS;
+  const raw = Number(value);
   if (!Number.isFinite(raw) || raw < 0) return DEFAULT_RETENTION_DAYS;
   return Math.floor(raw);
 }

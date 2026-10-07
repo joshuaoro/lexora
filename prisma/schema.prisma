@@ -31,7 +31,11 @@ model LearnerProfile {
   userId   String @unique
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   level    Int    @default(1) // adaptive difficulty 1–5
-  stage    Int    @default(1) // Marungko stage reached 1–7
+  // Marungko stage reached 1–7. Never below min(7, level + 2): that is the
+  // stage every activity actually draws words from (see effectiveStage in
+  // src/lib/marungko.ts), so a new level-1 learner starts at 3, not 1 — a
+  // stored 1 described letters (m, s, a) the child was not the one being shown.
+  stage    Int    @default(3)
   settings String @default("{}") // accessibility settings JSON
   /**
    * A demonstration account, not a study participant.
@@ -207,6 +211,12 @@ model Attempt {
 
   @@index([learnerId, createdAt])
   @@index([learnerId, activityType])
+  // Foreign keys with no index of their own. Postgres must find the attempts
+  // that point at a session or word whenever that row is deleted, to null the
+  // reference — and the stale-session sweep deletes sessions every time an
+  // activity starts. Without these, each one was a scan of every attempt.
+  @@index([sessionId])
+  @@index([wordId])
 }
 
 // A reading specialist's verdict on a system-scored oral reading.
@@ -238,6 +248,11 @@ model AttemptReview {
   createdAt    DateTime @default(now())
 
   tags ReviewErrorTag[]
+
+  // Deleting any User — which is what erasing a learner does — makes Postgres
+  // check this foreign key, because it points at User too. Unindexed, that was
+  // a scan of every review on every erasure.
+  @@index([specialistId])
 }
 
 /**
@@ -264,9 +279,11 @@ model ReviewErrorTag {
   review   AttemptReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   tag      String
 
-  // One of each tag per review; re-tagging is idempotent.
+  // One of each tag per review; re-tagging is idempotent. This also serves every
+  // read of the table, all of which go through the review. There is no index on
+  // `tag` alone: nothing filters by it — the distribution is counted in code
+  // over tags already loaded by review — so one would only be written, never read.
   @@unique([reviewId, tag])
-  @@index([tag])
 }
 
 // Personalized practice list: auto-added on misreads, or pinned by a specialist.
@@ -284,4 +301,7 @@ model PracticeItem {
   createdAt DateTime @default(now())
 
   @@unique([learnerId, wordId])
+  // The unique index above leads with learnerId, so it cannot find the practice
+  // items for a word; deleting a word needs exactly that, to cascade.
+  @@index([wordId])
 }

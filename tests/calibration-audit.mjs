@@ -495,9 +495,32 @@ if (tagged) {
   await chip.click();
   await provPage.waitForTimeout(1500);
 }
+
+/**
+ * A reading the specialist accepts still offers the behaviours, never the
+ * errors. Self-correction ends in the right word, so by running-record
+ * convention it is marked correct — and when the chips appeared only on
+ * misreadings, a specialist following that convention could not record one.
+ * Disagreeing with a "zzzz" transcript is the verdict "read correctly".
+ */
+// Rows run newest first: the one just judged, one never reviewed, and the one
+// section 8 reviewed through the API. The second is the unreviewed one.
+const selfCorrected = () =>
+  provPage.getByRole("button", { name: "Self-corrected in the recording" });
+const vowelBefore = await provPage.getByRole("button", { name: "Vowel" }).count();
+const selfBefore = await selfCorrected().count();
+await provPage.getByRole("button", { name: /I disagree with the system/ }).nth(1).click();
+await selfCorrected().nth(selfBefore).waitFor({ timeout: 15000 }).catch(() => {});
+const selfAfter = await selfCorrected().count();
+const vowelAfter = await provPage.getByRole("button", { name: "Vowel" }).count();
 await provBrowser.close();
 
 check("the observation chips appear once a misreading is recorded", tagged, tagged ? "shown" : "no chips");
+check(
+  "a reading judged correct offers the behaviours but not the error categories",
+  selfAfter === selfBefore + 1 && vowelAfter === vowelBefore,
+  `self-corrected chips ${selfBefore}→${selfAfter}, vowel chips ${vowelBefore}→${vowelAfter}`
+);
 if (tagged) {
   // One row, not an aggregate: grouping by `blind` would collapse every review
   // for this learner into two buckets and report a total rather than this one.

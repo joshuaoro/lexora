@@ -8,6 +8,7 @@ import {
   accuracyByPattern,
 } from "@/lib/stats";
 import { getDict, type Lang } from "@/lib/i18n";
+import { formatDate, dateLocale } from "@/lib/time";
 import AccuracyLine from "@/components/charts/AccuracyLine";
 import BarBlock from "@/components/charts/BarBlock";
 import DecodingTime from "@/components/DecodingTime";
@@ -152,7 +153,7 @@ export default async function LearnerReport({
                 {sessions.map((s) => (
                   <tr key={s.id}>
                     <td className="py-2.5 font-semibold text-ink-soft">
-                      {s.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {formatDate(s.createdAt, dateLocale(lang), { month: "short", day: "numeric" })}
                     </td>
                     <td className="py-2.5 font-bold text-ink">
                       {dict.activity[s.type] ?? s.type}

@@ -21,9 +21,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const word = await prisma.word.findUnique({
     where: { id },
-    select: { id: true, text: true, syllables: true },
+    select: { id: true, text: true, syllables: true, isPseudo: true },
   });
   if (!word) return NextResponse.json({ error: "Word not found" }, { status: 404 });
+  // Never for a probe item: a non-word with a pronunciation hands the child the
+  // answer the moment anything plays it, and a non-word heard is one learned.
+  if (word.isPseudo) {
+    return NextResponse.json(
+      { error: "Decoding-probe words never have audio — hearing one would teach it." },
+      { status: 409 }
+    );
+  }
 
   try {
     const { audioWord, audioSyll } = await synthesizeWord(word.text, word.syllables);

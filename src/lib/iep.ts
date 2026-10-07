@@ -3,6 +3,7 @@ import { learnerSummary, decodingTime, accuracyByPattern } from "./stats";
 import { divergence } from "./divergence";
 import { summariseTags } from "./error-tags";
 import { stageLabel } from "./marungko";
+import { formatDate } from "./time";
 
 /**
  * A plain-text summary a SPED teacher can paste into an IEP.
@@ -45,14 +46,28 @@ export async function buildIepDraft(learnerId: string): Promise<string | null> {
     accuracyByPattern(learnerId),
     divergence(learnerId),
     prisma.attemptReview.findMany({
-      where: { attempt: { learnerId, correct: false, isRetry: false } },
-      select: { tags: { select: { tag: true } } },
+      where: { attempt: { learnerId, isRetry: false } },
+      select: {
+        agrees: true,
+        attempt: { select: { correct: true } },
+        tags: { select: { tag: true } },
+      },
     }),
   ]);
 
-  const tags = summariseTags(reviewed.map((r) => r.tags.map((t) => t.tag)));
+  // The error profile is over the readings the *specialist* heard as misread —
+  // the only ones the review screen offers error categories for. Selecting on
+  // the machine's verdict instead, as this once did, dropped every tag on a
+  // reading the machine accepted and the specialist did not, and counted
+  // readings the specialist accepted as untagged misreadings.
+  const misread = reviewed.filter((r) => r.agrees !== r.attempt.correct);
+  const tags = summariseTags(misread.map((r) => r.tags.map((t) => t.tag)));
   const topErrors = tags.errors.filter((e) => e.count > 0).sort((a, b) => b.count - a.count);
-  const selfCorrected = tags.behaviours.find((b) => b.id === "self_corrected")?.count ?? 0;
+  // Self-correction is counted wherever it was recorded, misread or not: it
+  // usually ends in the right word, so it mostly sits on readings judged correct.
+  const selfCorrected = reviewed.filter((r) =>
+    r.tags.some((t) => t.tag === "self_corrected")
+  ).length;
 
   // A family with no scored readings has a null accuracy, not a zero — sorting
   // those to the front would report the *least practised* shape as the hardest.
@@ -63,7 +78,7 @@ export async function buildIepDraft(learnerId: string): Promise<string | null> {
 
   const L = [
     `LEXORA READING SUMMARY — ${profile.user.name}`,
-    `Generated ${new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}`,
+    `Generated ${formatDate(new Date(), "en-PH", { year: "numeric", month: "long", day: "numeric" })}`,
     "",
     "SCOPE",
     "Word-level reading only: phonological awareness and single-word decoding,",
@@ -75,7 +90,13 @@ export async function buildIepDraft(learnerId: string): Promise<string | null> {
     `  ${stageLabel(profile.stage)}`,
     "",
     "WHAT THE DATA SHOWS",
-    `  Single-word accuracy: ${summary.overallAccuracy}% over ${summary.wordsRead14} readings in the last 14 days.`,
+    // The percentage and its count must describe the same readings. This line
+    // used to pair the all-time accuracy with the last-14-days count, so a
+    // teacher pasting it into an IEP quoted a figure over readings it was not
+    // computed from.
+    summary.measuredReads === 0
+      ? "  Single-word accuracy: no scored readings yet."
+      : `  Single-word accuracy: ${summary.overallAccuracy}% over all ${summary.measuredReads} first readings (${summary.wordsRead14} of them in the last 14 days).`,
     `  Typical time per correct word: ${
       summary.medianDecodeMs === null
         ? "not enough timed readings yet"
@@ -128,15 +149,20 @@ export async function buildIepDraft(learnerId: string): Promise<string | null> {
     );
   } else {
     for (const e of topErrors) L.push(`  ${e.label}: ${e.count}`);
+  }
+  // The denominator travels with any profile, including an empty one: "none
+  // categorised" over three reviewed misreadings and over thirty are different
+  // statements.
+  if (tags.taggable > 0) {
     L.push(
       `  Categories were recorded for ${tags.tagged} of ${tags.taggable} reviewed misreadings (${tags.coveragePct}%).`
     );
-    if (selfCorrected > 0) {
-      L.push(
-        `  Separately, the learner self-corrected within the recording ${selfCorrected} time(s).`,
-        "  This is a reading behaviour rather than an error: the correct word was produced."
-      );
-    }
+  }
+  if (selfCorrected > 0) {
+    L.push(
+      `  Separately, the learner self-corrected within the recording ${selfCorrected} time(s).`,
+      "  This is a reading behaviour rather than an error: the correct word was produced."
+    );
   }
   L.push("");
 

@@ -642,7 +642,15 @@ export default function WordBankClient({ words }: { words: WordRow[] }) {
 
                   {/* Pronunciation: play, record, generate */}
                   <td className="px-3 py-3">
-                    {rowDraft ? (
+                    {w.isPseudo ? (
+                      /* No record or generate on a probe item: the server
+                         refuses both, because a non-word with a pronunciation
+                         hands the child the answer. Saying so beats offering
+                         buttons that fail. */
+                      <span className="text-xs font-semibold text-ink-muted">
+                        never voiced — probe item
+                      </span>
+                    ) : rowDraft ? (
                       /* Preview the take before it replaces what learners hear */
                       <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-primary-soft/60 p-1.5">
                         <span className="px-1 text-xs font-bold text-ink">

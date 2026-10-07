@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { effectiveStage } from "@/lib/marungko";
 
 const schema = z.object({
   level: z.number().int().min(1).max(5),
@@ -22,7 +23,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!profile) return NextResponse.json({ error: "Learner not found" }, { status: 404 });
 
   const level = parsed.data.level;
-  const stage = Math.max(profile.stage, Math.min(7, level + 2));
+  const stage = effectiveStage(level, profile.stage);
   await prisma.learnerProfile.update({ where: { id }, data: { level, stage } });
 
   return NextResponse.json({ ok: true, level, stage });

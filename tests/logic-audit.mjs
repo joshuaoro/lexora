@@ -59,13 +59,23 @@ const adaptiveRead = (wordId, target, heard) =>
     body: { activityType: "READ_ALOUD", wordId, target, browserTranscript: heard, responseMs: 1500 },
   });
 
-check("starts at level 1", (await adaptiveProfile()).level === 1);
+const fresh = await adaptiveProfile();
+check("starts at level 1", fresh.level === 1);
+// Level 1 draws its words from stage 3 (m, s, a, i, o, b, e, u). The record
+// used to say stage 1 — the letters m, s, a — until the first level change, so
+// a specialist, the summary export and the IEP draft all described a placement
+// the child was not being taught at.
+check(
+  "and is recorded at the Marungko stage level 1 actually teaches from",
+  fresh.stage === 3,
+  `S${fresh.stage}`
+);
 
 const easy = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
 for (const w of easy) await adaptiveRead(w.id, w.text, w.text);
 const up = await adaptiveProfile();
 check("levels up after sustained accuracy", up.level === 2, `L${up.level} S${up.stage}`);
-check("Marungko stage widens with the level", up.stage >= 3, `S${up.stage}`);
+check("Marungko stage widens with the level", up.stage >= 4, `S${up.stage}`);
 
 const any = await query(`SELECT id, text FROM "Word" WHERE level <= 2 AND NOT "isPseudo" ORDER BY text LIMIT 10`);
 for (const w of any) await adaptiveRead(w.id, w.text, "zzzz");

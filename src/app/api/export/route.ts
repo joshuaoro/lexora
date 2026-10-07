@@ -152,7 +152,7 @@ export async function GET(req: Request) {
               stressNote: true,
             },
           },
-          review: { select: { agrees: true } },
+          review: { select: { agrees: true, blind: true, tags: { select: { tag: true } } } },
           session: { select: { phase: true } },
         },
       }),
@@ -192,6 +192,10 @@ export async function GET(req: Request) {
       // machine's is recorded beside it in `correct` for the comparison.
       a.review ? (a.review.agrees === a.correct ? 1 : 0) : "",
       a.word?.stressNote ?? "",
+      a.review ? (a.review.blind ? 1 : 0) : "",
+      // Sorted so the same set always prints the same way, and joined with a
+      // semicolon so the cell never needs quoting.
+      a.review ? a.review.tags.map((t) => t.tag).sort().join(";") : "",
     ]);
 
     return csvResponse(
@@ -217,6 +221,17 @@ export async function GET(req: Request) {
           // does not write. The transcript cannot distinguish the two readings,
           // so `correct` on these rows is not evidence about stress.
           "stress_pair",
+          // review_blind = 1: the machine's transcript, verdict and similarity
+          // were hidden until the specialist had judged. Lets blind and anchored
+          // agreement be recomputed from the rows, not only read off the
+          // agreement-conditions table. Blank when unreviewed.
+          "review_blind",
+          // What the specialist heard, from the controlled vocabulary in
+          // src/lib/error-tags.ts, semicolon-separated. This is the error
+          // profile that describes the child rather than the recogniser's
+          // spelling. Blank means reviewed but untagged — honest missing data,
+          // so report coverage with any distribution built from it.
+          "review_tags",
         ],
         rows
       ),
@@ -294,9 +309,14 @@ export async function GET(req: Request) {
           where: { learnerId: l.id, completedAt: { not: null } },
         }),
         prisma.practiceItem.groupBy({ by: ["mastered"], where: { learnerId: l.id }, _count: true }),
+        // Human–machine agreement over first readings of real words — the
+        // population the calibration export fits, so the two agree. Probe items
+        // are reported in the pseudo_* columns instead: on a non-word the
+        // machine's verdict is known to be wrong, and folding it in here would
+        // make agreement fall whenever a child decoded well.
         prisma.attemptReview.groupBy({
           by: ["agrees"],
-          where: { attempt: { learnerId: l.id } },
+          where: { attempt: { learnerId: l.id, ...measured } },
           _count: true,
         }),
         prisma.attempt.groupBy({

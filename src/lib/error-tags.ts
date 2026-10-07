@@ -73,7 +73,11 @@ export const ERROR_TAGS: ErrorTag[] = [
     kind: "error",
     en: "Syllable dropped",
     fil: "Nawalang pantig",
-    hintEn: "a whole pantig missing — “atay” for tatay",
+    // Not "atay" for tatay: a-tay keeps both syllables and loses only the
+    // opening t, which is the first-sound category. A hint that contradicts
+    // its own category is how two specialists come to tag the same reading
+    // differently.
+    hintEn: "a whole pantig missing — “kabasa” for kalabasa",
   },
   {
     id: "syllable_added",

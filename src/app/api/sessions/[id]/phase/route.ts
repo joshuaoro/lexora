@@ -25,15 +25,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid phase" }, { status: 400 });
 
-  const existing = await prisma.activitySession.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const updated = await prisma.activitySession.update({
+  // A single conditional write, so a session erased between a lookup and the
+  // update is a 404 rather than an exception and a 500.
+  const { count } = await prisma.activitySession.updateMany({
     where: { id },
     data: { phase: parsed.data.phase },
   });
-  return NextResponse.json({ ok: true, id: updated.id, phase: updated.phase });
+  if (count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ok: true, id, phase: parsed.data.phase });
 }

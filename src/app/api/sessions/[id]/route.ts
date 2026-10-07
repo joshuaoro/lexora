@@ -24,27 +24,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-  const existing = await prisma.activitySession.findUnique({ where: { id } });
-  if (!existing || existing.learnerId !== session.learnerId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const { completed, ...totals } = parsed.data;
 
   // Progress is flushed as the learner works and again when they finish, and
   // those requests use keepalive, so they can arrive out of order. Once an
   // activity is complete its numbers are final — a straggling partial flush
   // must not walk them backwards, or un-complete it.
-  if (existing.completedAt) {
-    return NextResponse.json({ ok: true, id: existing.id, ignored: "already completed" });
-  }
-
-  const updated = await prisma.activitySession.update({
-    where: { id },
+  //
+  // One conditional write rather than a read and then a write. Checked in two
+  // steps, a partial flush could read "not completed", the completing flush
+  // land, and the partial one then overwrite the final totals — the very thing
+  // the check exists to stop. And a learner erased between the two steps made
+  // the write throw, answering 500 for a session that was simply gone.
+  const { count } = await prisma.activitySession.updateMany({
+    where: { id, learnerId: session.learnerId, completedAt: null },
     data: {
       ...totals,
       ...(completed ? { completedAt: new Date() } : {}),
     },
   });
-  return NextResponse.json({ ok: true, id: updated.id });
+  if (count === 1) return NextResponse.json({ ok: true, id });
+
+  // Nothing written: either it is finished already, or it is not this
+  // learner's — or not anyone's any more.
+  const existing = await prisma.activitySession.findFirst({
+    where: { id, learnerId: session.learnerId },
+    select: { id: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ok: true, id, ignored: "already completed" });
 }

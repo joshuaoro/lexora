@@ -33,6 +33,23 @@ export function lettersUpToStage(stage: number): string[] {
   return STAGE_LETTER_SETS.slice(0, Math.max(0, Math.min(7, stage))).flat();
 }
 
+/**
+ * The Marungko stage a learner is taught from: it widens with the level and
+ * never shrinks below what they have already reached.
+ *
+ * One rule, used by the word pools, the adaptive step and the specialist's
+ * level override, so the stage a child is shown words from and the stage
+ * recorded against them cannot disagree. They did once: a new learner was
+ * recorded at stage 1 (m, s, a) while every activity drew stage-3 words.
+ *
+ * Level 1 maps to stage 3 rather than 1 because stages 1–2 hold only fourteen
+ * words between them — too few for an eight-word session not to repeat itself
+ * within a sitting, which would turn decoding practice into recall.
+ */
+export function effectiveStage(level: number, stage: number): number {
+  return Math.max(stage, Math.min(7, level + 2));
+}
+
 export function stageLabel(stage: number) {
   return `Stage ${stage} (${STAGE_LETTERS[stage - 1] ?? ""})`;
 }

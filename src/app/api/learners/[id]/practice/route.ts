@@ -22,6 +22,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   ]);
   if (!profile || !word) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // The practice list teaches its words, and a probe non-word that has been
+  // taught measures recall, not decoding. Refused rather than silently dropped,
+  // so the specialist knows why it did not appear.
+  if (word.isPseudo) {
+    return NextResponse.json(
+      { error: `“${word.text}” is a decoding-probe word and cannot be practised.` },
+      { status: 409 }
+    );
+  }
+
   await prisma.practiceItem.upsert({
     where: { learnerId_wordId: { learnerId, wordId: word.id } },
     create: { learnerId, wordId: word.id, source: "SPECIALIST", missCount: 0 },

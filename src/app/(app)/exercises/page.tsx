@@ -4,12 +4,13 @@ import { requireLearner } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
+import { formatDate, dateLocale } from "@/lib/time";
 
 /**
  * How long the decoding probe rests between runs.
  *
  * The probe works because its words are unfamiliar. A child who can open it
- * whenever they like will meet the same twenty-two non-words often enough to
+ * whenever they like will meet the same couple of dozen non-words often enough to
  * learn them, and a learned non-word measures recall exactly like a real word
  * does — the instrument quietly turns into the thing it was built to rule out.
  *
@@ -73,7 +74,7 @@ export default async function ExercisesPage() {
                 <h2 className="mt-4 text-xl font-extrabold text-ink">{title}</h2>
                 <p className="mt-1 text-sm font-semibold text-ink-soft">
                   {dict.exercises.probeResting(
-                    probeReturns!.toLocaleDateString(lang === "fil" ? "fil-PH" : "en-US", {
+                    formatDate(probeReturns!, dateLocale(lang), {
                       weekday: "long",
                       month: "long",
                       day: "numeric",

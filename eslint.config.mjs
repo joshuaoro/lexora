@@ -13,6 +13,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/generated/**",
+    // Tooling state written by editor plugins — not project code.
+    ".remember/**",
+    ".agents/**",
+    ".windsurf/**",
   ]),
 ]);
 

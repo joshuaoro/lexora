@@ -3,6 +3,7 @@ import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import LearnerReport from "@/components/LearnerReport";
 import PrintButton from "@/components/PrintButton";
+import { formatDate, dateLocale } from "@/lib/time";
 
 export default async function ReportsPage() {
   const { profile, ...session } = await requireLearner();
@@ -17,7 +18,7 @@ export default async function ReportsPage() {
           <p className="mt-1 text-sm font-semibold text-ink-muted">
             {session.name} · {dict.common.levelChip(profile.level, profile.stage)} ·{" "}
             {dict.reports.generated}{" "}
-            {new Date().toLocaleDateString(lang === "fil" ? "fil-PH" : "en-US", {
+            {formatDate(new Date(), dateLocale(lang), {
               month: "long",
               day: "numeric",
               year: "numeric",

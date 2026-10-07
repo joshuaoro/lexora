@@ -31,6 +31,8 @@ import {
   report,
   endSuite,
   query,
+  one,
+  json,
   createTestLearner,
   deleteTestLearner,
 } from "./helpers.mjs";
@@ -200,6 +202,64 @@ async function main() {
         : `registration returned HTTP ${reg.status}`
     );
   }
+
+  section("[4] a reading whose session has gone is kept, not lost");
+
+  // Starting any activity sweeps the learner's empty sessions older than an
+  // hour. A second tab left open on one of them then posts a reading that
+  // names a session no longer there — which used to fail the foreign key and
+  // answer 500, losing the reading. It should save, untagged, as phases.ts
+  // already expects of readings without a session.
+  const orphan = await createTestLearner("orphan");
+  const ghost = "cm0000000000000000ghost00";
+  const word = await one(`SELECT id, text FROM "Word" WHERE NOT "isPseudo" AND level = 1 LIMIT 1`);
+  const kept = await api("/api/attempts", {
+    cookie: orphan.cookie,
+    method: "POST",
+    body: {
+      sessionId: ghost,
+      wordId: word.id,
+      activityType: "READ_ALOUD",
+      target: word.text,
+      browserTranscript: word.text,
+      responseMs: 1800,
+    },
+  });
+  const row = await one(
+    `SELECT "sessionId", "wordId" FROM "Attempt" WHERE "learnerId" = $1`,
+    [orphan.learnerId]
+  );
+  check(
+    "a reading naming a vanished session is saved, with no session",
+    kept.status === 200 && row && row.sessionId === null && row.wordId === word.id,
+    `HTTP ${kept.status}, sessionId ${row?.sessionId ?? "—"}`
+  );
+
+  // Nor may it borrow someone else's session — and with it, that session's
+  // baseline or endline tag.
+  const other = await createTestLearner("orphan-other");
+  const theirs = await json("/api/sessions", {
+    cookie: other.cookie,
+    method: "POST",
+    body: { type: "READ_ALOUD" },
+  });
+  await api("/api/attempts", {
+    cookie: orphan.cookie,
+    method: "POST",
+    body: {
+      sessionId: theirs.body.id,
+      wordId: word.id,
+      activityType: "READ_ALOUD",
+      target: word.text,
+      browserTranscript: word.text,
+      responseMs: 1800,
+    },
+  });
+  const borrowed = await one(
+    `SELECT COUNT(*)::int AS n FROM "Attempt" WHERE "learnerId" = $1 AND "sessionId" = $2`,
+    [orphan.learnerId, theirs.body.id]
+  );
+  check("a reading cannot attach to another learner's session", borrowed.n === 0, `${borrowed.n} attached`);
 
   report("Stale-session audit");
 }

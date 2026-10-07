@@ -83,9 +83,25 @@ export async function POST(req: Request) {
   const data = parsed.data;
   const isRetry = data.isRetry === true;
 
-  const wordRow = data.wordId
-    ? await prisma.word.findUnique({ where: { id: data.wordId }, select: { variants: true } })
-    : null;
+  // Both references are checked rather than trusted. A session swept as stale
+  // while its tab sat open, or a word removed mid-activity, would otherwise fail
+  // the foreign key and lose the child's reading as a 500 — and a session id
+  // belonging to someone else must not be able to give this reading its phase.
+  // An unknown one is dropped, which phases.ts already treats as "untagged".
+  const [wordRow, sessionRow] = await Promise.all([
+    data.wordId
+      ? prisma.word.findUnique({
+          where: { id: data.wordId },
+          select: { id: true, variants: true, isPseudo: true },
+        })
+      : null,
+    data.sessionId
+      ? prisma.activitySession.findFirst({
+          where: { id: data.sessionId, learnerId },
+          select: { id: true },
+        })
+      : null,
+  ]);
   const variants = (wordRow?.variants ?? "")
     .split(",")
     .map((v) => v.trim())
@@ -144,8 +160,8 @@ export async function POST(req: Request) {
   const attempt = await prisma.attempt.create({
     data: {
       learnerId,
-      wordId: data.wordId ?? null,
-      sessionId: data.sessionId ?? null,
+      wordId: wordRow?.id ?? null,
+      sessionId: sessionRow?.id ?? null,
       activityType: data.activityType,
       target: data.target,
       transcript,
@@ -165,11 +181,13 @@ export async function POST(req: Request) {
   // retry says whether the child could repeat a word just modelled for them,
   // which is worth recording but is not evidence that they can decode it — so
   // it must not master a practice word or move them up a level.
-  if (data.wordId && !isRetry) {
+  // Never for a probe word, whatever activity the request claims: the practice
+  // list exists to teach, and a taught non-word stops being one.
+  if (wordRow && !wordRow.isPseudo && !isRetry) {
     if (data.activityType === "PRACTICE") {
-      await recordPracticeResult(learnerId, data.wordId, correct);
+      await recordPracticeResult(learnerId, wordRow.id, correct);
     } else if (!correct && ADAPTIVE_TYPES.includes(data.activityType)) {
-      await recordMiss(learnerId, data.wordId);
+      await recordMiss(learnerId, wordRow.id);
     }
   }
 

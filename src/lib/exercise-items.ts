@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { effectiveStage } from "./marungko";
 
 export type ExerciseType =
   | "READ_ALOUD"
@@ -128,7 +129,7 @@ export async function buildItems(
   ]);
   const profile = known ?? loaded;
   if (!profile) return [];
-  const stage = Math.max(profile.stage, Math.min(7, profile.level + 2));
+  const stage = effectiveStage(profile.level, profile.stage);
 
   const flags = (id: string | null) => ({
     hasAudio: id ? audio.word.has(id) : false,
@@ -151,7 +152,8 @@ export async function buildItems(
     // Rhyme prompts are plain text, so match them to the word bank by text to
     // reuse the stored pronunciation where one exists.
     const bank = await prisma.word.findMany({
-      where: { text: { in: chosen.map((it) => it.prompt) } },
+      // Real words only, so a prompt can never pick up a probe item's id.
+      where: { text: { in: chosen.map((it) => it.prompt) }, isPseudo: false },
       select: { id: true, text: true },
     });
     const byText = new Map(bank.map((w) => [w.text, w.id]));

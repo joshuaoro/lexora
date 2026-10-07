@@ -317,6 +317,10 @@ export const STRESS_NOTES: Record<string, string> = {
   puto: "púto (rice cake) / putó (cut off)",
   buhay: "búhay (life) / buháy (alive)",
   hapon: "hápon (afternoon) / Hapón (Japanese)",
+  // Both are level-1 words a child meets in their first sessions, and both
+  // glosses above already list the two meanings — the stress was never marked.
+  basa: "bása (read) / basâ (wet)",
+  gabi: "gabí (night) / gábi (taro)",
 };
 
 /**

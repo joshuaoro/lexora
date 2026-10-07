@@ -51,8 +51,11 @@ export async function GET(req: Request) {
   const etag = `"${createHash("sha1").update(base64).digest("hex").slice(0, 16)}"`;
   const headers = {
     ETag: etag,
-    // The clip for a given URL never changes — the voice is part of the cache
-    // key, so a voice change produces a different URL rather than a stale hit.
+    // The voice is part of the *database* key, so changing SPEECH_VOICE
+    // synthesizes fresh clips — but it is not in this URL, which is only the
+    // text and language. A browser that already holds a phrase keeps playing
+    // the old voice for up to a week. Acceptable because the voice is chosen
+    // once, before a study starts; change it mid-study and expect a week's mix.
     "Cache-Control": "private, max-age=604800, immutable",
   };
 

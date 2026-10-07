@@ -5,6 +5,7 @@ import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines, Eye, EyeOff } from 
 import { ERROR_TAGS } from "@/lib/error-tags";
 import { tryFetch } from "@/lib/net";
 import { getDict, type Lang } from "@/lib/i18n";
+import { formatDate, dateLocale } from "@/lib/time";
 
 export type ReviewableAttempt = {
   id: string;
@@ -251,7 +252,7 @@ export default function ReviewList({
             <div className="min-w-32">
               <p className="font-extrabold text-ink">{a.target}</p>
               <p className="text-xs font-semibold text-ink-muted">
-                {new Date(a.createdAt).toLocaleDateString("en-US", {
+                {formatDate(a.createdAt, dateLocale(lang), {
                   month: "short",
                   day: "numeric",
                 })}{" "}
@@ -449,24 +450,30 @@ export default function ReviewList({
             )}
 
             {/*
-              Shown only once a verdict exists, and only for a misreading.
-              Offering categories before the judgement would be a second way to
-              anchor it, and a child who read the word correctly has nothing to
-              categorise.
+              Shown only once a verdict exists. Offering categories before the
+              judgement would be a second way to anchor it.
 
-              "Observe" rather than "hear" because the list is not all errors:
-              self-correction is a reading behaviour that ends in the right
-              word. Never required — a specialist who is unsure leaves it, and a
-              blank is honest missing data where a forced guess would be noise.
+              The error categories only for a misreading — a word read correctly
+              has no error to categorise. The behaviours for any verdict: a
+              self-correction ends in the right word, so a specialist following
+              running-record convention marks it *correct* — and when these chips
+              appeared only on misreadings, that specialist had no way to record
+              it at all. "Could not tell" can describe either.
+
+              "Observe" rather than "hear" because the list is not all errors.
+              Never required — a specialist who is unsure leaves it, and a blank
+              is honest missing data where a forced guess would be noise.
             */}
-            {readCorrectly === false && (
+            {readCorrectly !== undefined && (
               <div className="w-full border-t border-line pt-2.5 pl-1">
                 <p className="text-xs font-bold text-ink-muted">
                   {t.observePrompt}{" "}
                   <span className="font-semibold">{t.observeOptional}</span>
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {ERROR_TAGS.map((t) => {
+                  {ERROR_TAGS.filter(
+                    (t) => readCorrectly === false || t.kind === "behaviour"
+                  ).map((t) => {
                     const on = (tags[a.id] ?? []).includes(t.id);
                     return (
                       <li key={t.id}>

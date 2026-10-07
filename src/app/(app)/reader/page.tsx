@@ -13,12 +13,21 @@ export default async function ReaderPage() {
 
   const [words, withAudio] = await Promise.all([
     prisma.word.findMany({
+      // Real words only. The probe's non-words share this table, and the Reader
+      // used to list them — every one, in its stage's set, whatever the child's
+      // own stage — and, having no stored clip, spoke them aloud in the
+      // browser's voice. A non-word a child has heard and read is one they now
+      // know, and it stops measuring decoding. See Word.isPseudo.
+      where: { isPseudo: false },
       orderBy: [{ stage: "asc" }, { level: "asc" }],
       select: { id: true, text: true, level: true, stage: true, audioVersion: true },
     }),
     // ids only — the clips themselves are streamed by /api/word-audio
     prisma.word.findMany({
-      where: { OR: [{ audioWord: { not: null } }, { audioWordHuman: { not: null } }] },
+      where: {
+        isPseudo: false,
+        OR: [{ audioWord: { not: null } }, { audioWordHuman: { not: null } }],
+      },
       select: { id: true },
     }),
   ]);

@@ -17,6 +17,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { WORDS, STRESS_NOTES } from "../prisma/word-bank";
 import { PSEUDOWORDS } from "../prisma/pseudoword-bank";
+import { phonItemRows } from "../prisma/phon-items";
 import { stageForWord } from "../prisma/marungko-stage";
 
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -68,6 +69,36 @@ async function main() {
     noted++;
   }
   console.log(`Stress caveats: ${noted} applied, ${Object.keys(STRESS_NOTES).length - noted} unchanged.`);
+
+  // ── Rhyme and first-sound items ────────────────────────────────────────
+  /**
+   * Replaced as a set when they differ from the source, never edited in place.
+   *
+   * Safe on a live study: nothing references a PhonItem row — an attempt keeps
+   * the word it was about as text — so replacing them loses no reading. The
+   * comparison makes it idempotent, and the transaction means a learner never
+   * catches the table empty halfway through.
+   */
+  const wantedItems = phonItemRows();
+  const currentItems = await prisma.phonItem.findMany({
+    select: { type: true, prompt: true, answer: true, options: true, level: true },
+  });
+  const itemKey = (i: (typeof wantedItems)[number]) =>
+    [i.type, i.prompt, i.answer, i.options, i.level].join("|");
+  const wantedKeys = wantedItems.map(itemKey).sort();
+  const currentKeys = currentItems.map(itemKey).sort();
+  if (wantedKeys.join("\n") === currentKeys.join("\n")) {
+    console.log(`Phonological items: ${wantedItems.length} unchanged.`);
+  } else {
+    const gone = currentKeys.filter((k) => !wantedKeys.includes(k)).length;
+    await prisma.$transaction([
+      prisma.phonItem.deleteMany(),
+      prisma.phonItem.createMany({ data: wantedItems }),
+    ]);
+    console.log(
+      `Phonological items: replaced — ${gone} item(s) retired, ${wantedItems.length} now in place.`
+    );
+  }
 
   // ── Demo accounts ──────────────────────────────────────────────────────
   /**
