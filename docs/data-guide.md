@@ -659,6 +659,10 @@ the pictorial responses as stacked bars per item.
 10. **Phoneme-level manipulation** is in the proposal's item bank and not in the
     application (consultation brief, decision 12), unless the specialists record
     the sounds it needs.
+11. **Blending leaves out the 27 words with a lone-vowel syllable** (*a-so, i-sa*)
+    unless a specialist has recorded their parts, because the synthesized voice
+    may say a lone vowel as a letter name. Report the blending items as drawn from
+    the remaining words.
 
 ---
 

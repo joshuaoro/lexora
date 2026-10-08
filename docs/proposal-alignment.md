@@ -83,7 +83,7 @@ onset-rime awareness, and phoneme-level manipulation)".
 | Task in the proposal | In the application |
 |---|---|
 | Segmentation | *Count the syllables* — syllable level |
-| Blending | *Blend the parts* — **added 8 October**; syllable level. Until then, blending was missing, and "Listen & choose" (hearing a whole word and finding it, which is word recognition) carried the label |
+| Blending | *Blend the parts* — **added 8 October**; syllable level. Until then, blending was missing, and "Listen & choose" (hearing a whole word and finding it, which is word recognition) carried the label. Each syllable is spoken as its own clip, about half a second to a second apart: the original generated clips ran the syllables together, so blending would have played the answer. Words with a lone-vowel syllable (*a-so*) wait for a specialist's recording, because the voice may say a lone vowel as a letter name |
 | Rhyming | *Rhyme time* — onset–rime |
 | Sound isolation | *First sound* — phoneme isolation |
 | **Phoneme-level manipulation** | **Not built.** A task that deletes or substitutes a sound has to play single sounds, and the speech voice says letters by their names ("bi", not /b/) — the opposite of Marungko's sounds-before-names principle. It needs a specialist to record about twenty sounds. **Decision for the team and specialists** (consultation brief, decision 12) |
@@ -118,7 +118,16 @@ The thresholds are for the specialists to confirm (consultation brief, decision 
 
 **Instructional content reviewed by the specialists before use** — the consultation
 brief is that review, with every item listed in its appendices and a sign-off line
-(decision 14).
+(decision 14). The specialists can also record any word, and now any word's syllables,
+in their own voice from the word bank; learners then hear the recording.
+
+**Reading activity data** — "the words presented during each reading session, the
+learner's transcribed spoken response, reading accuracy, the type of word-level error
+identified, response time, and completed learning activities … recorded with a timestamp
+and linked to the learner's profile." All recorded, with one small gap: a word on screen
+when a child leaves an activity, unanswered, is not stored (the session's totals count
+answered words). If the manuscript claims every word *presented*, say *every word read
+or skipped*.
 
 ---
 

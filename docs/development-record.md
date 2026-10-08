@@ -42,15 +42,16 @@ Three companion documents:
 
 | Area | Files | Lines |
 |---|---:|---:|
-| `src/app/` — routes and API handlers | 60 | 4,744 |
-| `src/components/` — UI | 30 | 5,921 |
-| `src/lib/` — domain logic | 28 | 4,018 |
-| `prisma/` — schema, migrations, word banks, seed | 15 | 1,358 |
-| `scripts/` — operational tooling | 12 | 1,266 |
-| `tests/` — audit suites | 14 | 4,399 |
-| **Total tracked** | | **~23,200** |
+| `src/app/` — routes and API handlers | 60 | 4,994 |
+| `src/components/` — UI | 31 | 6,011 |
+| `src/lib/` — domain logic | 30 | 5,100 |
+| `prisma/` — schema, migrations, word banks, seed | 21 | 1,645 |
+| `scripts/` — operational tooling | 16 | 2,165 |
+| `tests/` — audit suites | 14 | 5,279 |
+| **Code, total** | **172** | **25,194** |
+| `docs/` and README — documents and instruments | 15 | 7,007 |
 
-14 migrations, 10 automated audit suites, 442 assertions (as of 7 October 2026).
+14 migrations, 10 automated audit suites, 455 assertions (as of 8 October 2026).
 
 ---
 
@@ -1768,19 +1769,19 @@ sentence on what is stored, the title — collected with suggested wording in
 
 ### 9.1 The suites
 
-Ten suites, **442 checks** (7 October 2026). Run with `npm run audit [url]`.
+Ten suites, **455 checks** (8 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 62 | Authorization, validation, data scoping, erasure, and the two RLS checks in §10.1a |
-| `logic-audit` | 23 | Scoring strictness, adaptive difficulty, mastery, agreement |
-| `ui-audit` | 20 | Complete learner journeys, specialist workflows, responsive sweep |
-| `links-audit` | 51 | Every route reachable from the navigation, as each role |
-| `stale-session-audit` | 25 | A learner or specialist erased mid-session |
+| `logic-audit` | 25 | Scoring strictness, the skill-progression map, mastery, agreement |
+| `ui-audit` | 23 | The dashboard's listening nudge, complete learner journeys (blending included), specialist workflows, responsive sweep |
+| `links-audit` | 54 | Every route reachable from the navigation, as each role |
+| `stale-session-audit` | 26 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
 | `decoding-audit` | 72 | Probe walls, latency guard, stress caveat, exports, Filipino |
-| `calibration-audit` | 89 | Calibration arithmetic, blind review, tags, demo, IEP, pre/post |
-| `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress |
+| `calibration-audit` | 93 | Calibration arithmetic, agreement first, blind review, tags, demo, IEP, start/end record, Filipino throughout |
+| `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
 | `a11y-audit` | 19 | WCAG 2.1 AA via axe-core, keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
 | `prod-smoke` | — | Real Groq audio, serverless TTS, live `SPECIALIST_CODE` |
