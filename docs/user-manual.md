@@ -129,7 +129,7 @@ isolation).
 |---|---|---|
 | **Read aloud** | `read-aloud` | Sees a word, presses the mic, reads it. **This is the one that records audio and produces the scored data.** |
 | **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options (word recognition) |
-| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip with a ~0.8 s pause — and picks the word they make (blending). The whole word plays only as feedback. Words with a lone-vowel syllable (*a-so*) are left out until a specialist records their parts |
+| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip, about half a second to a second apart — and picks the word they make (blending). The whole word plays only as feedback. Words with a lone-vowel syllable (*a-so*) are left out until a specialist records their parts |
 | **Count the syllables** | `syllables` | Taps how many *pantig* a word has |
 | **Rhyme time** | `rhyme` | Picks the word that rhymes |
 | **First sound** | `first-sound` | Picks the word starting with the same sound |

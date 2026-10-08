@@ -33,7 +33,7 @@ scope.
 - **Blend the parts** — syllable blending: hear a word only in its syllables (*ba… ta*) and
   pick the word they make. The wrong options share a syllable with the answer, so the first
   part alone is not enough; the whole word is played only as feedback. Each syllable is its
-  own clip with a timed pause (~0.8 s), because the single generated clip ran them together;
+  own clip, about 0.4–1.0 s apart, because the single generated clip ran them together;
   words with a lone-vowel syllable wait for a specialist's recording.
 - **Count the syllables** — segmentation (pantig), with syllable-by-syllable audio.
 - **Rhyme time** — rhyming awareness from a curated item bank.

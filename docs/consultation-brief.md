@@ -197,7 +197,7 @@ is played only after the answer, as feedback.
 synthesis of "ba, hay", relying on the comma for a pause; most had none ("bahay", "mesa",
 "salamat" had no gap at all), and Whisper transcribed the clip of "sa, la, mat" as
 "Salamat!" — the activity would have played the answer. Each syllable is now its own clip
-in the same voice, with a pause of about **0.8 seconds** between them (longer at a slower
+in the same voice, about **half a second to a second** apart (longer at a slower
 speech-rate setting). The syllable-counting activity's *Hear the parts* button uses the same.
 
 **One reservation.** Spoken on its own, a lone vowel may come out as an English letter name

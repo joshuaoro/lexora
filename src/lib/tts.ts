@@ -43,7 +43,12 @@ export function speakUi(text: string, lang: "en" | "fil", rate = 0.95): Promise<
 }
 
 /** speakUi without the stop, so a sequence of clips can play one after another. */
-function playUiClip(text: string, lang: "en" | "fil", rate: number): Promise<void> {
+function playUiClip(
+  text: string,
+  lang: "en" | "fil",
+  rate: number,
+  onStart?: () => void
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return Promise.resolve();
 
@@ -65,6 +70,7 @@ function playUiClip(text: string, lang: "en" | "fil", rate: number): Promise<voi
       resolve();
     };
     audio.onended = done;
+    audio.onplaying = () => onStart?.();
     audio.onerror = () => {
       if (settled) return;
       settled = true;
@@ -143,8 +149,20 @@ export function speakOnce(text: string, rate = 0.85): Promise<void> {
  */
 let generation = 0;
 
-/** Base pause between syllables, before the learner's speed setting is applied. */
-export const SYLLABLE_GAP_MS = 700;
+/**
+ * How long each syllable has, from the moment its clip starts playing, at
+ * normal speed — after which its silent tail is cut and the next one starts.
+ *
+ * Every synthesized clip is padded to about two seconds however short the
+ * syllable: roughly 0.2 s of lead-in, the syllable, then more than a second of
+ * silence. Played whole and back to back, that put over two seconds between
+ * "ba" and "ta" — long enough that a child has to hold the first part in mind
+ * across a gap, which is a memory task, not a blending one. Measured across
+ * all 201 syllable clips on 8 October, speech ends by 0.99 s at the latest
+ * ("u"), so a 1.2 s slot never cuts a syllable short and leaves about 0.4–1.0
+ * s between them. The slot stretches with a slower speech-rate setting.
+ */
+export const SYLLABLE_SLOT_MS = 1200;
 
 /**
  * Say a word's syllables one at a time, with a pause the app controls.
@@ -154,18 +172,33 @@ export const SYLLABLE_GAP_MS = 700;
  * "mesa" and "salamat" had no pause at all between syllables, and Whisper
  * transcribed the clip of "sa, la, mat" as "Salamat!" — the blending activity
  * was playing the answer. Each syllable is now its own clip, from the same
- * neural voice and the same cache as the spoken instructions, with a real gap
- * between them that slows with the learner's speech-rate setting.
+ * neural voice and the same cache as the spoken instructions.
  */
-export async function speakSyllables(parts: string[], rate = 0.85, gapMs = SYLLABLE_GAP_MS) {
+export async function speakSyllables(parts: string[], rate = 0.85) {
   stopSpeaking();
   const mine = generation;
+  const slot = SYLLABLE_SLOT_MS / Math.min(1.5, Math.max(0.6, rate));
   for (let i = 0; i < parts.length; i++) {
     if (generation !== mine) return;
-    await playUiClip(parts[i], "fil", rate);
-    if (i < parts.length - 1) {
-      await new Promise((r) => setTimeout(r, gapMs / Math.min(1.5, Math.max(0.6, rate))));
-    }
+    let started = () => {};
+    const playing = new Promise<void>((r) => (started = r));
+    const done = playUiClip(parts[i], "fil", rate, () => started());
+    if (i === parts.length - 1) return done; // the last one plays out
+
+    // The slot runs from the first sound, not from the request, so a clip that
+    // is slow to arrive is not cut short for it.
+    await Promise.race([done, playing]);
+    await Promise.race([done, new Promise((r) => setTimeout(r, slot))]);
+    if (generation !== mine) return;
+    cutCurrent();
+  }
+}
+
+/** Stop the clip that is playing without ending a sequence it belongs to. */
+function cutCurrent() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
   }
 }
 
