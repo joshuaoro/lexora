@@ -78,18 +78,33 @@ export function report(suiteName) {
 
 /* ── HTTP ──────────────────────────────────────────────────────────────── */
 
+/**
+ * One HTTP request to the app — retried if the host's firewall answered instead.
+ *
+ * A suite fires requests faster than any person, and Vercel's firewall
+ * sometimes answers one with its own 403 challenge page
+ * (`x-vercel-mitigated: challenge`) without the request reaching LEXORA. Read
+ * as the app's answer, that is a false finding: on 8 October it failed the
+ * calibration export ("HTTP 403") and crashed the suite on the empty CSV. A
+ * challenged request never ran, so sending it again is safe whatever the
+ * method; a pause usually lets it through.
+ */
 export async function api(path, { cookie, method = "GET", body, headers } = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: {
-      ...(cookie ? { Cookie: cookie } : {}),
-      ...(body ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    redirect: "manual",
-  });
-  return res;
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...headers,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      redirect: "manual",
+    });
+    if (!res.headers.get("x-vercel-mitigated") || attempt === 3) return res;
+    await res.body?.cancel();
+    await new Promise((r) => setTimeout(r, 5000 * attempt));
+  }
 }
 
 export async function json(path, opts) {

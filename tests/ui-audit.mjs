@@ -46,9 +46,17 @@ section("[0] the dashboard points to what the skill-progression map needs");
 // The skill-progression map asks for listening activities before a level-up,
 // and the dashboard's two big tiles lead elsewhere. A fresh learner has shown
 // none, so the third way in must be there.
+// Waited for, not counted on arrival: the dashboard streams in behind its
+// loading boundary, and a count taken the moment the URL changes sees nothing.
+const soundGames = p.locator("a[href='/exercises']", { hasText: /Sound games/ });
+const nudged = await soundGames
+  .first()
+  .waitFor({ timeout: 30000 })
+  .then(() => true)
+  .catch(() => false);
 check(
   "a learner yet to show phonological awareness is pointed to the sound games",
-  (await p.locator("a[href='/exercises']", { hasText: /Sound games/ }).count()) === 1
+  nudged && (await soundGames.count()) === 1
 );
 
 section("[1] choice-based exercises play to completion");
