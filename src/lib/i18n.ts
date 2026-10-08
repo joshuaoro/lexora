@@ -733,10 +733,17 @@ const en = {
       recording ? `Stop recording ${w}` : `Record ${w} in your voice`,
     recordTitle: (recording: boolean): string =>
       recording ? "Tap to stop" : "Record the word in your own voice",
+    recordSyllAria: (w: string, recording: boolean) =>
+      recording ? `Stop recording the syllables of ${w}` : `Record the syllables of ${w} in your voice`,
+    recordSyllTitle: (recording: boolean): string =>
+      recording
+        ? "Tap to stop"
+        : "Record the syllables in your own voice, pausing between them as you would teach them",
+    yourSyllables: "your syllables",
     generateTitle: "Generate Filipino pronunciation",
     generateAria: (w: string) => `Generate audio for ${w}`,
     yourVoice: "your voice",
-    removeTitle: "Remove your recording (generated voice returns)",
+    removeTitle: "Remove your recordings (the generated voice returns)",
     removeAria: (w: string) => `Remove your recording of ${w}`,
     noAudio: "no audio",
     working: "working…",
@@ -1517,10 +1524,17 @@ const fil: Dict = {
     recordAria: (w, recording) =>
       recording ? `Itigil ang pag-record ng ${w}` : `I-record ang ${w} sa boses mo`,
     recordTitle: (recording) => (recording ? "Pindutin para itigil" : "I-record ang salita sa sarili mong boses"),
+    recordSyllAria: (w, recording) =>
+      recording ? `Itigil ang pag-record ng mga pantig ng ${w}` : `I-record ang mga pantig ng ${w} sa boses mo`,
+    recordSyllTitle: (recording) =>
+      recording
+        ? "Pindutin para itigil"
+        : "I-record ang mga pantig sa sarili mong boses, may hinto sa pagitan gaya ng pagtuturo mo",
+    yourSyllables: "pantig mo",
     generateTitle: "Gumawa ng bigkas sa Filipino",
     generateAria: (w) => `Gumawa ng audio para sa ${w}`,
     yourVoice: "boses mo",
-    removeTitle: "Alisin ang recording mo (babalik ang generated na boses)",
+    removeTitle: "Alisin ang mga recording mo (babalik ang generated na boses)",
     removeAria: (w) => `Alisin ang recording mo ng ${w}`,
     noAudio: "walang audio",
     working: "ginagawa…",

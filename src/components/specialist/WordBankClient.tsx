@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Volume2, Mic, Square, Trash2, Sparkles, Play, Check, X } from "lucide-react";
 import { STAGE_LETTERS, stageForWord } from "@/lib/marungko";
-import { playAudioUrl, speakOnce, stopSpeaking } from "@/lib/tts";
+import { playAudioUrl, speakOnce, speakSyllables, stopSpeaking } from "@/lib/tts";
 import { tryFetch } from "@/lib/net";
 import { getDict, type Lang } from "@/lib/i18n";
 
@@ -20,6 +20,8 @@ type WordRow = {
   audioVersion: number;
   hasTts: boolean;
   hasHuman: boolean;
+  /** A specialist has recorded the syllables, which learners then hear as recorded. */
+  hasSyllHuman: boolean;
   /** A probe non-word: never shown in practice, never given audio. */
   isPseudo: boolean;
   /** Set when the word's meaning turns on stress the spelling does not mark. */
@@ -37,6 +39,8 @@ const EMPTY_FORM = {
   isPseudo: false,
 };
 const MAX_RECORD_MS = 6000;
+// The parts are said with pauses, as they are taught: ka… la… ba… sa… runs long.
+const MAX_SYLL_RECORD_MS = 12000;
 
 export default function WordBankClient({ words, lang = "en" }: { words: WordRow[]; lang?: Lang }) {
   const t = getDict(lang).wordBankPage;
@@ -114,6 +118,12 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
   /** Play the clip actually used by learners (specialist voice wins). */
   function preview(w: WordRow, kind: "word" | "syll" = "word") {
     stopSpeaking();
+    // Learners hear the parts one clip at a time unless a specialist recorded
+    // them, so the preview does the same — "hear what learners hear".
+    if (kind === "syll" && !w.hasSyllHuman) {
+      void speakSyllables(w.syllables.split("-"));
+      return;
+    }
     if (!w.hasTts && !w.hasHuman) {
       speakOnce(kind === "syll" ? w.syllables.split("-").join(", ") : w.text, 0.85);
       return;
@@ -232,7 +242,7 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
     recorder.start();
     setTimeout(() => {
       if (recorder.state !== "inactive") recorder.stop();
-    }, MAX_RECORD_MS);
+    }, kind === "syll" ? MAX_SYLL_RECORD_MS : MAX_RECORD_MS);
   }
 
   async function saveDraft(word: WordRow) {
@@ -559,6 +569,8 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
           <tbody className="divide-y divide-line">
             {filtered.map((w) => {
               const isRecording = recording?.id === w.id;
+              const recordingWord = isRecording && recording?.kind === "word";
+              const recordingSyll = isRecording && recording?.kind === "syll";
               const rowDraft = draft?.wordId === w.id ? draft : null;
               const rowBusy = busyId === w.id;
               return (
@@ -703,16 +715,36 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
 
                         <button
                           onClick={() => toggleRecord(w, "word")}
-                          disabled={rowBusy || (recording !== null && !isRecording)}
-                          aria-label={t.recordAria(w.text, isRecording)}
-                          title={t.recordTitle(isRecording)}
+                          disabled={rowBusy || (recording !== null && !recordingWord)}
+                          aria-label={t.recordAria(w.text, recordingWord)}
+                          title={t.recordTitle(recordingWord)}
                           className={`${iconBtn} ${
-                            isRecording
+                            recordingWord
                               ? "animate-pulse bg-red text-white"
                               : "text-ink-muted hover:bg-cream-dark hover:text-ink"
                           }`}
                         >
-                          {isRecording ? <Square size={15} /> : <Mic size={16} />}
+                          {recordingWord ? <Square size={15} /> : <Mic size={16} />}
+                        </button>
+
+                        {/* The parts in the specialist's own voice. Learners
+                            then hear this recording, pauses and all, instead of
+                            one generated clip per syllable — and a word with a
+                            lone-vowel syllable, held out of blending because
+                            the voice may say a letter name, comes back. */}
+                        <button
+                          onClick={() => toggleRecord(w, "syll")}
+                          disabled={rowBusy || (recording !== null && !recordingSyll)}
+                          aria-label={t.recordSyllAria(w.text, recordingSyll)}
+                          title={t.recordSyllTitle(recordingSyll)}
+                          className={`flex h-8 items-center gap-0.5 rounded-lg px-1.5 transition disabled:opacity-40 ${
+                            recordingSyll
+                              ? "animate-pulse bg-red text-white"
+                              : "text-ink-muted hover:bg-cream-dark hover:text-ink"
+                          }`}
+                        >
+                          {recordingSyll ? <Square size={13} /> : <Mic size={13} />}
+                          <span className="text-[10px] font-extrabold">ba·hay</span>
                         </button>
 
                         {!w.hasTts && (
@@ -727,11 +759,18 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
                           </button>
                         )}
 
-                        {w.hasHuman && (
+                        {(w.hasHuman || w.hasSyllHuman) && (
                           <>
-                            <span className="rounded-full bg-green-soft px-2 py-0.5 text-[10px] font-bold text-green">
-                              {t.yourVoice}
-                            </span>
+                            {w.hasHuman && (
+                              <span className="rounded-full bg-green-soft px-2 py-0.5 text-[10px] font-bold text-green">
+                                {t.yourVoice}
+                              </span>
+                            )}
+                            {w.hasSyllHuman && (
+                              <span className="rounded-full bg-green-soft px-2 py-0.5 text-[10px] font-bold text-green">
+                                {t.yourSyllables}
+                              </span>
+                            )}
                             <button
                               onClick={() => removeRecording(w)}
                               disabled={rowBusy}

@@ -4,8 +4,9 @@
  *   npx tsx scripts/generate-instruction-audio.ts
  *   npx tsx scripts/generate-instruction-audio.ts --force   # re-synthesize
  *
- * Every fixed line the speaker button can say, in both languages, synthesized
- * ahead of time. Without this the first child to press the speaker on study day
+ * Every fixed line the speaker button can say, in both languages, and every
+ * syllable of every real word in the bank (the exercises play a word's parts
+ * one clip at a time), synthesized ahead of time. Without this the first child to press the speaker on study day
  * waits a second or two for a WebSocket round trip; with it, nothing is cold.
  *
  * Lines are read from the dictionaries rather than copied here, so a reworded
@@ -68,8 +69,15 @@ async function main() {
   let kept = 0;
   let failed = 0;
 
+  // Every syllable of every real word, spoken on its own. The exercises play a
+  // word's parts one clip at a time (speakSyllables in src/lib/tts.ts), and a
+  // clip a child is the first to need is slow to arrive and spends their
+  // account's new-phrase budget. Probe non-words never get audio of any kind.
+  const words = await prisma.word.findMany({ where: { isPseudo: false }, select: { syllables: true } });
+  const syllables = [...new Set(words.flatMap((w) => w.syllables.split("-")).filter(Boolean))].sort();
+
   for (const lang of ["en", "fil"] as Lang[]) {
-    const phrases = phrasesFor(lang);
+    const phrases = lang === "fil" ? [...phrasesFor(lang), ...syllables] : phrasesFor(lang);
     console.log(`${lang} — ${phrases.length} phrases`);
 
     for (const text of phrases) {

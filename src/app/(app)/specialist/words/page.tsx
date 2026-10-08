@@ -8,7 +8,7 @@ export default async function WordBankPage() {
 
   // The audio columns hold base64 clips, so they are never selected directly —
   // only which of them exist, via id lookups.
-  const [words, withTts, withHuman, lang] = await Promise.all([
+  const [words, withTts, withHuman, withSyllHuman, lang] = await Promise.all([
     prisma.word.findMany({
       orderBy: [{ stage: "asc" }, { level: "asc" }, { text: "asc" }],
       select: {
@@ -27,11 +27,13 @@ export default async function WordBankPage() {
     }),
     prisma.word.findMany({ where: { audioWord: { not: null } }, select: { id: true } }),
     prisma.word.findMany({ where: { audioWordHuman: { not: null } }, select: { id: true } }),
+    prisma.word.findMany({ where: { audioSyllHuman: { not: null } }, select: { id: true } }),
     getLang(),
   ]);
 
   const ttsIds = new Set(withTts.map((w) => w.id));
   const humanIds = new Set(withHuman.map((w) => w.id));
+  const syllHumanIds = new Set(withSyllHuman.map((w) => w.id));
 
   return (
     <WordBankClient
@@ -39,6 +41,7 @@ export default async function WordBankPage() {
         ...w,
         hasTts: ttsIds.has(w.id),
         hasHuman: humanIds.has(w.id),
+        hasSyllHuman: syllHumanIds.has(w.id),
       }))}
       lang={lang}
     />

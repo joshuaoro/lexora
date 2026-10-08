@@ -191,11 +191,25 @@ measured against are themselves reliable). Who: ______________________
 child hears a word only in its syllables — *ba… ta* — and taps the word they make, from
 three. The wrong options share a syllable with the answer wherever the bank allows (*bata*
 against *baso* and *lata*), so catching the first part alone is not enough. The whole word
-is played only after the answer, as feedback. The syllables come from the same clips the
-syllable-counting activity uses.
+is played only after the answer, as feedback.
 
-**Decide:** ☐ suitable as written ☐ the parts should be shown in print as well ☐ the gap
-between syllables is too short / too long on the clips ☐ other: ______________________
+**How the parts are spoken — measured on 8 October.** The original syllable clips were one
+synthesis of "ba, hay", relying on the comma for a pause; most had none ("bahay", "mesa",
+"salamat" had no gap at all), and Whisper transcribed the clip of "sa, la, mat" as
+"Salamat!" — the activity would have played the answer. Each syllable is now its own clip
+in the same voice, with a pause of about **0.8 seconds** between them (longer at a slower
+speech-rate setting). The syllable-counting activity's *Hear the parts* button uses the same.
+
+**One reservation.** Spoken on its own, a lone vowel may come out as an English letter name
+— Whisper wrote the voice's "a" as "Ayy" and the old clip of "a-ma" as "Eh, ma". So words
+with a lone-vowel syllable (*a-so, i-sa, u-be* — 27 words) are left out of blending until
+someone listens. Your own recording of a word's parts (Word bank → record) is played exactly
+as you recorded it and brings the word back. *Hear the parts* in syllable counting still
+speaks them; listen to a few.
+
+**Decide:** ☐ suitable as written ☐ the parts should be shown in print as well ☐ the pause
+is too short / too long ☐ the lone vowels sound right / wrong (try *aso* in Count the
+syllables) ☐ other: ______________________
 
 ### 12. Phoneme-level manipulation — in the proposal, not yet in LEXORA
 

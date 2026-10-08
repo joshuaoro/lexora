@@ -38,10 +38,15 @@ export function getFilipinoVoice(): SpeechSynthesisVoice | null {
  * connection is better served by something than by nothing.
  */
 export function speakUi(text: string, lang: "en" | "fil", rate = 0.95): Promise<void> {
+  stopSpeaking();
+  return playUiClip(text, lang, rate);
+}
+
+/** speakUi without the stop, so a sequence of clips can play one after another. */
+function playUiClip(text: string, lang: "en" | "fil", rate: number): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return Promise.resolve();
 
-  stopSpeaking();
   const url = `/api/speech?lang=${lang}&text=${encodeURIComponent(trimmed.slice(0, 300))}`;
 
   return new Promise((resolve) => {
@@ -131,7 +136,41 @@ export function speakOnce(text: string, rate = 0.85): Promise<void> {
   });
 }
 
+/**
+ * Advanced by every stopSpeaking(). A sequence of clips checks it between
+ * clips, so anything else that starts speaking — the next word, a button —
+ * ends the sequence instead of talking over it.
+ */
+let generation = 0;
+
+/** Base pause between syllables, before the learner's speed setting is applied. */
+export const SYLLABLE_GAP_MS = 700;
+
+/**
+ * Say a word's syllables one at a time, with a pause the app controls.
+ *
+ * The stored syllable clip was one synthesis of "ba, hay": the comma was meant
+ * to make the voice pause, and mostly did not. Measured on 8 October, "bahay",
+ * "mesa" and "salamat" had no pause at all between syllables, and Whisper
+ * transcribed the clip of "sa, la, mat" as "Salamat!" — the blending activity
+ * was playing the answer. Each syllable is now its own clip, from the same
+ * neural voice and the same cache as the spoken instructions, with a real gap
+ * between them that slows with the learner's speech-rate setting.
+ */
+export async function speakSyllables(parts: string[], rate = 0.85, gapMs = SYLLABLE_GAP_MS) {
+  stopSpeaking();
+  const mine = generation;
+  for (let i = 0; i < parts.length; i++) {
+    if (generation !== mine) return;
+    await playUiClip(parts[i], "fil", rate);
+    if (i < parts.length - 1) {
+      await new Promise((r) => setTimeout(r, gapMs / Math.min(1.5, Math.max(0.6, rate))));
+    }
+  }
+}
+
 export function stopSpeaking() {
+  generation += 1;
   if (ttsSupported()) window.speechSynthesis.cancel();
   if (currentAudio) {
     currentAudio.pause();

@@ -129,7 +129,7 @@ isolation).
 |---|---|---|
 | **Read aloud** | `read-aloud` | Sees a word, presses the mic, reads it. **This is the one that records audio and produces the scored data.** |
 | **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options (word recognition) |
-| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta* — and picks the word they make (blending). The whole word plays only as feedback |
+| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip with a ~0.8 s pause — and picks the word they make (blending). The whole word plays only as feedback. Words with a lone-vowel syllable (*a-so*) are left out until a specialist records their parts |
 | **Count the syllables** | `syllables` | Taps how many *pantig* a word has |
 | **Rhyme time** | `rhyme` | Picks the word that rhymes |
 | **First sound** | `first-sound` | Picks the word starting with the same sound |
@@ -299,9 +299,14 @@ repeatedly during testing means readings were scored by different rules.
 
 ### Word bank `/specialist/words`
 
-- **🔊 / ba·hay** — hear exactly what learners hear
+- **🔊 / ba·hay** — hear exactly what learners hear: the word, then its syllables one clip
+  at a time with a pause between them
 - **🎤 Record** — record a word in your own voice, preview, then keep or discard
-- **🗑 Remove** — restores the synthesized voice instantly
+- **🎤 ba·hay** — record the *syllables* in your own voice, pausing between them the way you
+  teach. Learners then hear your recording in Blend the parts and Count the syllables. It
+  also brings back into blending a word with a lone-vowel syllable (*a-so*), which is held
+  out because the synthesized voice may say a lone vowel as a letter name
+- **🗑 Remove** — removes your recordings of that word; the synthesized voice returns
 - **✨ Generate** — synthesize audio for a word that has none. Probe non-words show
   *"never voiced — probe item"* instead: a non-word with a pronunciation hands the child
   the answer, so the server refuses to record or generate one

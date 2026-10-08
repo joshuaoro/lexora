@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
-import { sayWord, playAudioUrl, speakOnce, speakUi, stopSpeaking } from "@/lib/tts";
+import { sayWord, playAudioUrl, speakSyllables as speakParts, speakUi, stopSpeaking } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
 import SpeakButton from "@/components/SpeakButton";
 import LeaveGuard from "./LeaveGuard";
@@ -56,21 +56,22 @@ function playChime(good: boolean) {
 }
 
 /**
- * Play a word in parts: the stored syllable clip when there is one, else each
- * syllable through the browser voice.
+ * Play a word in parts.
+ *
+ * A specialist's own recording of the parts is played as recorded — they pause
+ * the way they teach. Otherwise each syllable is its own neural clip with a
+ * real pause between them (see speakSyllables in src/lib/tts.ts for why the
+ * single generated clip is no longer used).
  *
  * Module scope, and handed the item, because starting an item has to play the
  * parts of the item about to be shown — not the one still in state.
  */
 async function playParts(it: ExerciseItem, rate: number) {
-  stopSpeaking();
-  if (it.wordId && it.hasSyllAudio) {
+  if (it.wordId && it.hasSyllHuman) {
     await playAudioUrl(`/api/word-audio/${it.wordId}?kind=syll&v=${it.audioVersion}`, Math.max(0.6, rate + 0.15));
     return;
   }
-  for (const part of (it.syllables ?? it.target).split("-")) {
-    await speakOnce(part, Math.max(0.5, rate * 0.9));
-  }
+  await speakParts((it.syllables ?? it.target).split("-"), rate);
 }
 
 /** Word display size that shrinks gracefully on small screens. */

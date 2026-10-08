@@ -19,6 +19,7 @@ export type ExerciseItem = {
   answer: string | null; // correct option
   hasAudio: boolean; // stored Filipino pronunciation of the whole word
   hasSyllAudio: boolean; // stored syllable-by-syllable pronunciation
+  hasSyllHuman: boolean; // ...recorded by a specialist, which is played as recorded
   audioVersion: number; // busts cached clips after a specialist re-records
 };
 
@@ -48,9 +49,10 @@ function shuffle<T>(arr: T[]): T[] {
 async function audioIndex(): Promise<{
   word: Set<string>;
   syll: Set<string>;
+  syllHuman: Set<string>;
   version: Map<string, number>;
 }> {
-  const [withWord, withSyll, versions] = await Promise.all([
+  const [withWord, withSyll, withSyllHuman, versions] = await Promise.all([
     prisma.word.findMany({
       where: { OR: [{ audioWord: { not: null } }, { audioWordHuman: { not: null } }] },
       select: { id: true },
@@ -59,11 +61,13 @@ async function audioIndex(): Promise<{
       where: { OR: [{ audioSyll: { not: null } }, { audioSyllHuman: { not: null } }] },
       select: { id: true },
     }),
+    prisma.word.findMany({ where: { audioSyllHuman: { not: null } }, select: { id: true } }),
     prisma.word.findMany({ select: { id: true, audioVersion: true } }),
   ]);
   return {
     word: new Set(withWord.map((w) => w.id)),
     syll: new Set(withSyll.map((w) => w.id)),
+    syllHuman: new Set(withSyllHuman.map((w) => w.id)),
     version: new Map(versions.map((w) => [w.id, w.audioVersion])),
   };
 }
@@ -135,6 +139,7 @@ export async function buildItems(
   const flags = (id: string | null) => ({
     hasAudio: id ? audio.word.has(id) : false,
     hasSyllAudio: id ? audio.syll.has(id) : false,
+    hasSyllHuman: id ? audio.syllHuman.has(id) : false,
     audioVersion: (id && audio.version.get(id)) || 1,
   });
 
@@ -200,6 +205,7 @@ export async function buildItems(
         // holds — a probe item the child can listen to hands them the answer.
         hasAudio: false,
         hasSyllAudio: false,
+        hasSyllHuman: false,
         audioVersion: 1,
       }));
   }
@@ -265,10 +271,21 @@ export async function buildItems(
    * bank allows it — same first syllable or same last — so catching "ba…"
    * alone is not enough: the parts have to be put together. One-syllable words
    * have nothing to blend and are left out.
+   *
+   * So, until a specialist has recorded them, are words with a syllable that
+   * is a lone vowel (a-so, i-sa, u-be). The parts are spoken one clip at a
+   * time, and a voice handed a lone "a" may say the English letter name —
+   * Whisper wrote the voice's "a" down as "Ayy" and its "a-ma" as "Eh, ma" —
+   * which would teach the opposite of Marungko's sounds before names. A
+   * specialist's own recording of the parts is played as recorded, so it
+   * brings the word back.
    */
   if (type === "BLEND") {
     const parts = (w: WordRow) => w.syllables.split("-");
-    const blendable = pool.filter((w) => parts(w).length >= 2);
+    const loneVowel = (w: WordRow) => parts(w).some((p) => /^[aeiou]+$/.test(p));
+    const blendable = pool.filter(
+      (w) => parts(w).length >= 2 && (!loneVowel(w) || audio.syllHuman.has(w.id))
+    );
     return blendable.slice(0, count).map((w) => {
       const mine = parts(w);
       const others = blendable.filter((o) => o.text !== w.text);
