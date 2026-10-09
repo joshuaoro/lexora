@@ -67,7 +67,7 @@ Evaluator: `____________________`  Role: `____________________`  Date: `________
 | A3 | The system's judgement of whether a word was read correctly usually agrees with mine. | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A4 | The progress reports contain the information I need to plan instruction. | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A5 | The word difficulty levels are appropriate for the learners I work with. | ☐ | ☐ | ☐ | ☐ | ☐ |
-| A6 | The listening activities (blend, count the syllables, rhyme, first sound) practise the phonological-awareness skills I teach. | ☐ | ☐ | ☐ | ☐ | ☐ |
+| A6 | The listening activities (blend, count the syllables, rhyme, first sound, change the sound) practise the phonological-awareness skills I teach. | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A7 | The practice word list matches the words the learner actually finds hard. | ☐ | ☐ | ☐ | ☐ | ☐ |
 
 **Comments — especially anything the application could not do that you needed:**

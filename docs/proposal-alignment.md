@@ -17,7 +17,7 @@ Compared on 8 October 2026, against the application as deployed that day.
 |---|---|
 | Objectives 1–6 | Each has a feature in the application **and** an instrument that determines it (§2) |
 | Scope and delimitation | Followed. Baseline/endline features no longer present change as a gain (§3) |
-| Data set | Followed, with one gap: **phoneme-level manipulation** (§4) |
+| Data set | Followed, including phoneme-level manipulation (added 9 October, with specialist-recorded sounds) (§4) |
 | Validation | Followed, including the threshold refinement the proposal describes |
 | Evaluation instruments | All nine ISO/IEC 25010 characteristics rated; Table 1 and Table 2 used as written |
 | Statistical treatment | The analysis guide uses only the proposal's four descriptive measures |
@@ -83,16 +83,36 @@ onset-rime awareness, and phoneme-level manipulation)".
 | Task in the proposal | In the application |
 |---|---|
 | Segmentation | *Count the syllables* — syllable level |
-| Blending | *Blend the parts* — **added 8 October**; syllable level. Until then, blending was missing, and "Listen & choose" (hearing a whole word and finding it, which is word recognition) carried the label. Each syllable is spoken as its own clip, about half a second to a second apart: the original generated clips ran the syllables together, so blending would have played the answer. Words with a lone-vowel syllable (*a-so*) wait for a specialist's recording, because the voice may say a lone vowel as a letter name |
+| Blending | *Blend the parts* — **added 8 October**; syllable level. Until then, blending was missing, and "Listen & choose" (hearing a whole word and finding it, which is word recognition) carried the label. Each syllable is spoken as its own clip, about half a second to a second apart: the original generated clips ran the syllables together, so blending would have played the answer. A syllable that is a lone vowel (*a-so*) is played from the specialist's recording of that vowel; until it is recorded, the word is left out |
 | Rhyming | *Rhyme time* — onset–rime |
 | Sound isolation | *First sound* — phoneme isolation |
-| **Phoneme-level manipulation** | **Not built.** A task that deletes or substitutes a sound has to play single sounds, and the speech voice says letters by their names ("bi", not /b/) — the opposite of Marungko's sounds-before-names principle. It needs a specialist to record about twenty sounds. **Decision for the team and specialists** (consultation brief, decision 12) |
+| Phoneme-level manipulation | *Change the sound* — **added 9 October**, phoneme substitution: the child hears a word (*bata*), then the sound to take out (/b/) and the sound to put in (/m/), and picks the word that makes (*mata*, against *bata* unchanged and *lata*). Built from the 48 pairs of bank words that differ only in their first sound. The sounds are **recorded by the reading specialists** — the speech voice says a lone letter by its name ("bi", "ey"), the opposite of Marungko's sounds before names — so a pair is used only once both of its sounds are recorded |
 
-If the task is not built, **suggested manuscript wording** for the Data Set:
+**The letter sounds.** The research team decided on 9 October that the specialists record
+the sounds. The word bank has a *Letter sounds* panel for the twenty the activities need —
+the vowels a, e, i, o, u; the consonants m, s, b, t, k, l, y, n, g, p, r, d, h, w; and the
+digraph ng. Each is trimmed to the sound in the browser and stored once. The same
+recordings fix a second problem the team heard: the voice's lone vowels sounded "so
+English", so a lone-vowel syllable is now only ever spoken from the specialist's vowel.
 
-> …sequenced from simple to complex: syllable-level awareness (blending and
-> segmentation), onset-rime awareness (rhyming), and phoneme-level awareness (initial
-> sound isolation).
+**Suggested manuscript wording** for the Data Set's item bank:
+
+> Phonological awareness item bank, consisting of sound-isolation, rhyming, blending,
+> segmentation and phoneme-manipulation tasks sequenced from simple to complex:
+> syllable-level awareness (blending and segmenting syllables), onset-rime awareness
+> (rhyming), and phoneme-level awareness (isolating and substituting the initial sound of
+> a word), consistent with the principles of Structured Literacy and with approaches such
+> as Orton-Gillingham. Isolated phonemes are presented from recordings made by the
+> reading specialists of the partner institution, so that each letter is heard by its
+> sound rather than its name, consistent with the Marungko Approach.
+
+And, if the manuscript describes the activities, for the System Development or Scope:
+
+> The phonological-awareness activities are Blend the Parts (syllable blending), Count the
+> Syllables (syllable segmentation), Rhyme Time (rhyming), First Sound (initial-sound
+> isolation) and Change the Sound (initial-sound substitution). Each presents its prompt
+> as audio and its answer choices in print; the word to be read is never shown before it
+> is answered.
 
 **Leveled word lists** — 254 Filipino words in five levels by structure (CV-CV open
 syllables; closed syllables and vowel sequences; three syllables; clusters and complex
@@ -108,13 +128,15 @@ learner". Until 8 October promotion read oral reading alone. It now follows the 
 > A learner advances to the next difficulty level only after meeting, at the current
 > level, (a) the phonological-awareness criterion — at least eight responses in the
 > listening activities with at least 80% correct over the latest twelve — and then
-> (b) the single-word decoding criterion — at least eight oral readings with at least 85%
+> (b) the single-word decoding criterion — at least eight oral readings with at least 80%
 > correct over the latest twelve, provided correct readings are not becoming more than
 > 25% slower. A learner moves down a level when decoding accuracy over the latest twelve
 > readings falls to 50% or below. The reading specialist may set a learner's level
 > directly at any time.
 
-The thresholds are for the specialists to confirm (consultation brief, decision 8).
+Both thresholds are 80%, set by the research team on 9 October (decoding was 85%); the
+specialists confirm them at the consultation (decision 8). The listening activities are
+the five above.
 
 **Instructional content reviewed by the specialists before use** — the consultation
 brief is that review, with every item listed in its appendices and a sign-off line
@@ -269,19 +291,24 @@ validation evidence, **not as results**.
 
 ## 10. Decisions still open
 
-For the team, mostly with the specialists — the consultation brief carries each one:
+Decided by the research team on 9 October: the specialists record the letter sounds, and
+Change the sound is built on them; both level thresholds are 80%; lone vowels are spoken
+only from a specialist's recording; `ENROLMENT_CODE` is set on the deployment.
 
-1. Phoneme-level manipulation: record the sounds and build it, or amend the Data Set
-   wording (decision 12).
-2. The skill-progression thresholds, 80% / 85% / 50% (decision 8), and the agreement
-   that every session includes a listening activity.
-3. The blending activity as built (decision 11).
+Still open, for the team, mostly with the specialists — the consultation brief carries
+each one:
+
+1. **The specialists record the twenty letter sounds** (word bank → *Letter sounds*)
+   before testing. Until a pair's two sounds exist, Change the sound has nothing to play,
+   and 27 lone-vowel words stay out of blending and syllable counting.
+2. Confirming the 80% thresholds and the 50% demotion line (decision 8), and that every
+   session includes a listening activity.
+3. The blending and sound-change activities as built (decisions 11–12).
 4. Who completes instrument 06, when, and how decoding level is assessed (decision 13).
 5. Whether Table 2's labels, which describe ease of use, should be generalised for the
    two pictorial items about enjoyment and wanting to use it again (instrument 04).
 6. The manuscript changes in §2 and §4–§8 above.
 
 And before the first child, operationally: ethics clearance; adviser review of every
-instrument; a Cebuano translation of the consent and assent forms; `ENROLMENT_CODE` set on
-the deployment; the demo passwords rotated; the daily backup task registered
-(`scripts/schedule-backup.ps1`).
+instrument; a Cebuano translation of the consent and assent forms; the demo passwords
+rotated; the daily backup task registered (`scripts/schedule-backup.ps1`).

@@ -662,9 +662,9 @@ methodological safeguard below.
 
 ### 5.1 Exercise modules
 
-Eight activities. The four listening ones are the proposal's phonological-awareness
-bank — blending, segmentation, rhyming, sound isolation — and they are what the
-first criterion of the skill-progression map counts (§8.17):
+Nine activities. The five listening ones are the proposal's phonological-awareness
+bank — blending, segmentation, rhyming, sound isolation, phoneme manipulation — and
+they are what the first criterion of the skill-progression map counts (§8.17):
 
 | Activity | Skill | Notes |
 |---|---|---|
@@ -674,6 +674,7 @@ first criterion of the skill-progression map counts (§8.17):
 | **Count the syllables** | Segmentation (pantig) | Syllable-by-syllable audio |
 | **Rhyme time** | Rhyming awareness | 46 curated items |
 | **First sound** | Sound isolation | 30 curated items |
+| **Change the sound** | Phoneme manipulation (substitution) | bata, /b/ → /m/, mata; the sounds are the specialists' recordings (added 9 October, §8.18) |
 | **Practice list** | The child's own misread words | Two correct reads in a row masters a word |
 | **Silly words** | The decoding probe | Assessment only — see §6.4 |
 
@@ -698,14 +699,14 @@ change.
 
 ```
 WINDOW = 12          MIN_ATTEMPTS = 8
-UP_THRESHOLD = 0.85  DOWN_THRESHOLD = 0.50
+UP_THRESHOLD = 0.80  DOWN_THRESHOLD = 0.50     (0.85 until 9 October, §8.18)
 PA_WINDOW = 12       PA_MIN_ANSWERS = 8     PA_THRESHOLD = 0.80
 ```
 
 **The skill-progression map** (added 8 October, §8.17). The proposal defines
 "the mastery criteria that a learner must meet at each stage (phonological
 awareness, then single-word decoding)", so a promotion first needs the listening
-activities at this level — blend, syllables, rhyme, first sound, taken together —
+activities at this level — blend, syllables, rhyme, first sound, change the sound, taken together —
 at 80% over the latest 12 answers, at least 8 of them. Unlike the latency guard,
 no data here means "not yet": it is a mastery criterion, not a safeguard. The
 *Skill progression* panel on the learner page reads the same tallies, so it
@@ -1763,6 +1764,50 @@ The manuscript has its own differences from the application — Tables 4–6, on
 sentence on what is stored, the title — collected with suggested wording in
 `proposal-alignment.md` rather than changed here.
 
+### 8.18 The research team's decisions, 9 October
+
+The team listened, decided four things, and set the enrolment code on Vercel.
+
+- *"Let the specialists record them."* Phoneme-level manipulation was the one
+  part of the proposal's item bank left unbuilt, because it plays isolated
+  sounds and the neural voice says a lone letter by its name. The word bank now
+  has a **Letter sounds** panel for the twenty sounds the activities need (the
+  vowels, fourteen consonants, and ng). A take is trimmed to the sound in the
+  browser — decoded, cut where it rises above about −28 dB of its own peak,
+  levelled, and saved as 16 kHz mono WAV (`src/lib/trim-sound.ts`), because a
+  second of silence either side becomes the pause in a sequence, and a
+  MediaRecorder WebM carries no duration to seek by. One new table,
+  `LetterSound`, with row level security and the deny-all policy in its own
+  migration, and in the backup's table list — a person's voice cannot be
+  regenerated. **Change the sound** is built on it: the word, the sound out, the
+  sound in, then printed choices — the answer, the word unchanged, and a third
+  from the same family. The bank has 48 such pairs, six at level 1; a pair is
+  used only once both of its sounds are recorded, and the activity says it is
+  waiting until then.
+- *"It sounds so English and not so encouraging"* — the voice's lone vowels.
+  So a lone-vowel syllable is now spoken only from the specialists' recording
+  of that vowel, in Blend the parts and Count the syllables alike, and a word
+  whose vowel is not recorded yet is left out of both rather than voiced badly.
+- *80%.* The decoding criterion drops from 85% to 80%, matching the
+  phonological-awareness one: over the latest twelve readings, ten promotes and
+  nine does not. `logic-audit` now checks both sides of the line.
+- *The enrolment code* was set on Vercel and confirmed refusing an unregistered
+  learner ("An enrolment code from the reading centre is needed…"). The suites
+  register their throwaway learners with it from `.env`, and if a machine lacks
+  it they now create the learner the way registration does and sign in through
+  the real login route, rather than failing every suite at its first step.
+
+Two things around the edges. Vercel's install began warning that six packages'
+install scripts were "not yet covered by allowScripts" — npm's new review of
+dependency scripts, which its documentation says will block them. The build
+had succeeded regardless (`vercel-build` runs `prisma generate` itself);
+`package.json` now approves the five whose scripts do real work and denies
+`msedge-tts`, whose only script is `npx only-allow pnpm`, written to fail an npm
+install. And the UI suite plays Change the sound to completion by putting a
+silent stand-in in place of any of /m/, /s/, /b/ nobody has recorded, removed
+in a `finally` and swept again by every suite's cleanup — matched on the
+silent clip itself, so a specialist's recording is never touched.
+
 ---
 
 ## 9. Verification
@@ -2188,14 +2233,14 @@ and o↔u count as errors for Cebuano-speaking children, the eight probe non-wor
 one letter from a practice word, the accepted-spelling list, starting placement,
 the rhyme criterion, stress flags, observation categories, the skill-progression
 thresholds, the word bank, whether a second specialist scores an overlapping
-sample, the blending activity, phoneme-level manipulation, the verification
-procedure, and the content sign-off.
+sample, the blending and sound-change activities, who records the twenty letter
+sounds and when, the verification procedure, and the content sign-off.
 
 ### 13.5 For the manuscript
 
 `docs/proposal-alignment.md` §2–§8: measures for Objectives 1, 3, 4 and 5; the
-skill-progression criteria; the Data Set wording if phoneme-level manipulation is
-not built; Tables 4–6; one sentence of *Privacy and Confidentiality*; and the
+skill-progression criteria (both 80%); the Data Set wording for the item bank, now
+including phoneme manipulation on specialist-recorded sounds; Tables 4–6; one sentence of *Privacy and Confidentiality*; and the
 title, which the body gives three times in a different form from the title page.
 
 ---

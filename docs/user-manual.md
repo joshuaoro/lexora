@@ -120,19 +120,20 @@ on; a percentage is not). A speaker button reads the greeting aloud.
 
 ### Exercises `/exercises`
 
-Eight activities. Each draws **8 items** per run, matched to the learner's level and
-Marungko stage. The four listening activities — blend, syllables, rhyme, first sound —
-are the proposal's phonological-awareness tasks (blending, segmentation, rhyming, sound
-isolation).
+Nine activities. Each draws up to **8 items** per run, matched to the learner's level and
+Marungko stage. The five listening activities — blend, syllables, rhyme, first sound,
+change the sound — are the proposal's phonological-awareness tasks (blending,
+segmentation, rhyming, sound isolation, phoneme manipulation).
 
 | Activity | Slug | What the child does |
 |---|---|---|
 | **Read aloud** | `read-aloud` | Sees a word, presses the mic, reads it. **This is the one that records audio and produces the scored data.** |
 | **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options (word recognition) |
-| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip, about half a second to a second apart — and picks the word they make (blending). The whole word plays only as feedback. Words with a lone-vowel syllable (*a-so*) are left out until a specialist records their parts |
+| **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip, about half a second to a second apart — and picks the word they make (blending). The whole word plays only as feedback. A lone-vowel syllable (*a-so*) is played from the specialist's recording of that vowel; until there is one, the word is left out |
 | **Count the syllables** | `syllables` | Taps how many *pantig* a word has |
 | **Rhyme time** | `rhyme` | Picks the word that rhymes |
 | **First sound** | `first-sound` | Picks the word starting with the same sound |
+| **Change the sound** | `change-sound` | Hears a word (*bata*), then the sound to take out and the sound to put in (/b/ → /m/), and picks the word that makes (*mata*). The sounds are the specialists' recordings; until both sounds of a pair exist, the screen says the game is waiting for them |
 | **Practice list** | (via `/practice`) | Their own previously-misread words |
 | **Silly words** | `silly-words` | **The decoding probe.** Made-up words. Assessment only |
 
@@ -230,7 +231,7 @@ and Print. Then, top to bottom:
    **confirmed** and **overturned** — the evidence for verifying the list (Objective 3).
 2. **Skill progression** — the proposal's map at the child's current level: phonological
    awareness (the listening activities, ≥ 8 answers, 80%) and then single-word decoding
-   (≥ 8 readings, 85%, not slowing). Both must be met to move up. If a child's level has
+   (≥ 8 readings, 80%, not slowing). Both must be met to move up. If a child's level has
    stopped moving, this says which criterion is holding it.
 3. **Scoring reliability check (Review list)** — the core research instrument; covered
    below. The agreement percentage beside it is over **first readings of real words
@@ -303,9 +304,15 @@ repeatedly during testing means readings were scored by different rules.
   at a time with a pause between them
 - **🎤 Record** — record a word in your own voice, preview, then keep or discard
 - **🎤 ba·hay** — record the *syllables* in your own voice, pausing between them the way you
-  teach. Learners then hear your recording in Blend the parts and Count the syllables. It
-  also brings back into blending a word with a lone-vowel syllable (*a-so*), which is held
-  out because the synthesized voice may say a lone vowel as a letter name
+  teach. Learners then hear your recording in Blend the parts and Count the syllables.
+- **Letter sounds** (the panel above the table) — record each of the twenty sounds once:
+  a, e, i, o, u, m, s, b, t, k, l, y, n, g, p, r, d, h, w, ng. Say the sound the way you
+  teach it (/m/, not "em"; /a/, not "ey"), hear the take, and keep it; the silence around
+  it is trimmed for you. These are the only way the app plays an isolated sound: *Change
+  the sound* uses them, and a syllable that is a lone vowel (*a-so*) is played from them —
+  the synthesized voice says a lone letter by its name. **Record them before testing
+  starts**: until a vowel is recorded, the words that need it stay out of blending and
+  syllable counting, and until both sounds of a pair are, Change the sound cannot use it
 - **🗑 Remove** — removes your recordings of that word; the synthesized voice returns
 - **✨ Generate** — synthesize audio for a word that has none. Probe non-words show
   *"never voiced — probe item"* instead: a non-word with a pronunciation hands the child
@@ -440,7 +447,9 @@ Spend the time on:
 3. **The observation chips** — walk the vocabulary. Ask whether the categories match what
    they actually hear; that is real feedback worth writing down.
 4. **The word bank** — show them **🎤 Record**, because a specialist's own voice takes
-   priority over the synthesized clip. This is usually the feature they most want.
+   priority over the synthesized clip. This is usually the feature they most want. Then
+   the **Letter sounds** panel: the twenty sounds are theirs to record, and Change the
+   sound and the lone-vowel words wait for them.
 5. **What they will verify** — the *Skill progression* panel and the practice-list
    evidence (confirmed · overturned). Instrument 06 asks them to judge both, so they
    should see them before testing begins.
@@ -541,7 +550,8 @@ later.
 **During**
 
 - The child signs in under their code.
-- **One listening activity and one Read aloud run.** Read aloud produces the scored data
+- **One listening activity (blend, syllables, rhyme, first sound, change the sound) and one
+  Read aloud run.** Read aloud produces the scored data
   for Objective 2, and the listening activities are the phonological-awareness half of the
   skill-progression map — a child who only reads aloud never moves up a level.
 - Leaving an activity partway is fine — the words already read are saved, and the app

@@ -149,7 +149,7 @@ The raw data. Everything else can be recomputed from this.
 | `attempt_id` | Unique id |
 | `learner` | Display name |
 | `timestamp_iso` | When |
-| `activity_type` | `READ_ALOUD`, `PRACTICE`, `PSEUDO_PROBE`, `LISTEN_CHOOSE`, `BLEND`, `SYLLABLES`, `RHYME`, `FIRST_SOUND` |
+| `activity_type` | `READ_ALOUD`, `PRACTICE`, `PSEUDO_PROBE`, `LISTEN_CHOOSE`, `BLEND`, `SYLLABLES`, `RHYME`, `FIRST_SOUND`, `CHANGE_SOUND` |
 | `target_word` | The word shown. Denormalised, so history survives word edits |
 | `syllables` | Hyphenated, e.g. `ba-hay` |
 | `pattern` | CV, CVC, CVCV, CCVC … |
@@ -289,6 +289,7 @@ produces, so a skipped step has a visible cost.
 | **Enrol each child under their participant code** — name `L1`, email `l1@participant.lexora` — never their real name | Records held "under a coded learner identifier" (proposal, *Privacy and Confidentiality*) |
 | Intake sheet per child ([`instruments/05`](instruments/05-intake-and-field-log.md)) | The participants table |
 | `/diagnostics` on every device and browser to be used, copied into the device validation log ([`instruments/05`](instruments/05-intake-and-field-log.md) §2) | ASR integration validation "across the supported browsers and microphone configurations" (proposal, *Validation*) — the page keeps nothing, so the log is the record |
+| Specialists record the twenty letter sounds (word bank → *Letter sounds*) | *Change the sound* has pairs to play, and the 27 lone-vowel words can be blended and counted |
 | Specialist sets each child's starting level | Sensible first sessions instead of everyone at level 1 |
 | `npm run backup` | A restore point |
 
@@ -296,7 +297,8 @@ produces, so a skipped step has a visible cost.
 
 - The child signs in under their code.
 - **Pair a listening activity with a reading activity.** One of *Blend the parts*,
-  *Count the syllables*, *Rhyme time* or *First sound*, and one *Read aloud* run.
+  *Count the syllables*, *Rhyme time*, *First sound* or *Change the sound*, and one *Read
+  aloud* run.
   The skill-progression map needs both to move a child up a level
   (`src/lib/adaptive.ts`): a child who only reads aloud never shows the
   phonological-awareness criterion and stays where they are.
@@ -532,7 +534,7 @@ accuracy = correct = 1 AND is_retry = 0 AND activity_type IN (READ_ALOUD, PRACTI
 
 Retries measure repetition (filter ①). The listening activities are not oral
 reading — `LISTEN_CHOOSE` is recognition, `BLEND` and `SYLLABLES` are syllable
-awareness, `RHYME` and `FIRST_SOUND` are sound awareness — and are reported as
+awareness, `RHYME`, `FIRST_SOUND` and `CHANGE_SOUND` are sound awareness — and are reported as
 their own frequencies. Probe items are excluded (filter ③).
 
 **Word-level error patterns — two views, kept apart.**
@@ -656,13 +658,14 @@ the pictorial responses as stacked bars per item.
    *machine's* verdict, not their investment in the outcome.
 9. **Acquiescence in the children's ratings**, mitigated by who administers the
    scale and by the "Bakit?" answers, not removed.
-10. **Phoneme-level manipulation** is in the proposal's item bank and not in the
-    application (consultation brief, decision 12), unless the specialists record
-    the sounds it needs.
-11. **Blending leaves out the 27 words with a lone-vowel syllable** (*a-so, i-sa*)
-    unless a specialist has recorded their parts, because the synthesized voice
-    may say a lone vowel as a letter name. Report the blending items as drawn from
-    the remaining words.
+10. **Phoneme-level manipulation is by substitution only** (*Change the sound*);
+    deletion is not built. It draws on 48 word pairs — six at level 1 — and only
+    those whose two first sounds a specialist has recorded, so report how many
+    pairs were available to each child.
+11. **Lone vowels come only from the specialists' recordings.** Until a vowel is
+    recorded, the words with a syllable that is that vowel (27 in all: *a-so,
+    i-sa*) are left out of blending and syllable counting. Report the items as
+    drawn from the words available when testing ran.
 
 ---
 

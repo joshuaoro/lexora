@@ -50,16 +50,15 @@ caveat was forgotten. **Revisit when:** a later study sets out to measure gains,
 with a design built for it; even then, export to a statistics package rather
 than compute inline.
 
-### Phoneme-level manipulation
-The proposal's item bank runs up to "phoneme-level manipulation" — say *bata*
-without /b/; change /b/ to /m/. LEXORA stops at phoneme isolation (*First
-sound*).
+### Phoneme deletion
+*Change the sound* (built 9 October, on the specialists' recorded letter sounds)
+covers phoneme manipulation by substitution: *bata*, /b/ → /m/, *mata*. The
+other classic form — say *bata* without /b/ — is not built.
 
-**Why not now:** the task must play single sounds, and the neural voice reads a
-lone letter by its name ("bi"), the opposite of Marungko's sounds-before-names
-principle. **Revisit when:** a specialist records the ~20 sounds (consultation
-brief, decision 12); the word-audio recorder already stores a specialist's voice
-in preference to the synthesized one.
+**Why not now:** the answer must be a real word for the child to pick, and
+removing a Filipino word's first consonant rarely leaves one (*bata* → *ata*).
+**Revisit when:** the specialists want it (consultation brief, decision 12) and
+can name pairs that work; the recorded sounds it would need already exist.
 
 ---
 

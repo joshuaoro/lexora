@@ -22,7 +22,7 @@ have dyslexia, sequenced by the Marungko Approach. A child reads single words al
 pre-trained speech recogniser (Whisper, via Groq) transcribes the recording, and the
 transcript is compared letter by letter with the target word. The child also does
 listening activities (listen and choose, blend the parts, syllable counting, rhyme, first
-sound), a Reader
+sound, change the sound), a Reader
 where words are spoken to them, and a short **decoding probe** of made-up words.
 
 LEXORA does not diagnose and does not replace a specialist. Your verdicts are the ground
@@ -141,10 +141,10 @@ recording, could not tell. All optional; blank is honest missing data.
 that order. To move **up** a level, a child must meet both at their current level:
 
 1. **Phonological awareness:** at least 8 answers in the listening activities (blend the
-   parts, count the syllables, rhyme, first sound), **80% or more** correct over the latest
-   12. Taken across the four together, not each one, so a short session does not hold a
-   child back; the split per activity is shown to you.
-2. **Single-word decoding:** at least 8 first readings aloud, **85% or more** correct over
+   parts, count the syllables, rhyme, first sound, change the sound), **80% or more**
+   correct over the latest 12. Taken across them together, not each one, so a short
+   session does not hold a child back; the split per activity is shown to you.
+2. **Single-word decoding:** at least 8 first readings aloud, **80% or more** correct over
    the latest 12 — unless correct readings are getting more than 25% slower, a sign of
    effortful decoding (Filipino is regular enough that a struggling reader is often
    accurate but slow).
@@ -157,7 +157,9 @@ and you can set the level by hand at any time.
 One consequence to agree on: **a child who only ever does Read aloud will not move up**,
 because the first criterion is never shown. Sessions need a listening activity as well.
 
-**Decide:** ☐ reasonable ☐ adjust the 80% / 85% / 50%: ______________________
+Both thresholds are **80%**, set by the research team on 9 October (decoding was 85%).
+
+**Decide:** ☐ confirm 80% / 80% / 50% ☐ adjust: ______________________
 ☐ sessions will include a listening activity ☐ other: ______________________
 
 ### 9. The word bank itself (Appendix F)
@@ -200,32 +202,37 @@ synthesis of "ba, hay", relying on the comma for a pause; most had none ("bahay"
 in the same voice, about **half a second to a second** apart (longer at a slower
 speech-rate setting). The syllable-counting activity's *Hear the parts* button uses the same.
 
-**One reservation.** Spoken on its own, a lone vowel may come out as an English letter name
-— Whisper wrote the voice's "a" as "Ayy" and the old clip of "a-ma" as "Eh, ma". So words
-with a lone-vowel syllable (*a-so, i-sa, u-be* — 27 words) are left out of blending until
-someone listens. Your own recording of a word's parts (Word bank → record) is played exactly
-as you recorded it and brings the word back. *Hear the parts* in syllable counting still
-speaks them; listen to a few.
+**Lone vowels — your recordings.** Spoken on its own, a lone vowel comes out as an English
+letter name: the research team listened on 9 October and found it "so English and not so
+encouraging". So the voice never says one. A syllable that is a lone vowel (*a-so, i-sa,
+u-be* — 27 words) is played from **your recording of that vowel** (Word bank → *Letter
+sounds*), and until the vowel is recorded the word is left out of blending and syllable
+counting. Your own recording of a whole word's parts (Word bank → 🎤 ba·hay) is played
+exactly as you recorded it and brings the word back too.
 
 **Decide:** ☐ suitable as written ☐ the parts should be shown in print as well ☐ the pause
-is too short / too long ☐ the lone vowels sound right / wrong (try *aso* in Count the
-syllables) ☐ other: ______________________
+is too short / too long ☐ other: ______________________
 
-### 12. Phoneme-level manipulation — in the proposal, not yet in LEXORA
+### 12. Change the sound — phoneme-level manipulation, on your recordings
 
 **Now:** the proposal's item bank runs "from simple to complex (syllable-level awareness,
-onset-rime awareness, and phoneme-level manipulation)". LEXORA covers syllable level
-(blending, counting), onset–rime (rhyme) and phoneme **isolation** (first sound) — but has
-no task that *manipulates* a phoneme (say *bata* without /b/; change /b/ to /m/).
+onset-rime awareness, and phoneme-level manipulation)". *Change the sound* is the phoneme
+level: the child hears *bata*, then the sound to take out (/b/) and the sound to put in
+(/m/), and picks the word that makes — *mata*, against *bata* unchanged and *lata*. It uses
+the 48 pairs of bank words that differ only in their first sound, at the child's level
+(six at level 1: *mama/sama, basa/masa, bisa/misa*, both ways).
 
-**Why it is not built:** such a task has to play single sounds — /b/, /m/ — and the speech
-voice says letters by their **names** ("bi", "em"). The Marungko Approach teaches sounds
-*before* names, so a voice that says "bi" for /b/ would teach the opposite of the method.
-It would need your own recordings of each sound.
+**The sounds are yours.** The speech voice says a letter by its **name** ("bi", "em"), and
+the Marungko Approach teaches sounds *before* names, so the research team decided on
+9 October that you record them. Word bank → *Letter sounds* lists the twenty — a, e, i, o,
+u, m, s, b, t, k, l, y, n, g, p, r, d, h, w, and ng. Press the microphone, say the sound
+the way you teach it, and keep the take; the silence around it is trimmed for you. A word
+pair is used once both of its sounds are recorded, and the vowels serve blending too
+(decision 11).
 
-**Decide:** ☐ record the sounds (about 20 short clips) and add the task ☐ the study
-covers phoneme level through first-sound isolation; the manuscript wording is amended
-☐ other: ______________________
+**Decide:** ☐ suitable as written ☐ the word and sounds should be shown in print as well
+☐ add deletion (*bata* without /b/) ☐ other: ______________________
+**Who records the sounds, and when:** ______________________
 
 ### 13. Verifying Objectives 3 and 4 — instrument 06
 
