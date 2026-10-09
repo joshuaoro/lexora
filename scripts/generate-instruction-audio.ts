@@ -25,6 +25,7 @@ const EXERCISE_TYPES = [
   "SYLLABLES",
   "RHYME",
   "FIRST_SOUND",
+  "CHANGE_SOUND",
   "PRACTICE",
   // Spoken automatically the moment a probe starts, like any oral activity.
   "PSEUDO_PROBE",

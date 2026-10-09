@@ -247,13 +247,32 @@ export async function createTestLearner(prefix = "audit") {
     // ENROLMENT_CODE gates learner registration when the server has it set.
     body: { name: "AuditBot", email, password: PASSWORD, role: "LEARNER", code: ENROLMENT_CODE },
   });
-  if (!res.ok) {
+  let cookie;
+  if (res.ok) {
+    cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+  } else if (res.status === 403 && !ENROLMENT_CODE) {
+    // The deployment gates learner registration with an enrolment code this
+    // machine does not hold — rightly: it is the reading centre's, and set on
+    // Vercel only. The throwaway learner is then made the way registration
+    // makes one (a user and an empty learner profile; the database supplies
+    // every default) and signs in through the real login route, so everything
+    // after this point is tested exactly as before.
+    const { default: bcrypt } = await import("bcryptjs");
+    const id = `audit${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    await query(
+      `INSERT INTO "User" (id, email, password, name, role) VALUES ($1, $2, $3, 'AuditBot', 'LEARNER')`,
+      [id, email, await bcrypt.hash(PASSWORD, 10)]
+    );
+    await query(`INSERT INTO "LearnerProfile" (id, "userId") VALUES ($1, $2)`, [`${id}p`, id]);
+    const login = await api("/api/auth/login", { method: "POST", body: { email, password: PASSWORD } });
+    if (!login.ok) throw new Error(`could not sign in the test learner: HTTP ${login.status}`);
+    cookie = login.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+  } else {
     throw new Error(
       `could not create test learner: HTTP ${res.status}` +
         (res.status === 403 ? " — set ENROLMENT_CODE in .env to the server's value" : "")
     );
   }
-  const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   const row = await one(
     `SELECT lp.id FROM "LearnerProfile" lp JOIN "User" u ON u.id = lp."userId" WHERE u.email = $1`,
     [email]
@@ -266,8 +285,52 @@ export async function deleteTestLearner(email) {
   await query(`DELETE FROM "User" WHERE email = $1`, [email]);
 }
 
+/**
+ * A silent tenth of a second, as a WAV data URL: what a suite puts in for a
+ * letter sound no specialist has recorded, so Change the sound has pairs to
+ * play. Silence on purpose — if one were ever left behind, a child would hear
+ * nothing rather than a wrong sound — and the sweep below removes it anyway.
+ */
+export const STAND_IN_SOUND = (() => {
+  const samples = 1600;
+  const b = Buffer.alloc(44 + samples * 2);
+  b.write("RIFF", 0);
+  b.writeUInt32LE(36 + samples * 2, 4);
+  b.write("WAVE", 8);
+  b.write("fmt ", 12);
+  b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20);
+  b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(16000, 24);
+  b.writeUInt32LE(32000, 28);
+  b.writeUInt16LE(2, 32);
+  b.writeUInt16LE(16, 34);
+  b.write("data", 36);
+  b.writeUInt32LE(samples * 2, 40);
+  return `data:audio/wav;base64,${b.toString("base64")}`;
+})();
+
+/**
+ * Put in stand-ins for whichever of these sounds nobody has recorded, and
+ * return the ones put in. A specialist's own recording is never replaced.
+ */
+export async function standInSounds(sounds) {
+  const added = [];
+  for (const sound of sounds) {
+    const rows = await query(
+      `INSERT INTO "LetterSound" (sound, audio, "updatedAt") VALUES ($1, $2, NOW())
+       ON CONFLICT (sound) DO NOTHING RETURNING sound`,
+      [sound, STAND_IN_SOUND]
+    );
+    if (rows.length) added.push(sound);
+  }
+  return added;
+}
+
 /** Safety net: never let a suite delete real study accounts. */
 export async function cleanupTestAccounts() {
+  // Stand-in sounds go too, and only those: matched on the silent clip itself.
+  await getPool().query(`DELETE FROM "LetterSound" WHERE audio = $1`, [STAND_IN_SOUND]);
   const { rowCount } = await getPool().query(`DELETE FROM "User" WHERE email LIKE '%@lexora.test'`);
   return rowCount;
 }

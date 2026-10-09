@@ -17,7 +17,14 @@ import {
 } from "lucide-react";
 import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
-import { sayWord, playAudioUrl, speakSyllables as speakParts, speakUi, stopSpeaking } from "@/lib/tts";
+import {
+  sayWord,
+  playAudioUrl,
+  speakSyllables as speakParts,
+  speakSwap,
+  speakUi,
+  stopSpeaking,
+} from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
 import SpeakButton from "@/components/SpeakButton";
 import LeaveGuard from "./LeaveGuard";
@@ -71,7 +78,23 @@ async function playParts(it: ExerciseItem, rate: number) {
     await playAudioUrl(`/api/word-audio/${it.wordId}?kind=syll&v=${it.audioVersion}`, Math.max(0.6, rate + 0.15));
     return;
   }
-  await speakParts((it.syllables ?? it.target).split("-"), rate);
+  // A lone vowel comes from the specialist's recording of it (partClips).
+  await speakParts((it.syllables ?? it.target).split("-"), rate, it.partClips);
+}
+
+/** The Change the sound prompt: the word, then the sound out, then the sound in. */
+function playSwapPrompt(swap: NonNullable<ExerciseItem["swap"]>, rate: number) {
+  return speakSwap(
+    {
+      wordId: swap.fromWordId,
+      hasAudio: swap.fromHasAudio,
+      text: swap.fromText,
+      version: swap.fromVersion,
+    },
+    swap.fromSound,
+    swap.toSound,
+    rate
+  );
 }
 
 /** Word display size that shrinks gracefully on small screens. */
@@ -215,6 +238,11 @@ export default function ExerciseSession({
       // first would leave nothing to blend.
       if (next && type === "BLEND") {
         setTimeout(() => void playParts(next, settings.ttsRate), 350);
+      }
+      // Change the sound plays its whole prompt: the word, then the two sounds.
+      if (next?.swap && type === "CHANGE_SOUND") {
+        const swap = next.swap;
+        setTimeout(() => void playSwapPrompt(swap, settings.ttsRate), 350);
       }
       // Receptive activities speak the target automatically
       if (next && (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND")) {
@@ -451,7 +479,11 @@ export default function ExerciseSession({
       <div className="mx-auto max-w-2xl rounded-3xl border border-line bg-card p-6 text-center shadow-sm sm:p-10">
         <h1 className="text-2xl font-extrabold text-ink">{intro.title}</h1>
         <p className="mt-3 text-ink-soft">
-          {type === "PRACTICE" ? t.emptyPractice : t.emptyGeneric}
+          {type === "PRACTICE"
+            ? t.emptyPractice
+            : type === "CHANGE_SOUND"
+              ? t.emptyChangeSound
+              : t.emptyGeneric}
         </p>
         <Link
           href="/exercises"
@@ -765,6 +797,63 @@ export default function ExerciseSession({
           </>
         )}
 
+        {/* ——— Change the sound ———
+             Heard, not read: the word and both sounds are speakers, never
+             letters. Shown "bata" and "b → m", a child could swap letters on the
+             screen — phonics, which Read aloud already practises — instead of
+             swapping sounds. */}
+        {type === "CHANGE_SOUND" && item.swap && (
+          <>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {t.changeQuestion}
+              </p>
+              <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-5">
+              <button
+                onClick={() => playSwapPrompt(item.swap!, settings.ttsRate)}
+                aria-label={t.hearWordAria}
+                className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-peach text-peach-deep shadow-md transition hover:scale-105"
+              >
+                <Volume2 size={36} />
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void playAudioUrl(item.swap!.fromSound, settings.ttsRate)}
+                  aria-label={t.hearFromSoundAria}
+                  className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-red-soft text-red transition hover:scale-105"
+                >
+                  <Volume2 size={24} />
+                </button>
+                <ArrowRight size={24} className="text-ink-muted" aria-hidden />
+                <button
+                  onClick={() => void playAudioUrl(item.swap!.toSound, settings.ttsRate)}
+                  aria-label={t.hearToSoundAria}
+                  className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-soft text-green transition hover:scale-105"
+                >
+                  <Volume2 size={24} />
+                </button>
+              </div>
+            </div>
+            {phase === "item" && (
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {item.options!.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => onChoose(opt)}
+                    disabled={posting}
+                    className="rounded-2xl border-2 border-line bg-white px-4 py-5 font-bold text-ink transition hover:border-primary hover:bg-primary-soft"
+                    style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 0.75) }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {/* ——— Syllable counting ——— */}
         {type === "SYLLABLES" && (
           <>
@@ -907,6 +996,11 @@ export default function ExerciseSession({
                 {type === "BLEND" && (
                   <p className="mt-2 text-sm font-semibold text-ink-soft">
                     {t.blendAnswer(item.answer ?? "")}
+                  </p>
+                )}
+                {type === "CHANGE_SOUND" && item.swap && (
+                  <p className="mt-2 text-sm font-semibold text-ink-soft">
+                    {t.changeAnswer(item.swap.fromText, item.answer ?? "")}
                   </p>
                 )}
                 <p className="mt-3 text-lg font-extrabold text-ink" style={wordStyle}>

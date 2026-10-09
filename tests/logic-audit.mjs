@@ -107,33 +107,37 @@ const down = await adaptiveProfile();
 check("levels down after poor accuracy", down.level === 1, `L${down.level}`);
 check("stage never shrinks back", down.stage >= up.stage, `S${down.stage}`);
 
-// A near-miss run must NOT promote. The misreads come first: promotion is
-// evaluated after every attempt, so trailing misreads would arrive too late —
-// the learner would already have been promoted on a clean run of ten.
-// Two misreads followed by ten correct keeps the 12-attempt window at 83%,
-// just under the 85% rule.
-const borderline = await createTestLearner("borderline");
-// Phonological awareness met first, so the reading threshold is the only
-// thing that can be holding this learner.
-await listeningAnswers(borderline, 8);
-const bWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 12`);
-for (let i = 0; i < 12; i++) {
-  const w = bWords[i % bWords.length];
-  await json("/api/attempts", {
-    cookie: borderline.cookie,
-    method: "POST",
-    body: {
-      activityType: "READ_ALOUD",
-      wordId: w.id,
-      target: w.text,
-      browserTranscript: i < 2 ? "zzzz" : w.text,
-      responseMs: 1500,
-    },
-  });
+// Either side of the 80% line, set by the research team on 9 October. The
+// misreads come first: promotion is evaluated after every attempt, so trailing
+// misreads would arrive too late — the learner would already have been
+// promoted on a clean run. Phonological awareness is met first, so the reading
+// threshold is the only thing that can be holding these learners.
+async function readTwelve(misreads) {
+  const who = await createTestLearner("borderline");
+  await listeningAnswers(who, 8);
+  const words = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 12`);
+  for (let i = 0; i < 12; i++) {
+    const w = words[i % words.length];
+    await json("/api/attempts", {
+      cookie: who.cookie,
+      method: "POST",
+      body: {
+        activityType: "READ_ALOUD",
+        wordId: w.id,
+        target: w.text,
+        browserTranscript: i < misreads ? "zzzz" : w.text,
+        responseMs: 1500,
+      },
+    });
+  }
+  const { level } = await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [who.learnerId]);
+  await deleteTestLearner(who.email);
+  return level;
 }
-const bLevel = await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [borderline.learnerId]);
-check("83% accuracy stays below the level-up threshold", bLevel.level === 1, `L${bLevel.level}`);
-await deleteTestLearner(borderline.email);
+const below = await readTwelve(3); // 9 of 12 = 75%
+check("75% accuracy stays below the 80% level-up line", below === 1, `L${below}`);
+const above = await readTwelve(2); // 10 of 12 = 83%
+check("83% clears it", above === 2, `L${above}`);
 await deleteTestLearner(adaptive.email);
 
 /* ── 3. practice list ──────────────────────────────────────────────────── */

@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { effectiveStage } from "./marungko";
+import { firstSound, isLoneVowel, letterSoundUrl } from "./letter-sounds";
 
 export type ExerciseType =
   | "READ_ALOUD"
@@ -8,6 +9,7 @@ export type ExerciseType =
   | "SYLLABLES"
   | "RHYME"
   | "FIRST_SOUND"
+  | "CHANGE_SOUND"
   | "PRACTICE"
   | "PSEUDO_PROBE";
 
@@ -21,6 +23,20 @@ export type ExerciseItem = {
   hasSyllAudio: boolean; // stored syllable-by-syllable pronunciation
   hasSyllHuman: boolean; // ...recorded by a specialist, which is played as recorded
   audioVersion: number; // busts cached clips after a specialist re-records
+  /**
+   * Per syllable, a specialist's recording to play in place of the voice —
+   * set for a lone vowel, which the voice would say as a letter name.
+   */
+  partClips?: (string | null)[];
+  /** Change the sound: the word heard first, and the two recorded sounds swapped. */
+  swap?: {
+    fromText: string;
+    fromWordId: string;
+    fromHasAudio: boolean;
+    fromVersion: number;
+    fromSound: string;
+    toSound: string;
+  };
 };
 
 /**
@@ -128,13 +144,33 @@ export async function buildItems(
   // second lookup and the crash when the row has been erased mid-session.
   known?: { level: number; stage: number }
 ): Promise<ExerciseItem[]> {
-  const [loaded, audio] = await Promise.all([
+  const [loaded, audio, recordedSounds] = await Promise.all([
     known ? null : prisma.learnerProfile.findUnique({ where: { id: learnerId } }),
     audioIndex(),
+    prisma.letterSound.findMany({ select: { sound: true, version: true } }),
   ]);
   const profile = known ?? loaded;
   if (!profile) return [];
   const stage = effectiveStage(profile.level, profile.stage);
+
+  // The letter sounds a specialist has recorded, and at what version.
+  const sounds = new Map(recordedSounds.map((r) => [r.sound, r.version]));
+  const soundUrl = (sound: string) => letterSoundUrl(sound, sounds.get(sound) ?? 1);
+
+  /**
+   * Whether a word's parts can be spoken properly, one at a time.
+   *
+   * A syllable that is a lone vowel (the "a" of a-so) can only come from a
+   * specialist's recording: the voice says "ey", and the research team heard it
+   * sound "so English" on 9 October. So a word with a lone vowel nobody has
+   * recorded is left out of the activities that speak its parts — unless a
+   * specialist recorded the word's syllables whole, which is played as it is.
+   */
+  const speakable = (w: WordRow) =>
+    audio.syllHuman.has(w.id) ||
+    w.syllables.split("-").every((part) => !isLoneVowel(part) || sounds.has(part));
+  const partClips = (w: WordRow) =>
+    w.syllables.split("-").map((part) => (isLoneVowel(part) && sounds.has(part) ? soundUrl(part) : null));
 
   const flags = (id: string | null) => ({
     hasAudio: id ? audio.word.has(id) : false,
@@ -263,6 +299,70 @@ export async function buildItems(
   }
 
   /**
+   * Change the sound — phoneme-level manipulation, the top of the proposal's
+   * phonological-awareness sequence. The child hears a word, then two sounds,
+   * and finds the word made by swapping the first for the second: bata, /b/,
+   * /m/ → mata.
+   *
+   * Built from pairs of real words in the learner's pool that differ only in
+   * their first sound, and only where a specialist has recorded both sounds — a
+   * voice cannot say /b/ without saying "bi". The wrong options are the word
+   * unchanged (a child who did not make the swap) and, where the bank has one, a
+   * third word from the same family (lata), so the second sound has to be heard
+   * rather than guessed. No answer word comes up twice in a run.
+   */
+  if (type === "CHANGE_SOUND") {
+    const families = new Map<string, WordRow[]>();
+    for (const w of pool) {
+      const first = firstSound(w.text);
+      if (!first) continue;
+      const rest = w.text.slice(first.length);
+      families.set(rest, [...(families.get(rest) ?? []), w]);
+    }
+    const pairs: { from: WordRow; to: WordRow; family: WordRow[] }[] = [];
+    for (const family of families.values()) {
+      for (const from of family) {
+        for (const to of family) {
+          const a = firstSound(from.text)!;
+          const b = firstSound(to.text)!;
+          if (a !== b && sounds.has(a) && sounds.has(b)) pairs.push({ from, to, family });
+        }
+      }
+    }
+    const chosen: typeof pairs = [];
+    const answers = new Set<string>();
+    for (const pair of shuffle(pairs)) {
+      if (chosen.length === count) break;
+      if (answers.has(pair.to.id)) continue;
+      answers.add(pair.to.id);
+      chosen.push(pair);
+    }
+    return chosen.map(({ from, to, family }) => {
+      const sameShape = (w: WordRow) =>
+        w.syllables.split("-").length === to.syllables.split("-").length;
+      const third =
+        shuffle(family.filter((w) => w.id !== from.id && w.id !== to.id))[0] ??
+        shuffle(pool.filter((w) => w.id !== from.id && w.id !== to.id && sameShape(w)))[0];
+      return {
+        wordId: to.id,
+        target: to.text,
+        syllables: to.syllables,
+        options: shuffle([to.text, from.text, ...(third ? [third.text] : [])]),
+        answer: to.text,
+        ...flags(to.id),
+        swap: {
+          fromText: from.text,
+          fromWordId: from.id,
+          fromHasAudio: audio.word.has(from.id),
+          fromVersion: audio.version.get(from.id) || 1,
+          fromSound: soundUrl(firstSound(from.text)!),
+          toSound: soundUrl(firstSound(to.text)!),
+        },
+      };
+    });
+  }
+
+  /**
    * Syllable blending: the child hears the word only in parts — "ba… ta" — and
    * picks the word those parts make.
    *
@@ -272,20 +372,12 @@ export async function buildItems(
    * alone is not enough: the parts have to be put together. One-syllable words
    * have nothing to blend and are left out.
    *
-   * So, until a specialist has recorded them, are words with a syllable that
-   * is a lone vowel (a-so, i-sa, u-be). The parts are spoken one clip at a
-   * time, and a voice handed a lone "a" may say the English letter name —
-   * Whisper wrote the voice's "a" down as "Ayy" and its "a-ma" as "Eh, ma" —
-   * which would teach the opposite of Marungko's sounds before names. A
-   * specialist's own recording of the parts is played as recorded, so it
-   * brings the word back.
+   * So are words whose parts cannot be spoken properly yet — a lone vowel
+   * nobody has recorded (see `speakable` above).
    */
   if (type === "BLEND") {
     const parts = (w: WordRow) => w.syllables.split("-");
-    const loneVowel = (w: WordRow) => parts(w).some((p) => /^[aeiou]+$/.test(p));
-    const blendable = pool.filter(
-      (w) => parts(w).length >= 2 && (!loneVowel(w) || audio.syllHuman.has(w.id))
-    );
+    const blendable = pool.filter((w) => parts(w).length >= 2 && speakable(w));
     return blendable.slice(0, count).map((w) => {
       const mine = parts(w);
       const others = blendable.filter((o) => o.text !== w.text);
@@ -312,12 +404,14 @@ export async function buildItems(
         options: shuffle([w.text, ...distractors]),
         answer: w.text,
         ...flags(w.id),
+        partClips: partClips(w),
       };
     });
   }
 
-  // SYLLABLES — count the syllables (pantig) of the word
-  return targets.map((w) => {
+  // SYLLABLES — count the syllables (pantig) of the word. Its "Hear the parts"
+  // speaks them one at a time too, so the same rule decides which words qualify.
+  return pool.filter(speakable).slice(0, count).map((w) => {
     const n = w.syllables.split("-").length;
     const opts = new Set<number>([n]);
     while (opts.size < 3) {
@@ -331,6 +425,7 @@ export async function buildItems(
       options: shuffle([...opts].map(String)),
       answer: String(n),
       ...flags(w.id),
+      partClips: partClips(w),
     };
   });
 }

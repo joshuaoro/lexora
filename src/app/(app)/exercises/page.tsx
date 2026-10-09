@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mic, Ear, Combine, Puzzle, Music, AudioLines, Sparkles } from "lucide-react";
+import { Mic, Ear, Combine, Puzzle, Music, AudioLines, ArrowLeftRight, Sparkles } from "lucide-react";
 import { requireLearner } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
@@ -46,6 +46,7 @@ export default async function ExercisesPage() {
     { type: "syllables", icon: Puzzle, tone: "bg-green-soft text-green", ...dict.exercises.syllables },
     { type: "rhyme", icon: Music, tone: "bg-orange-soft text-orange", ...dict.exercises.rhyme },
     { type: "first-sound", icon: AudioLines, tone: "bg-primary-soft text-primary", ...dict.exercises.firstSound },
+    { type: "change-sound", icon: ArrowLeftRight, tone: "bg-green-soft text-green", ...dict.exercises.changeSound },
     { type: "silly-words", icon: Sparkles, tone: "bg-peach-soft text-peach-deep", ...dict.exercises.probe },
   ];
 

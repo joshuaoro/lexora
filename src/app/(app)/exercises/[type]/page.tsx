@@ -12,6 +12,7 @@ const SLUGS: Record<string, ExerciseType> = {
   syllables: "SYLLABLES",
   rhyme: "RHYME",
   "first-sound": "FIRST_SOUND",
+  "change-sound": "CHANGE_SOUND",
   "silly-words": "PSEUDO_PROBE",
 };
 

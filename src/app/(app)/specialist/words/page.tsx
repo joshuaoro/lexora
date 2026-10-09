@@ -1,6 +1,7 @@
 import { requireSpecialist } from "@/lib/guards";
 import { prisma } from "@/lib/db";
 import WordBankClient from "@/components/specialist/WordBankClient";
+import LetterSoundsPanel from "@/components/specialist/LetterSoundsPanel";
 import { getLang } from "@/lib/lang";
 
 export default async function WordBankPage() {
@@ -8,7 +9,7 @@ export default async function WordBankPage() {
 
   // The audio columns hold base64 clips, so they are never selected directly —
   // only which of them exist, via id lookups.
-  const [words, withTts, withHuman, withSyllHuman, lang] = await Promise.all([
+  const [words, withTts, withHuman, withSyllHuman, sounds, lang] = await Promise.all([
     prisma.word.findMany({
       orderBy: [{ stage: "asc" }, { level: "asc" }, { text: "asc" }],
       select: {
@@ -28,6 +29,8 @@ export default async function WordBankPage() {
     prisma.word.findMany({ where: { audioWord: { not: null } }, select: { id: true } }),
     prisma.word.findMany({ where: { audioWordHuman: { not: null } }, select: { id: true } }),
     prisma.word.findMany({ where: { audioSyllHuman: { not: null } }, select: { id: true } }),
+    // Which sounds are recorded, not the recordings themselves.
+    prisma.letterSound.findMany({ select: { sound: true, version: true } }),
     getLang(),
   ]);
 
@@ -44,6 +47,8 @@ export default async function WordBankPage() {
         hasSyllHuman: syllHumanIds.has(w.id),
       }))}
       lang={lang}
-    />
+    >
+      <LetterSoundsPanel recorded={sounds} lang={lang} />
+    </WordBankClient>
   );
 }

@@ -117,7 +117,7 @@ for (const path of EXPECTED.specialist) {
 }
 
 section("[4] every exercise type is linked and loads");
-for (const slug of ["read-aloud", "listen-choose", "blend", "syllables", "rhyme", "first-sound"]) {
+for (const slug of ["read-aloud", "listen-choose", "blend", "syllables", "rhyme", "first-sound", "change-sound"]) {
   check(`/exercises/${slug}`, learner.get(`/exercises/${slug}`) === 200, `HTTP ${learner.get(`/exercises/${slug}`) ?? "not linked"}`);
 }
 check("/practice/session is linked", learner.has("/practice/session"), learner.has("/practice/session") ? "" : "not reachable (empty practice list is fine)");

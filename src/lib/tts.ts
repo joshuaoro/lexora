@@ -111,8 +111,13 @@ let currentAudio: HTMLAudioElement | null = null;
  * would read Tagalog with English phonics.
  */
 export function playAudioUrl(url: string, rate = 1): Promise<void> {
+  stopSpeaking();
+  return playMedia(url, rate);
+}
+
+/** playAudioUrl without the stop, so it can be one step of a sequence. */
+function playMedia(url: string, rate: number): Promise<void> {
   return new Promise((resolve) => {
-    stopSpeaking();
     const audio = new Audio(url);
     // Clamp: below ~0.6 the browser's time-stretch makes speech unintelligible.
     audio.playbackRate = Math.min(1.5, Math.max(0.6, rate));
@@ -126,6 +131,9 @@ export function playAudioUrl(url: string, rate = 1): Promise<void> {
     audio.play().catch(done);
   });
 }
+
+const pause = (ms: number, rate: number) =>
+  new Promise((r) => setTimeout(r, ms / Math.min(1.5, Math.max(0.6, rate))));
 
 /** Speak one word/short text; resolves when finished or cancelled. */
 export function speakOnce(text: string, rate = 0.85): Promise<void> {
@@ -174,12 +182,25 @@ export const SYLLABLE_SLOT_MS = 1200;
  * was playing the answer. Each syllable is now its own clip, from the same
  * neural voice and the same cache as the spoken instructions.
  */
-export async function speakSyllables(parts: string[], rate = 0.85) {
+/**
+ * `clips` holds, per part, a specialist's recording to play instead of the
+ * voice — a lone vowel (the "a" of a-so), recorded as the sound and not the
+ * letter name. A recording is already trimmed to the sound, so it plays whole
+ * with a short pause after it rather than inside a slot.
+ */
+export async function speakSyllables(parts: string[], rate = 0.85, clips?: (string | null)[]) {
   stopSpeaking();
   const mine = generation;
   const slot = SYLLABLE_SLOT_MS / Math.min(1.5, Math.max(0.6, rate));
   for (let i = 0; i < parts.length; i++) {
     if (generation !== mine) return;
+    const clip = clips?.[i];
+    if (clip) {
+      await playMedia(clip, rate);
+      if (i === parts.length - 1 || generation !== mine) return;
+      await pause(RECORDED_GAP_MS, rate);
+      continue;
+    }
     let started = () => {};
     const playing = new Promise<void>((r) => (started = r));
     const done = playUiClip(parts[i], "fil", rate, () => started());
@@ -192,6 +213,42 @@ export async function speakSyllables(parts: string[], rate = 0.85) {
     if (generation !== mine) return;
     cutCurrent();
   }
+}
+
+/** The pause after a specialist's trimmed recording, at normal speed. */
+const RECORDED_GAP_MS = 350;
+
+/**
+ * The prompt of Change the sound: the word, then the sound to take out, then
+ * the sound to put in — "bata … /b/ … /m/". Cancelled like any sequence.
+ *
+ * The two sounds are always specialist recordings (no voice can say /b/ without
+ * saying "bi"); the word is its stored clip, or the neural voice's.
+ */
+export async function speakSwap(
+  word: { wordId: string | null; hasAudio: boolean; text: string; version: number },
+  fromSound: string,
+  toSound: string,
+  rate = 0.85
+) {
+  stopSpeaking();
+  const mine = generation;
+  if (word.wordId && word.hasAudio) {
+    await playMedia(
+      `/api/word-audio/${word.wordId}?kind=word&v=${word.version}`,
+      Math.max(0.6, rate + 0.15)
+    );
+  } else {
+    await playUiClip(word.text, "fil", rate);
+  }
+  if (generation !== mine) return;
+  await pause(700, rate);
+  if (generation !== mine) return;
+  await playMedia(fromSound, rate);
+  if (generation !== mine) return;
+  await pause(500, rate);
+  if (generation !== mine) return;
+  await playMedia(toSound, rate);
 }
 
 /** Stop the clip that is playing without ending a sequence it belongs to. */

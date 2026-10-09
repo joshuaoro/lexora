@@ -42,7 +42,16 @@ const MAX_RECORD_MS = 6000;
 // The parts are said with pauses, as they are taught: ka… la… ba… sa… runs long.
 const MAX_SYLL_RECORD_MS = 12000;
 
-export default function WordBankClient({ words, lang = "en" }: { words: WordRow[]; lang?: Lang }) {
+export default function WordBankClient({
+  words,
+  lang = "en",
+  children,
+}: {
+  words: WordRow[];
+  lang?: Lang;
+  /** Rendered under the header: the letter sounds panel. */
+  children?: React.ReactNode;
+}) {
   const t = getDict(lang).wordBankPage;
   const router = useRouter();
   const [stageFilter, setStageFilter] = useState<number | 0>(0);
@@ -515,6 +524,8 @@ export default function WordBankClient({ words, lang = "en" }: { words: WordRow[
           </div>
         </form>
       )}
+
+      {children}
 
       {/* Filters */}
       <div className="no-print mt-5 flex flex-wrap items-center gap-2">

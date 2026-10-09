@@ -20,6 +20,9 @@ export const TABLE_ORDER = [
   "PhonItem",
   // No foreign keys of its own; grouped with the other reference data.
   "SpeechClip",
+  // The specialists' own recordings of each letter sound — a person's voice,
+  // which cannot be regenerated, so it is backed up like the study data.
+  "LetterSound",
   "LearnerProfile",
   "ActivitySession",
   "Attempt",

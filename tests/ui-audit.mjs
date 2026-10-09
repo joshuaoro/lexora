@@ -9,7 +9,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE, passwordFor, check, section, report, one, query,
-  createTestLearner, deleteTestLearner, endSuite,
+  createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND,
 } from "./helpers.mjs";
 
 console.log(`UI audit against ${BASE}`);
@@ -60,11 +60,19 @@ check(
 );
 
 section("[1] choice-based exercises play to completion");
+// Change the sound plays only pairs whose two first sounds a specialist has
+// recorded. A level-1 learner's pairs need /m/, /s/ and /b/ (mama/sama,
+// basa/masa, bisa/misa); any nobody has recorded get a silent stand-in for the
+// length of this section, removed in the finally — and swept by endSuite if
+// the run dies first. A specialist's own recording is never touched.
+const standIns = await standInSounds(["m", "s", "b"]);
+try {
 for (const [slug, type, label] of [
   ["listen-choose", "LISTEN_CHOOSE", "listen & choose"],
   ["blend", "BLEND", "blend the parts"],
   ["syllables", "SYLLABLES", "count the syllables"],
   ["rhyme", "RHYME", "rhyme time"],
+  ["change-sound", "CHANGE_SOUND", "change the sound"],
 ]) {
   await p.goto(`${BASE}/exercises/${slug}`, { waitUntil: "networkidle" });
   await p.locator("button:has-text('Start!')").click();
@@ -104,6 +112,14 @@ for (const [slug, type, label] of [
   );
   check(`${label}: reaches the results screen`, done > 0);
   check(`${label}: session recorded`, !!saved, saved ? `${saved.correct}/${saved.total}` : "none");
+}
+} finally {
+  if (standIns.length) {
+    await query(`DELETE FROM "LetterSound" WHERE sound = ANY($1) AND audio = $2`, [
+      standIns,
+      STAND_IN_SOUND,
+    ]);
+  }
 }
 
 section("[2] display settings persist and apply to the Reader");

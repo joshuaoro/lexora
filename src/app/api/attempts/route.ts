@@ -29,6 +29,7 @@ const schema = z.object({
     "SYLLABLES",
     "RHYME",
     "FIRST_SOUND",
+    "CHANGE_SOUND",
     "PRACTICE",
     "PSEUDO_PROBE",
   ]),

@@ -50,6 +50,7 @@ const LEARNER_PAGES = [
   "/exercises/syllables",
   "/exercises/rhyme",
   "/exercises/first-sound",
+  "/exercises/change-sound",
   "/practice/session",
   "/reports",
   "/settings",

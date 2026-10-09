@@ -139,6 +139,21 @@ model SpeechClip {
   @@index([createdBy, createdAt])
 }
 
+// A letter sound recorded by a reading specialist: /m/, /a/, /ng/.
+//
+// The neural voice reads a lone letter by its name — "a" comes out as "ey" —
+// which is the opposite of the Marungko Approach's sounds before names, and the
+// research team heard it sound "so English" on 9 October. So isolated sounds are
+// only ever played from a person's recording: a syllable that is a single vowel
+// (a-so), and the two sounds of the Change the sound activity. Trimmed to the
+// sound and stored as a short WAV by the specialist's browser.
+model LetterSound {
+  sound     String   @id // "m", "a", "ng" — one of LETTER_SOUNDS in src/lib/letter-sounds.ts
+  audio     String // base64 data URL (audio/wav)
+  version   Int      @default(1) // bumped on every re-record, so no device plays a stale copy
+  updatedAt DateTime @updatedAt
+}
+
 // Curated phonological-awareness items (e.g. rhyme sets)
 model PhonItem {
   id      String @id @default(cuid())

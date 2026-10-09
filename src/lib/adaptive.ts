@@ -13,9 +13,9 @@ import { effectiveStage } from "./marungko";
  * level". In that order:
  *
  *  1. Phonological awareness: ≥ 8 answers at this level across the listening
- *     activities (blend, count the syllables, rhyme, first sound), ≥ 80%
- *     correct over the latest 12.
- *  2. Single-word decoding: ≥ 8 oral readings at this level, ≥ 85% correct
+ *     activities (blend, count the syllables, rhyme, first sound, change the
+ *     sound), ≥ 80% correct over the latest 12.
+ *  2. Single-word decoding: ≥ 8 oral readings at this level, ≥ 80% correct
  *     over the latest 12, and decoding not getting slower.
  *
  *  Both met                                            → level up
@@ -39,7 +39,12 @@ import { effectiveStage } from "./marungko";
  */
 const WINDOW = 12;
 const MIN_ATTEMPTS = 8;
-const UP_THRESHOLD = 0.85;
+/**
+ * 80%, set by the research team on 9 October to match the phonological-
+ * awareness criterion (it was 85%). Over the latest 12 readings: 10 correct
+ * promotes, 9 does not.
+ */
+const UP_THRESHOLD = 0.8;
 const DOWN_THRESHOLD = 0.5;
 
 /**
@@ -61,8 +66,8 @@ const SLOWER_TOLERANCE = 1.25;
 /**
  * Phonological awareness, the first criterion on the map.
  *
- * Judged on the four listening activities together rather than on each one.
- * Asking for all four at every level would hold a child back because a session
+ * Judged on the listening activities together rather than on each one.
+ * Asking for all of them at every level would hold a child back because a session
  * ran short, not because of anything they cannot do; the per-activity split is
  * shown to the specialist instead, who can see a gap and fill it.
  *
@@ -72,11 +77,11 @@ const SLOWER_TOLERANCE = 1.25;
  * page says so, rather than leaving a level that has stopped moving
  * unexplained. The specialist can still set the level by hand.
  *
- * 80% rather than the 85% asked of reading, because these are three-option
- * choices made from listening: one slip in eight is 88%, two is 75%, and the
- * line sits between them.
+ * 80%, the same line reading has to clear. These are three-option choices made
+ * from listening: one slip in eight is 88%, two is 75%, and the line sits
+ * between them.
  */
-export const PA_TYPES = ["BLEND", "SYLLABLES", "RHYME", "FIRST_SOUND"] as const;
+export const PA_TYPES = ["BLEND", "SYLLABLES", "RHYME", "FIRST_SOUND", "CHANGE_SOUND"] as const;
 const PA_WINDOW = 12;
 export const PA_MIN_ANSWERS = 8;
 export const PA_THRESHOLD = 0.8;

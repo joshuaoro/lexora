@@ -27,6 +27,7 @@ for (const [path, opts] of [
   ["/api/attempts", { method: "POST", body: { activityType: "READ_ALOUD", target: "aso" } }],
   ["/api/reviews", { method: "POST", body: { attemptId: "x", agrees: true } }],
   ["/api/words", { method: "POST", body: { text: "x", syllables: "x", pattern: "CV", stage: 1, level: 1 } }],
+  ["/api/sounds/m", {}],
 ]) {
   const res = await api(path, opts);
   check(`anon ${opts.method ?? "GET"} ${path}`, res.status === 401, String(res.status));
@@ -45,6 +46,9 @@ for (const [label, path, method, body] of [
   ["change level", `/api/learners/${bob.learnerId}`, "PATCH", { level: 5 }],
   ["erase learner", `/api/learners/${bob.learnerId}`, "DELETE", { confirmName: "AuditBot" }],
   ["clear recordings", `/api/learners/${bob.learnerId}/recordings`, "DELETE", undefined],
+  // Refused before anything is written, so a specialist's recording of /m/ is safe.
+  ["record a letter sound", "/api/sounds/m", "PATCH", { audio: "data:audio/wav;base64,AAAA" }],
+  ["remove a letter sound", "/api/sounds/m", "DELETE", undefined],
 ]) {
   const res = await api(path, { cookie: alice.cookie, method, body });
   check(`learner ${label}`, res.status === 401, String(res.status));
@@ -100,7 +104,20 @@ if (ENROLMENT_CODE) {
     (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `en-${Date.now()}@lexora.test`, password: "abcdef", role: "LEARNER" } })).status === 403
   );
 } else {
-  check("SKIP: ENROLMENT_CODE is not set, so learner registration is open by design", true);
+  // This machine does not hold the code, so ask the deployment what it does.
+  // A 201 means none is set there either — open by design for local runs —
+  // and the throwaway account is swept with the rest at the end.
+  const open = await api("/api/auth/register", {
+    method: "POST",
+    body: { name: "X", email: `en-${Date.now()}@lexora.test`, password: "abcdef", role: "LEARNER" },
+  });
+  check(
+    open.status === 403
+      ? "the deployment refuses a learner without its enrolment code"
+      : "no enrolment code is set, so learner registration is open by design",
+    open.status === 403 || open.status === 201,
+    `HTTP ${open.status}`
+  );
 }
 check("blank access code never matches", (await api("/api/auth/register", { method: "POST", body: { name: "X", email: `sp2-${Date.now()}@lexora.test`, password: "abcdef", role: "SPECIALIST", code: "" } })).status === 403);
 
@@ -116,12 +133,14 @@ check("word with spaces", (await api("/api/words", { cookie: specialist, method:
 check("word with bad stage", (await api("/api/words", { cookie: specialist, method: "POST", body: { text: "zzz", syllables: "zzz", pattern: "X", stage: 99, level: 1 } })).status === 400);
 check("variants with digits", (await api(`/api/words/${wordId}`, { cookie: specialist, method: "PATCH", body: { variants: "abc123" } })).status === 400);
 check("level out of range", (await api(`/api/learners/${alice.learnerId}`, { cookie: specialist, method: "PATCH", body: { level: 99 } })).status === 400);
+check("a letter sound that is not audio", (await api("/api/sounds/m", { cookie: specialist, method: "PATCH", body: { audio: "hello" } })).status === 400);
 
 /* ── 7. not found ──────────────────────────────────────────────────────── */
 section("[7] unknown resources return 404");
 check("unknown word audio", (await api("/api/word-audio/does-not-exist", { cookie: alice.cookie })).status === 404);
 check("unknown learner", (await api("/api/learners/nope", { cookie: specialist, method: "PATCH", body: { level: 3 } })).status === 404);
 check("unknown word generate", (await api("/api/words/nope/audio/generate", { cookie: specialist, method: "POST" })).status === 404);
+check("a sound the app does not teach", (await api("/api/sounds/zz", { cookie: specialist, method: "PATCH", body: { audio: "data:audio/wav;base64,AAAA" } })).status === 404);
 // Assert what the learner actually sees, not the status line. The signed-in
 // layout is an async server component, so Next.js commits response headers
 // before `notFound()` runs deeper in the tree and the status stays 200 even
