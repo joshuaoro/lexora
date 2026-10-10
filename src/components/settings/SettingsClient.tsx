@@ -151,6 +151,15 @@ export default function SettingsClient({
                 className="h-5 w-5 shrink-0 accent-primary"
               />
             </label>
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm font-bold text-ink-soft">{t.syllablesLabel}</span>
+              <input
+                type="checkbox"
+                checked={s.syllables}
+                onChange={(e) => set("syllables", e.target.checked)}
+                className="h-5 w-5 shrink-0 accent-primary"
+              />
+            </label>
             {slider(t.voiceSpeed, "ttsRate", 0.5, 1.2, 0.05, (v) => `${v.toFixed(2)}×`)}
             <button
               // The same pipeline the child hears, so the preview is a

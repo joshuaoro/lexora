@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Volume2,
@@ -8,12 +8,13 @@ import {
   Minus,
   Plus,
   AlignJustify,
+  Scissors,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { FONT_STACKS, OVERLAY_COLORS, type ReaderSettings } from "@/lib/settings";
 import { sayWord, stopSpeaking, ttsSupported } from "@/lib/tts";
 import { getDict, type Lang } from "@/lib/i18n";
-import type { ReaderSet, ReaderWord } from "@/lib/reader-sets";
+import { syllableParts, wordCore, type ReaderSet, type ReaderWord } from "@/lib/reader-sets";
 import { tryFetch } from "@/lib/net";
 
 /** Save the reading session this long after the last word is played. */
@@ -43,6 +44,7 @@ export default function ReaderClient({
   const [fontSize, setFontSize] = useState(settings.fontSize);
   const [rate, setRate] = useState(settings.ttsRate);
   const [rulerOn, setRulerOn] = useState(settings.ruler);
+  const [syllablesOn, setSyllablesOn] = useState(settings.syllables);
   const [playing, setPlaying] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [rulerY, setRulerY] = useState<number | null>(null);
@@ -118,14 +120,30 @@ export default function ReaderClient({
     };
   }, [finishSession]);
 
+  // The stage sets between them hold every real word, so they double as the
+  // lookup that lets a typed bank word be split into syllables too.
+  const bankSyllables = useMemo(() => {
+    const bySpelling = new Map<string, string>();
+    for (const set of sets) {
+      for (const w of set.words) if (w.syllables) bySpelling.set(w.text.toLowerCase(), w.syllables);
+    }
+    return bySpelling;
+  }, [sets]);
+
   // Typed words have no stored clip, so they fall back to browser speech.
   const words: ReaderWord[] = useCustom
     ? customText
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 120)
-        .map((text) => ({ id: null, text, hasAudio: false }))
+        .map((text) => ({
+          id: null,
+          text,
+          syllables: bankSyllables.get(wordCore(text).toLowerCase()),
+          hasAudio: false,
+        }))
     : (sets[setIndex]?.words ?? []);
+  const someUnsplit = useCustom && syllablesOn && words.some((w) => !w.syllables);
 
   function say(w: ReaderWord) {
     countWordPlayed();
@@ -283,6 +301,18 @@ export default function ReaderClient({
           <AlignJustify size={16} /> {dict.reader.focusRuler}
         </button>
 
+        <button
+          onClick={() => setSyllablesOn((on) => !on)}
+          aria-pressed={syllablesOn}
+          className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition ${
+            syllablesOn
+              ? "border-primary bg-primary-soft text-ink"
+              : "border-line bg-card text-ink-soft hover:bg-cream-dark"
+          }`}
+        >
+          <Scissors size={16} /> {dict.reader.showSyllables}
+        </button>
+
         <Link
           href="/settings"
           className="ml-auto flex items-center gap-2 text-sm font-bold text-primary hover:underline"
@@ -299,6 +329,9 @@ export default function ReaderClient({
           rows={3}
           className="no-print mt-4 w-full rounded-2xl border border-line bg-card p-4 text-ink outline-none focus:border-primary"
         />
+      )}
+      {someUnsplit && (
+        <p className="no-print mt-2 text-sm font-semibold text-ink-muted">{dict.reader.syllablesWhole}</p>
       )}
 
       {/* Reading surface */}
@@ -328,17 +361,36 @@ export default function ReaderClient({
             }}
             className="wrap-break-word text-center text-ink"
           >
-            {words.map((w, i) => (
-              <button
-                key={`${w.text}-${i}`}
-                onClick={() => speakWord(i)}
-                className={`mx-1 inline-block rounded-xl px-2 transition ${
-                  activeIndex === i ? "bg-primary text-white" : "hover:bg-primary-soft"
-                }`}
-              >
-                {w.text}
-              </button>
-            ))}
+            {words.map((w, i) => {
+              // Split the way the exercise feedback shows it (ba-hay), so the
+              // child meets one form of a split word. The word is still spoken
+              // whole; the split is for the eye.
+              const parts = syllablesOn ? syllableParts(w.text, w.syllables) : null;
+              return (
+                <button
+                  key={`${w.text}-${i}`}
+                  onClick={() => speakWord(i)}
+                  // Named as the word, not "ba hyphen hay".
+                  aria-label={parts ? w.text : undefined}
+                  className={`mx-1 inline-block rounded-xl px-2 transition ${
+                    activeIndex === i ? "bg-primary text-white" : "hover:bg-primary-soft"
+                  }`}
+                >
+                  {parts
+                    ? parts.map((part, j) => (
+                        <Fragment key={j}>
+                          {j > 0 && (
+                            <span aria-hidden className="mx-[0.12em]">
+                              -
+                            </span>
+                          )}
+                          {part}
+                        </Fragment>
+                      ))
+                    : w.text}
+                </button>
+              );
+            })}
           </p>
         )}
 

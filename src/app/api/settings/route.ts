@@ -12,6 +12,7 @@ const schema = z.object({
   lineHeight: z.number().min(1.2).max(2.6).optional(),
   overlay: z.enum(["none", "cream", "yellow", "blue", "green", "pink"]).optional(),
   ruler: z.boolean().optional(),
+  syllables: z.boolean().optional(),
   ttsRate: z.number().min(0.5).max(1.2).optional(),
 });
 

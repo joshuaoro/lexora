@@ -20,7 +20,7 @@ export default async function ReaderPage() {
       // know, and it stops measuring decoding. See Word.isPseudo.
       where: { isPseudo: false },
       orderBy: [{ stage: "asc" }, { level: "asc" }],
-      select: { id: true, text: true, level: true, stage: true, audioVersion: true },
+      select: { id: true, text: true, syllables: true, level: true, stage: true, audioVersion: true },
     }),
     // ids only — the clips themselves are streamed by /api/word-audio
     prisma.word.findMany({

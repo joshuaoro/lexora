@@ -51,9 +51,11 @@ with."***
 | A5 | Losing one's place on the page | Reading focus tool (the focus ruler) | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A6 | Hearing a word while seeing it | Text-to-speech with synchronized word highlighting | ☐ | ☐ | ☐ | ☐ | ☐ |
 | A7 | Speech too fast to follow | Adjustable reading speed | ☐ | ☐ | ☐ | ☐ | ☐ |
-| A8 | `______________________________` | `______________________________` | ☐ | ☐ | ☐ | ☐ | ☐ |
+| A8 | Seeing where one syllable ends and the next begins | Syllable breakdown (Show syllables in the Reader) | ☐ | ☐ | ☐ | ☐ | ☐ |
+| A9 | `______________________________` | `______________________________` | ☐ | ☐ | ☐ | ☐ | ☐ |
 
-Rows A1–A7 are the features the proposal names; **replace the "need" column
+Rows A1–A7 are the features the proposal's objectives name. A8 is the syllable
+breakdown in its Figs. 1 and 2; drop the row if the figures drop it. **Replace the "need" column
 with the specialists' own words from the Phase 1 consultation**, and add rows
 for any need they raised that is not listed. A need no feature addresses is a
 finding: rate it 1 and say so.

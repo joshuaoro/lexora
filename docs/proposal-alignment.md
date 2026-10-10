@@ -302,7 +302,7 @@ application, so add them to Fig. 1.
 | Reading performance data | Every reading and activity, timestamped and linked to the learner |
 | User management | Sign-in; learner and specialist roles; enrolment and specialist access codes |
 | Accessibility features, text-to-speech, reading ruler | Settings; the Reader (highlighting, adjustable speed); focus ruler |
-| Syllable breakdown | *Count the syllables* and *Blend the parts*; the feedback after every reading shows the word in syllables (ba-hay). It is not a tool in the Reader |
+| Syllable breakdown | **Show syllables** in the Reader (added 10 October; also a saved setting), which splits each word where the word bank does (ba-hay); *Count the syllables* and *Blend the parts*; the feedback after every reading. Read aloud never splits the word, because the split would do part of the decoding being measured |
 | Adaptive reading exercises | Levels 1–5 on the skill-progression map (§4) |
 | Speech-to-text | Whisper, through Groq |
 | Pronunciation feedback | After every reading, with the word modelled and "Now you try it!" |

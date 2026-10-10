@@ -166,8 +166,11 @@ retire it from the list. A specialist can also pin words here manually.
 ### Reader `/reader`
 
 A text display with all the accessibility settings applied, word-by-word
-text-to-speech, and synchronised highlighting. Tap any word to hear it alone. **Nothing
-here is scored** — reader time counts toward "minutes practised" but produces no
+text-to-speech, and synchronised highlighting. Tap any word to hear it alone. **Show
+syllables** splits every word where the word bank does (*ba-hay*); the word is still
+spoken whole. A typed word is split only if it is in the word bank, and is otherwise shown
+whole. The app never guesses a split. Read aloud never shows the split: there it would do
+part of the decoding the reading measures. **Nothing here is scored** — reader time counts toward "minutes practised" but produces no
 accuracy figure. Only real words appear: the probe's non-words are never listed or
 spoken here.
 
@@ -190,6 +193,7 @@ Per-learner display customisation, saved to their profile:
 | Line height | slider | 2.0 |
 | Colour overlay | none, cream, yellow, blue, green, pink | none |
 | Focus ruler | on / off | off |
+| Show syllables in the Reader | on / off | off |
 | Speech rate | 0.5 – 1.2 | 0.85 |
 
 Also here: **Check this device** → `/diagnostics`.

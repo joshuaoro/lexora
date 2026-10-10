@@ -13,6 +13,7 @@ import { PSEUDOWORDS } from "../prisma/pseudoword-bank";
 import { RHYMES, FIRST_SOUNDS } from "../prisma/phon-items";
 import { stageForWord, syllableCount } from "../prisma/marungko-stage";
 import { levenshtein } from "../src/lib/scoring";
+import { syllableParts } from "../src/lib/reader-sets";
 
 const MIN_PER_LEVEL = 20; // an 8-item session needs real choice to draw from
 
@@ -66,6 +67,15 @@ for (const [text, syllables, pattern, level, meaning] of WORDS) {
   const joined = syllables.split("-").join("");
   if (joined !== text) fail(`"${text}" syllabified as "${syllables}" spells "${joined}"`);
 
+  // and the Reader's "Show syllables" must split it the same way, typed or not
+  const want = syllables.includes("-") ? syllables : null;
+  const typed = text[0].toUpperCase() + text.slice(1) + ",";
+  const shown = syllableParts(text, syllables)?.join("-") ?? null;
+  const shownTyped = syllableParts(typed, syllables)?.join("-") ?? null;
+  const wantTyped = want && want[0].toUpperCase() + want.slice(1) + ",";
+  if (shown !== want) fail(`"${text}" shows in the Reader as "${shown}", not "${want}"`);
+  if (shownTyped !== wantTyped) fail(`typed "${typed}" shows in the Reader as "${shownTyped}", not "${wantTyped}"`);
+
   if (!/^[a-zñ]+$/.test(text)) fail(`"${text}" contains characters the word bank does not allow`);
   if (AVOID[text]) fail(`"${text}" is not suitable for a children's reading list — ${AVOID[text]}`);
   if (level < 1 || level > 5) fail(`"${text}" has level ${level}, outside 1–5`);
@@ -101,6 +111,13 @@ for (const [text, syllables, pattern, level, meaning] of WORDS) {
   const stage = stageForWord(text);
   byLevel.set(level, (byLevel.get(level) ?? 0) + 1);
   byStage.set(stage, (byStage.get(stage) ?? 0) + 1);
+}
+
+// A word that does not spell the bank word is shown whole, never split by guess.
+for (const [text, syllables] of [["buhay", "ba-hay"], ["bahayan", "ba-hay"], ["(aso)", "a-so"]]) {
+  const shown = syllableParts(text, syllables)?.join("-") ?? null;
+  const want = text === "(aso)" ? "(a-so)" : null;
+  if (shown !== want) fail(`the Reader splits "${text}" (bank "${syllables}") as "${shown}", not "${want}"`);
 }
 
 for (const key of Object.keys(ASR_VARIANTS)) {

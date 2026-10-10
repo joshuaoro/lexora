@@ -1808,6 +1808,42 @@ silent stand-in in place of any of /m/, /s/, /b/ nobody has recorded, removed
 in a `finally` and swept again by every suite's cleanup — matched on the
 silent clip itself, so a specialist's recording is never touched.
 
+### 8.19 The figures, and Show syllables, 10 October
+
+The manuscript of 10 October has the proposal's text word for word, but its
+figures had never been compared: the text export carried no images. Figs. 1
+and 2 list four features that neither the text nor the application has.
+These are Bionic Reading, a dictionary, text simplification and a parent
+dashboard. `proposal-alignment.md` §9 recommends removing the first three and
+renaming the dashboard, and gives item lists for redrawn figures.
+
+A fifth item, *Syllable Breakdown*, sits in the figures' Reading Support
+Module. The application had it only in the exercises, so the Reader gained
+**Show syllables**: a toggle beside the focus ruler, with a saved default in
+Settings. It splits each word where the word bank does (*ba-hay*) and still
+speaks the word whole. Three choices in it are deliberate:
+
+- **No split by rule.** A typed word is split only if it spells a bank word.
+  Otherwise it is shown whole, and the page says so. Filipino loanwords break
+  the simple syllable rules, and a wrong split on a child's reading surface
+  teaches the wrong unit. The bank's splits are the ones the specialists
+  review. `words:check` now confirms the Reader splits every bank word, typed
+  with a capital and a comma or not, as the bank does, and refuses a near
+  spelling.
+- **The Reader only.** The setting never reaches Read aloud, where the split
+  would do part of the decoding the reading measures.
+- **Named as the word.** The hyphen is hidden from screen readers and each
+  split word is labelled with its spelling, so it is read as *bahay*, not
+  "ba hyphen hay". The accessibility suite now also scans the Reader with
+  syllables shown.
+
+The UI suite's first full run on Change the sound stopped there. The cause was
+the test, not the activity. Its answer selector, written for Count the
+syllables' number buttons, also matched Change the sound's speaker, which comes
+first on the page, so the test pressed the speaker until it timed out. The
+selector now leaves out buttons that carry an `aria-label`, which every speaker
+has and no answer has.
+
 ---
 
 ## 9. Verification

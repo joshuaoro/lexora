@@ -8,6 +8,11 @@ export type ReaderSettings = {
   lineHeight: number;
   overlay: "none" | "cream" | "yellow" | "blue" | "green" | "pink";
   ruler: boolean; // reading focus ruler
+  /**
+   * The Reader shows words split into syllables (ba-hay). The Reader only: on
+   * Read aloud the split would do part of the decoding the reading measures.
+   */
+  syllables: boolean;
   ttsRate: number; // 0.5 – 1.2
 };
 
@@ -19,6 +24,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   lineHeight: 2,
   overlay: "none",
   ruler: false,
+  syllables: false,
   ttsRate: 0.85,
 };
 

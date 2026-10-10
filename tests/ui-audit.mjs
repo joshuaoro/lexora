@@ -82,8 +82,11 @@ for (const [slug, type, label] of [
   // local one, so any hard-coded delay is wrong on one of the two.
   const finished = p.locator("text=/Amazing!|Great work!|Good try!/");
   const advance = p.locator("button:has-text('Next word'), button:has-text('Finish')");
+  // The second selector is Count the syllables' number buttons. Change the
+  // sound's speaker is also an h-20 button in a flex-wrap row, and comes first,
+  // so speakers, the buttons that carry an aria-label, are left out.
   const answerable = p.locator(
-    "div.grid > button:not([disabled]), div.flex-wrap > button.h-20:not([disabled])"
+    "div.grid > button:not([disabled]), div.flex-wrap > button.h-20:not([disabled]):not([aria-label])"
   );
 
   for (let guard = 0; guard < 40; guard++) {
@@ -127,13 +130,17 @@ await p.goto(`${BASE}/settings`, { waitUntil: "networkidle" });
 await p.click("button:has-text('Atkinson Hyperlegible')");
 await p.locator("input[type=range]").first().fill("48");
 await p.click("button[aria-label='yellow']");
+await p.getByLabel("Show syllables in the Reader (ba-hay)").check();
 await p.click("button:has-text('Save settings')");
 await p.waitForSelector("text=Saved", { timeout: 15000 });
 
 const saved = JSON.parse(
   (await one(`SELECT settings FROM "LearnerProfile" WHERE id = $1`, [learner.learnerId])).settings || "{}"
 );
-check("saved to the database", saved.font === "atkinson" && saved.fontSize === 48 && saved.overlay === "yellow");
+check(
+  "saved to the database",
+  saved.font === "atkinson" && saved.fontSize === 48 && saved.overlay === "yellow" && saved.syllables === true
+);
 
 await p.goto(`${BASE}/reader`, { waitUntil: "networkidle" });
 const style = await p.locator("p.wrap-break-word").first().evaluate((el) => {
@@ -144,6 +151,41 @@ check("Reader uses the chosen font", /atkinson/i.test(style.font), style.font.sp
 check("Reader uses the chosen size", style.size === "48px", style.size);
 const overlay = await p.locator("div.relative.mt-5").first().evaluate((el) => getComputedStyle(el).backgroundColor);
 check("Reader uses the colour overlay", overlay === "rgb(253, 246, 201)", overlay);
+
+// Show syllables: on from the saved setting, split by the word bank, named as
+// the whole word, and off again from the toggle.
+const sylToggle = p.locator("button[aria-pressed]", { hasText: "Show syllables" });
+const wordButtons = p.locator("p.wrap-break-word button");
+const breaks = p.locator("p.wrap-break-word button span[aria-hidden]");
+check(
+  "Reader opens with syllables shown, as saved",
+  (await sylToggle.getAttribute("aria-pressed")) === "true" && (await breaks.count()) > 0,
+  `${await breaks.count()} syllable breaks`
+);
+const split = p.locator("p.wrap-break-word button[aria-label]").first();
+const shownSplit = (await split.textContent()) ?? "";
+const splitName = await split.getAttribute("aria-label");
+check(
+  "a split word is shown in syllables and named as the word",
+  shownSplit.includes("-") && shownSplit.replaceAll("-", "") === splitName,
+  `${shownSplit} / ${splitName}`
+);
+await p.selectOption("select[aria-label='Choose a word set']", "custom");
+await p.fill("textarea", "Bahay, zzq");
+await wordButtons.filter({ hasText: "zzq" }).waitFor({ timeout: 10000 });
+const typed = await wordButtons.evaluateAll((els) => els.map((el) => el.textContent));
+check(
+  "a typed bank word is split; a word not in the bank is shown whole, and the page says so",
+  typed[0] === "Ba-hay," && typed[1] === "zzq" &&
+    (await p.locator("text=Words LEXORA doesn't have in its word list are shown whole.").count()) === 1,
+  typed.join(" ")
+);
+await p.selectOption("select[aria-label='Choose a word set']", "0");
+await sylToggle.click();
+check(
+  "the toggle puts the words back whole",
+  (await sylToggle.getAttribute("aria-pressed")) === "false" && (await breaks.count()) === 0
+);
 
 section("[3] Reader plays the stored Filipino audio");
 // Wait for the actual response rather than guessing a duration.

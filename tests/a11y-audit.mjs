@@ -66,6 +66,14 @@ for (const path of ["/dashboard", "/reader", "/exercises", "/practice", "/report
   allViolations.push(...(await scan(page, path)));
 }
 
+// Show syllables changes every word on the Reader's surface: separators the
+// screen reader must skip and a name for each word. The toggle is not saved,
+// so this leaves the demo account as it was.
+await page.goto(`${BASE}/reader`, { waitUntil: "networkidle" });
+await page.locator("button[aria-pressed]", { hasText: "Show syllables" }).click();
+await page.locator("p.wrap-break-word button[aria-label]").first().waitFor({ timeout: 10000 });
+allViolations.push(...(await scan(page, "/reader (syllables shown)")));
+
 /**
  * The specialist workspace was never scanned, and it should have been.
  *
