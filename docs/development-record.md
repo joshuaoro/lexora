@@ -2238,10 +2238,12 @@ sounds and when, the verification procedure, and the content sign-off.
 
 ### 13.5 For the manuscript
 
-`docs/proposal-alignment.md` §2–§8: measures for Objectives 1, 3, 4 and 5; the
+`docs/proposal-alignment.md` §2–§9: measures for Objectives 1, 3, 4 and 5; the
 skill-progression criteria (both 80%); the Data Set wording for the item bank, now
-including phoneme manipulation on specialist-recorded sounds; Tables 4–6; one sentence of *Privacy and Confidentiality*; and the
-title, which the body gives three times in a different form from the title page.
+including phoneme manipulation on specialist-recorded sounds; Tables 4–6; one sentence of *Privacy and Confidentiality*; the
+title, which the body gives three times in a different form from the title page; and
+Figs. 1 and 2, which list Bionic Reading, a dictionary, text simplification and a
+parent dashboard. Neither the text nor the application has any of the four.
 
 ---
 

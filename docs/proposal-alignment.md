@@ -7,7 +7,9 @@ application is for. This document compares the two, section by section, and says
 was changed in the application, what the application does beyond the proposal and how
 to present it, and where the **manuscript** should change — with wording you can adapt.
 
-Compared on 8 October 2026, against the application as deployed that day.
+Compared on 8 October 2026, against the application as deployed that day. The figures,
+which the text export did not carry, were compared on 10 October against the manuscript
+of that date (*76-11 LEXORA*, .docx and .pdf), whose text is otherwise the proposal's.
 
 ---
 
@@ -24,6 +26,7 @@ Compared on 8 October 2026, against the application as deployed that day.
 | Hardware and software (Tables 4–6) | **The manuscript should be updated** to the real deployment (§6) |
 | Ethics | The application now matches the proposal; **one sentence of the manuscript** contradicts the proposal's own Validation and should change (§7) |
 | Title | **Inconsistent within the manuscript** (§8) |
+| Figures 1–3 | **Figs. 1 and 2 name four features that neither the text nor the application has**; they should be redrawn (§9) |
 
 ---
 
@@ -267,7 +270,73 @@ title page's wording, since that is the one an ethics protocol registers.
 
 ---
 
-## 9. What the application does beyond the proposal
+## 9. The figures
+
+**Fig. 1 (Scope) and Fig. 2 (Conceptual Framework) list four features that appear
+nowhere in the text.** The Statement of Objectives, the Scope paragraph and the
+description of Fig. 2 never mention them, and the application does not have them.
+Fig. 2's own description gives the AI features as exactly three: pronunciation
+feedback, adaptive word-level exercises and personalized practice word lists. A panel
+reading Fig. 1, titled *Scope of the LEXORA web application*, will expect to see all
+four.
+
+| In the figures | In the application | Recommendation |
+|---|---|---|
+| **Bionic Reading** (Reading Support Module) | No | Remove. It bolds the first part of every word at a fixed fraction, cutting across syllables (**bah**ay), while the Marungko Approach reads by syllable (ba-hay). It also invites a child to guess a word from its beginning, the habit decoding practice works to replace. Its benefit for readers with dyslexia is not established, and *Bionic Reading* is a registered trademark |
+| **Dictionary** (Reading Support Module) | No | Remove. The study concerns decoding single words, and no objective or instrument covers word meaning. Building it would mean writing a meaning for each of the 254 words and having the specialists review them |
+| **Text Simplification** (AI Assistance Module) | No | Remove. Simplification rewrites sentences and passages, and the Delimitation places passage-level reading outside the study |
+| **Teacher/Parent Dashboard** (Output) | A learner dashboard and a specialist dashboard; no parent account | Rename it *Learner and Specialist Dashboards*. The text gives the dashboard to "the learner and the authorized reading specialist", and names parents as beneficiaries, not users. A parent sees progress on the child's dashboard, with the child, or on the printed report. A parent account would be a new route to a child's records that the consent form and *Privacy and Confidentiality* do not cover |
+
+**The two figures also differ from each other.** Fig. 2 includes *Speech Responses*
+(input) and *Reading Ruler*; Fig. 1 has neither. Both are in the text and in the
+application, so add them to Fig. 1.
+
+**Every other item is in the application:**
+
+| Figure item | In the application |
+|---|---|
+| User information | Learner profiles under codes L1–L5, with level; learner and specialist accounts |
+| Reading materials | The 254-word leveled bank; the Reader's word sets |
+| Accessibility preferences | Settings |
+| Speech responses | Read aloud recordings |
+| Reading performance data | Every reading and activity, timestamped and linked to the learner |
+| User management | Sign-in; learner and specialist roles; enrolment and specialist access codes |
+| Accessibility features, text-to-speech, reading ruler | Settings; the Reader (highlighting, adjustable speed); focus ruler |
+| Syllable breakdown | *Count the syllables* and *Blend the parts*; the feedback after every reading shows the word in syllables (ba-hay). It is not a tool in the Reader |
+| Adaptive reading exercises | Levels 1–5 on the skill-progression map (§4) |
+| Speech-to-text | Whisper, through Groq |
+| Pronunciation feedback | After every reading, with the word modelled and "Now you try it!" |
+| Personalized word lists | The practice list, built from misreads |
+| Reading history | *Recent activities* on Reports and on the specialist's learner page |
+| Performance monitoring, analytics, reports | Dashboard, Reports, error patterns, the Cohort overview, exports |
+| The six outputs | All of the above; the dashboard output as renamed |
+
+**Fig. 3 (Agile SDLC)** matches the six phases in the text. The image has one typo: under
+*Testing*, "verify Lexora Lexora quality".
+
+**Suggested item lists** for a redrawn Fig. 2 (Fig. 1 uses the same lists):
+
+> **Input:** User Information; Reading Materials (leveled word lists); Accessibility
+> Preferences; Speech Responses; Reading Performance Data.
+>
+> **Process:** (1) User Management. (2) Reading Support Module: Display Customization;
+> Text-to-Speech with Word Highlighting; Adjustable Reading Speed; Reading Focus Ruler;
+> Syllable Breakdown. (3) AI Assistance Module: Speech-to-Text (pre-trained ASR);
+> Pronunciation Feedback; Adaptive Exercises (phonological awareness and decoding);
+> Personalized Practice Word Lists. (4) Progress Tracking Module: Reading History;
+> Performance Monitoring; Analytics; Reports.
+>
+> **Output:** AI-Assisted Reading Support; Personalized Reading Activities; Reading
+> Progress Reports; Learner and Specialist Dashboards; Accessible Reading Environment;
+> Reading Performance Analytics.
+
+If the team would rather keep any of the four, each must also be added to the
+Objectives or Scope and given an instrument item. Otherwise a panel can ask how it was
+evaluated.
+
+---
+
+## 10. What the application does beyond the proposal
 
 None of these contradicts the proposal. Present them as tools for the specialist or as
 validation evidence, **not as results**.
@@ -289,7 +358,7 @@ validation evidence, **not as results**.
 
 ---
 
-## 10. Decisions still open
+## 11. Decisions still open
 
 Decided by the research team on 9 October: the specialists record the letter sounds, and
 Change the sound is built on them; both level thresholds are 80%; lone vowels are spoken
@@ -307,7 +376,10 @@ each one:
 4. Who completes instrument 06, when, and how decoding level is assessed (decision 13).
 5. Whether Table 2's labels, which describe ease of use, should be generalised for the
    two pictorial items about enjoyment and wanting to use it again (instrument 04).
-6. The manuscript changes in §2 and §4–§8 above.
+6. Figs. 1 and 2: redraw them without Bionic Reading, Dictionary and Text
+   Simplification, with the dashboard renamed (§9). The alternative is to build those
+   features and add them to the Objectives and instruments.
+7. The manuscript changes in §2 and §4–§9 above.
 
 And before the first child, operationally: ethics clearance; adviser review of every
 instrument; a Cebuano translation of the consent and assent forms; the demo passwords
