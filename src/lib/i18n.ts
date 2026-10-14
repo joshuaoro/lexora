@@ -331,7 +331,8 @@ const en = {
     typeAWord: "Type a word…",
     add: "Add",
     reliabilityCheck: "Scoring reliability check",
-    reliabilitySub: "Replay recorded readings and confirm or dispute the system's scoring.",
+    reliabilitySub:
+      "Replay each recorded reading and score it yourself. Agreement with the system is calculated from your scores.",
     agreementChip: (n: number) => `specialist–system agreement (${n} reviewed)`,
     probeTitle: "Decoding probe (non-words)",
     probeSub:
@@ -397,11 +398,7 @@ const en = {
 
     /* ── Blind review ───────────────────────────────────────────────── */
     blindOn: "Blind review",
-    blindOnSub: "the system's verdict is hidden until you decide",
-    blindOff: "Quick review",
-    blindOffSub: "verdicts recorded now are marked as not blind",
-    blindSwitchOff: "Switch to quick review (shows AI verdict first)",
-    blindSwitchOn: "Return to blind review",
+    blindOnSub: "score each reading by ear first; the system's verdict appears after",
     blindPromptBefore: "Play the recording, then say whether the learner read",
     blindPromptAfter: "correctly. The system's reading is hidden until you decide.",
     observePrompt: "What did you observe?",
@@ -410,8 +407,10 @@ const en = {
     heardNothing: "(nothing)",
     browserHeard: "Browser heard",
     verdictNotSaved: "That verdict was not saved — check the connection and press it again.",
-    readIt: "Read it",
+    readCorrectly: "Read correctly",
     misread: "Misread",
+    noRecording:
+      "No recording to play, so this reading can't be scored by ear. It stays out of the agreement figure.",
     noReadings:
       "No oral readings recorded yet. Readings appear here after the learner does Read-aloud or Practice exercises.",
     noProbeReadings:
@@ -521,11 +520,11 @@ const en = {
     similarityTitle: "Similarity to the target word",
     playRecordingOf: (w: string) => `Play recording of ${w}`,
     probeQuestion: "Did the learner read this non-word correctly?",
-    agreeQuestion: "Do you agree with the system's scoring?",
+    readQuestion: "Did the learner read this word correctly?",
     probeReadTitle: "The learner read this non-word correctly",
     probeMisreadTitle: "The learner did not read this non-word correctly",
-    agreeTitle: "I agree with the system's scoring",
-    disagreeTitle: "I disagree with the system's scoring",
+    readTitle: "The learner read this word correctly",
+    misreadTitle: "The learner did not read this word correctly",
     addObservationTitle: "Add an observation about this reading",
   },
   reports: {
@@ -850,7 +849,7 @@ const en = {
       `Youden's J peaks at ${j} rather than ${best}. J weights missing a correct reading and accepting a wrong one equally; MCC also accounts for how lopsided the sample is. Where they disagree, say which you chose and why.`,
     blindTitle: "Blind versus anchored judgements",
     blindSub:
-      "Agreement at the threshold in force, split by whether the machine's verdict was hidden when the specialist decided. Reviews recorded before blind review existed are all anchored: the verdict, the transcript and the similarity were on screen above the play button.",
+      "Agreement at the threshold in force, split by whether the machine's verdict was hidden when the specialist decided. A score is anchored if it was recorded before blind review existed, in the quick review that has since been removed, or changed after the system's verdict appeared.",
     judgedBlind: "Judged blind",
     judgedAnchored: "Judged with the verdict visible",
     tooFew: "Too few to report yet.",
@@ -1174,7 +1173,7 @@ const fil: Dict = {
     add: "Idagdag",
     reliabilityCheck: "Pagsusuri sa pagiging maaasahan ng scoring",
     reliabilitySub:
-      "Pakinggang muli ang mga naitalang pagbasa at kumpirmahin o tutulan ang scoring ng sistema.",
+      "Pakinggang muli ang bawat naitalang pagbasa at ikaw mismo ang magmarka. Kinukuwenta ang pagkakasundo sa sistema mula sa iyong mga marka.",
     agreementChip: (n) => `pagkakasundo ng specialist at sistema (${n} nasuri)`,
     probeTitle: "Pagsusuri sa pagdedekowd (mga salitang imbento)",
     probeSub:
@@ -1233,11 +1232,7 @@ const fil: Dict = {
     rereadStill: "mahirap pa rin",
 
     blindOn: "Blind review",
-    blindOnSub: "nakatago ang hatol ng sistema hanggang magdesisyon ka",
-    blindOff: "Mabilisang review",
-    blindOffSub: "ang mga hatol ngayon ay markadong hindi blind",
-    blindSwitchOff: "Lumipat sa mabilisang review (makikita muna ang hatol ng AI)",
-    blindSwitchOn: "Bumalik sa blind review",
+    blindOnSub: "suriin muna ang bawat pagbasa sa pakikinig; lalabas ang hatol ng sistema pagkatapos",
     blindPromptBefore: "Pakinggan ang recording, tapos sabihin kung tama bang nabasa ng mag-aaral ang",
     blindPromptAfter: "— nakatago ang pagbasa ng sistema hanggang magdesisyon ka.",
     observePrompt: "Ano ang napansin mo?",
@@ -1246,8 +1241,10 @@ const fil: Dict = {
     heardNothing: "(wala)",
     browserHeard: "Narinig ng browser",
     verdictNotSaved: "Hindi na-save ang hatol na iyon — tingnan ang koneksyon at pindutin ulit.",
-    readIt: "Nabasa",
+    readCorrectly: "Nabasa nang tama",
     misread: "Namali",
+    noRecording:
+      "Walang recording na mapapakinggan, kaya hindi masusuri sa pakikinig ang pagbasang ito. Hindi ito kasama sa bilang ng pagkakasundo.",
     noReadings:
       "Wala pang naitalang pagbasa nang malakas. Lilitaw sila rito matapos ang Basahin nang malakas o Praktis.",
     noProbeReadings:
@@ -1352,11 +1349,11 @@ const fil: Dict = {
     similarityTitle: "Pagkakahawig sa target na salita",
     playRecordingOf: (w) => `Pakinggan ang recording ng ${w}`,
     probeQuestion: "Nabasa ba nang tama ng mag-aaral ang salitang imbentong ito?",
-    agreeQuestion: "Sang-ayon ka ba sa iskor ng sistema?",
+    readQuestion: "Nabasa ba nang tama ng mag-aaral ang salitang ito?",
     probeReadTitle: "Nabasa nang tama ng mag-aaral ang salitang imbentong ito",
     probeMisreadTitle: "Hindi nabasa nang tama ng mag-aaral ang salitang imbentong ito",
-    agreeTitle: "Sang-ayon ako sa iskor ng sistema",
-    disagreeTitle: "Hindi ako sang-ayon sa iskor ng sistema",
+    readTitle: "Nabasa nang tama ng mag-aaral ang salitang ito",
+    misreadTitle: "Hindi nabasa nang tama ng mag-aaral ang salitang ito",
     addObservationTitle: "Magdagdag ng obserbasyon tungkol sa pagbasang ito",
   },
   reports: {
@@ -1674,7 +1671,7 @@ const fil: Dict = {
       `Ang Youden's J ay pinakamataas sa ${j} sa halip na ${best}. Pantay ang timbang ng J sa hindi pagtanggap sa tamang pagbasa at sa pagtanggap sa mali; isinasaalang-alang din ng MCC kung gaano kahindi-pantay ang sample. Kung magkaiba sila, sabihin kung alin ang pinili at bakit.`,
     blindTitle: "Bulag laban sa naka-angklang paghatol",
     blindSub:
-      "Pagkakasundo sa kasalukuyang threshold, hinati ayon sa kung nakatago ang hatol ng makina nang magpasya ang espesyalista. Lahat ng pagsusuring naitala bago nagkaroon ng blind review ay naka-angkla: nasa screen ang hatol, ang transcript at ang pagkakahawig, sa itaas ng play button.",
+      "Pagkakasundo sa kasalukuyang threshold, hinati ayon sa kung nakatago ang hatol ng makina nang magpasya ang espesyalista. Naka-angkla ang marka kung naitala ito bago nagkaroon ng blind review, sa mabilisang review na inalis na, o binago matapos lumabas ang hatol ng sistema.",
     judgedBlind: "Hinatulan nang bulag",
     judgedAnchored: "Hinatulan habang nakikita ang hatol",
     tooFew: "Kulang pa para iulat.",

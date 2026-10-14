@@ -24,7 +24,11 @@ const schema = z.object({
   tags: z.array(z.string()).max(TAG_IDS.length).optional(),
 });
 
-/** A reading specialist confirms or disputes the system's scoring of an oral reading. */
+/**
+ * A reading specialist's score of an oral reading, stored as agreement with the
+ * system's: the client sends `agrees = readCorrectly === attempt.correct`. The
+ * specialist is asked about the child, never about the system (ReviewList).
+ */
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session || session.role !== "SPECIALIST") {

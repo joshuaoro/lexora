@@ -1844,6 +1844,56 @@ first on the page, so the test pressed the speaker until it timed out. The
 selector now leaves out buttons that carry an `aria-label`, which every speaker
 has and no answer has.
 
+### 8.20 The specialist scores the child, 14 October
+
+The research team asked how a specialist could "agree or disagree with the
+system's scoring" in blind review, when the system's scoring is hidden. They
+could not, and the buttons were recording something else.
+
+In blind review the row said *"Play the recording, then say whether the learner
+read **bahay** correctly"*, and offered two unlabelled thumbs. Their tooltips,
+invisible on a tablet, said *"I agree / I disagree with the system's scoring"*,
+and that is what was stored. When the system had marked a reading correct the two
+meanings coincide. When it had marked it wrong they are opposite: a specialist
+who heard a correct reading and pressed 👍 for "read correctly" was saved as
+agreeing it was wrong. The agreement figure for Objective 2 would have counted
+every such case backwards, and the screen then revealed "system: incorrect" beside
+the green thumb and offered error categories for a reading the specialist had
+called correct. The user manual and the README already described the intended
+behaviour ("did the learner read this correctly?", "reusing the mapping the
+non-word probe already used"); the non-word probe had it, and the real-word
+buttons never did. The tests checked that the system's answer was absent, not
+what the buttons meant. A read-only count found 26 reviews in the live database,
+all on demo learners, so no participant's data was affected.
+
+What changed:
+
+- **One question, about the child.** Both lists offer *Read correctly* and
+  *Misread*, in words. The score is stored as agreement with the system
+  (`agrees = readCorrectly === attempt.correct`), so the column, every
+  calculation and every export are unchanged.
+- **Quick review removed.** Once the question is about the child, showing the
+  system's answer first does nothing but anchor the score. A score changed after
+  the reveal is still recorded as not blind.
+- **No recording, no score.** A row with nothing to play says so and offers no
+  buttons. This keeps out a skipped word, which both sides always call wrong, an
+  agreement that tests nothing. It keeps in a reading the recogniser heard nothing
+  in, which has a recording and is exactly the failure Objective 2 should count.
+  A row scored before its recording was cleared at close-out keeps its score,
+  shown but fixed. The rule is enforced in the review list, not the route: the
+  suites score readings that have no recording through the API, and moving the
+  rule there would mean sending them through the recogniser.
+- **No verdict from a note.** Saving a note on an unscored row used to record
+  "agrees with the system" on the specialist's behalf, as a blind verdict. The
+  note button now appears only once the reading is scored.
+
+`calibration-audit` gives the blind learner's readings a silent stand-in
+recording, leaves one without, and checks the buttons by what they save:
+*Read correctly* on a reading the system marked wrong is stored as a
+disagreement, *Misread* as an agreement, both blind; the unrecorded row offers no
+score; and nothing on the page asks whether the specialist agrees with the
+system.
+
 ---
 
 ## 9. Verification

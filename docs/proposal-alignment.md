@@ -172,12 +172,20 @@ should move. It never moves it by itself. Refine it **once, when validation ends
 report the percentage of agreement at both thresholds (the similarity is stored on every
 reading, so both can be computed).
 
-**Percentage of agreement** — computed on **blind** reviews: the system's verdict is
-hidden until the specialist has given theirs. A verdict given with the answer visible can
-be pulled toward it. **Suggested addition** to the Statistical Treatment:
+**Percentage of agreement** — computed on **blind** scores: the specialist scores each
+recording as *read correctly* or *misread*, and the system's verdict is hidden until they
+have. They are never asked whether they agree with the system; the application compares
+the two. (Until 14 October the real-word buttons stored agreement directly, which in blind
+review recorded the opposite of the specialist's score whenever the system had marked a
+reading wrong. Only demo data existed; see the development record §8.20.) A reading with
+no recording, such as a skipped word, cannot be scored by ear and is excluded. Both sides
+would always call it wrong, so it would add an agreement that tests nothing. **Suggested
+addition** to the Statistical Treatment:
 
-> Agreement is computed over first readings of real words, scored by the specialist
-> before the system's verdict is shown to them.
+> Agreement is computed over first readings of real words that have a recording. The
+> reading specialist scores each recording as read correctly or misread before the
+> system's verdict is shown, and a reading counts as an agreement when the two verdicts
+> match.
 
 **Statistics beyond the proposal.** The calibration page also reports Cohen's κ, the
 Matthews correlation and a bootstrap interval. They are not among the proposal's
@@ -343,7 +351,7 @@ validation evidence, **not as results**.
 
 | Feature | How to present it |
 |---|---|
-| Blind review | Part of Objective 2's method: why the agreement can be trusted |
+| Blind review (the specialist scores the child, never the system) | Part of Objective 2's method: why the agreement can be trusted |
 | Observation tags (vowel, cluster, stress…) | Part of "word-level error patterns" (Objective 5) — what the specialist heard, beside what the machine recorded |
 | Threshold calibration (κ, MCC, bootstrap) | Validation evidence for refining the threshold |
 | Latency guard in the level rule | Part of the adaptive mechanism (Objective 4): promotion waits while correct readings slow |

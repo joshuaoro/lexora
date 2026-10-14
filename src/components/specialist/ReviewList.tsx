@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, Play, StickyNote, AudioLines, Eye, EyeOff } from "lucide-react";
+import { Check, X, Play, StickyNote, AudioLines, EyeOff } from "lucide-react";
 import { ERROR_TAGS } from "@/lib/error-tags";
 import { tryFetch } from "@/lib/net";
 import { getDict, type Lang } from "@/lib/i18n";
@@ -30,29 +30,40 @@ const ENGINE_LABELS: Record<string, string> = {
 };
 
 /**
- * Reliability check (Validation section): the specialist replays recorded oral
- * readings and confirms or disputes the system's verdict. The agreement rate
- * between specialist and system is computed from these reviews.
+ * Reliability check (Validation section): the specialist replays each recorded
+ * oral reading and scores it — read correctly, or misread. The agreement rate
+ * between specialist and system is computed from those scores.
  *
- * Two modes, one stored column
- * ----------------------------
- * In `agreement` mode the specialist answers "was the system right?" directly.
+ * The specialist scores the child, never the system
+ * -------------------------------------------------
+ * The question used to be "do you agree with the system's scoring?", asked with
+ * thumbs. Once blind review hid the system's verdict, the prompt asked about
+ * the child while the thumbs still stored agreement, so on every reading the
+ * system had marked wrong a "read correctly" was saved as its opposite. And
+ * "do you agree?" makes the system the reference and the specialist its
+ * checker, where a validation study needs it the other way round: Objective 2
+ * is agreement "with a reading specialist on the same recordings".
  *
- * In `probe` mode they answer a different question — "did the child read this
- * non-word correctly?" — because on a made-up word the machine verdict is not
- * something to ratify. It is a language model transcribing a word that has no
- * entry in any language, and how often it guesses right is precisely what is
- * unknown; the first real probe run had it write seven of eight correctly and
- * garble the eighth, which is neither reliable enough to trust nor bad enough
- * to discard. So a person decides, and the transcript is kept beside them.
+ * So both lists ask one question, about the reading. On a non-word it was
+ * already this: there the machine verdict is a language model transcribing a
+ * word that has no entry in any language, which is nothing to ratify.
  *
- * Both still store `agrees`, and it keeps its single meaning: whether the human
- * and the machine reached the same conclusion. The probe verdict is folded into
- * it here rather than stored separately, and reads back out as
- * `agrees ? attempt.correct : !attempt.correct`. One column, one definition,
- * and the agreement rate stays comparable across both kinds of item — which is
- * the interesting comparison, since machine–human agreement is known to be
- * worse for readers with disabilities and worse again on unfamiliar words.
+ * One stored column
+ * -----------------
+ * The score is still stored as `agrees`, whether the human and the machine
+ * reached the same conclusion: `agrees = readCorrectly === attempt.correct`,
+ * and it reads back out the same way. Every calculation, export and figure
+ * built on that column is unchanged, and the agreement rate stays comparable
+ * across real words and non-words — the interesting comparison, since
+ * machine–human agreement is known to be worse for readers with disabilities
+ * and worse again on unfamiliar words.
+ *
+ * Scored by ear, so only with a recording
+ * ---------------------------------------
+ * A row with nothing to play offers no score. That keeps out a skipped word,
+ * which both sides would always call wrong — an agreement that tests nothing —
+ * while a reading the recogniser heard nothing in keeps its recording, and is
+ * exactly the failure Objective 2 should count.
  */
 export default function ReviewList({
   attempts,
@@ -67,16 +78,15 @@ export default function ReviewList({
   const errorTypes: Record<string, string> = getDict(lang).reports.errorTypes;
   const isProbe = mode === "probe";
 
-  /**
-   * Blind is the default, and the probe is blind by construction.
-   *
-   * The machine's verdict used to sit above the play button in green or red
-   * with its similarity beside it, so a specialist met the answer before they
-   * could hear the reading. Every one of those judgements feeds the agreement
-   * percentage, Cohen's κ and the fitted threshold, and none of them was
-   * independent of the thing it was measuring.
+  /*
+   * Always blind. The machine's verdict used to sit above the play button in
+   * green or red with its similarity beside it, so a specialist met the answer
+   * before they could hear the reading; every one of those judgements feeds the
+   * agreement percentage, Cohen's κ and the fitted threshold. There was then a
+   * "quick review" that showed it first on request. Once the specialist scores
+   * the child rather than the system, showing the answer first does nothing
+   * but anchor the score, so the switch was removed.
    */
-  const [blind, setBlind] = useState(true);
   const [reviews, setReviews] = useState<Record<string, boolean>>(
     Object.fromEntries(
       attempts.filter((a) => a.review).map((a) => [a.id, a.review!.agrees])
@@ -112,14 +122,12 @@ export default function ReviewList({
   const [judgedBlind, setJudgedBlind] = useState<Record<string, boolean>>({});
 
   /**
-   * Whether this row may show the machine's verdict.
-   *
-   * In quick review, always. In blind review, only once the specialist has
-   * committed a judgement — either now or in an earlier sitting, since a row
-   * already carrying a review has nothing left to anchor.
+   * Whether this row may show the machine's verdict: only once the specialist
+   * has scored it — now or in an earlier sitting, since a row already carrying
+   * a score has nothing left to anchor.
    */
   function revealed(attemptId: string): boolean {
-    return !blind || reviews[attemptId] !== undefined || justJudged.has(attemptId);
+    return reviews[attemptId] !== undefined || justJudged.has(attemptId);
   }
 
   /**
@@ -133,7 +141,12 @@ export default function ReviewList({
    */
   function blindFor(attemptId: string, verdictChange: boolean): boolean {
     if (!verdictChange && judgedBlind[attemptId] !== undefined) return judgedBlind[attemptId];
-    return blind && !justJudged.has(attemptId) && reviews[attemptId] === undefined;
+    return !justJudged.has(attemptId) && reviews[attemptId] === undefined;
+  }
+
+  /** The specialist's score of the reading, stored as agreement with the system's. */
+  function scoreReading(a: ReviewableAttempt, readCorrectly: boolean) {
+    return review(a.id, readCorrectly === a.correct);
   }
 
   async function review(
@@ -179,15 +192,17 @@ export default function ReviewList({
     }
   }
 
-  /** Save a written observation alongside the verdict (kept for the audit trail). */
+  /**
+   * Save a written observation alongside the score (kept for the audit trail).
+   *
+   * Only offered once a score exists. A note saved before one used to record
+   * "agrees with the system" on the specialist's behalf: a verdict nobody gave,
+   * stored as blind, in the agreement figure.
+   */
   async function saveNote(attemptId: string) {
     const agrees = reviews[attemptId];
-    if (agrees === undefined) {
-      // A note only makes sense with a verdict; default to agreeing.
-      await review(attemptId, true, notes[attemptId]);
-    } else {
-      await review(attemptId, agrees, notes[attemptId], undefined, { verdictChange: false });
-    }
+    if (agrees === undefined) return;
+    await review(attemptId, agrees, notes[attemptId], undefined, { verdictChange: false });
     setNoteOpen(null);
   }
 
@@ -206,38 +221,12 @@ export default function ReviewList({
 
   return (
     <>
-      {/*
-        The mode, always on screen, and leaving it is a sentence rather than a
-        switch. A specialist who has just recorded twenty verdicts should never
-        have to remember which condition produced them, and stepping out of
-        blind review should take a moment's thought — the friction is the point,
-        but it is not a lock: there are real reasons to look first.
-      */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-cream/60 px-4 py-2.5">
-        <span className="flex items-center gap-2 text-sm font-extrabold text-ink">
-          {blind ? (
-            <>
-              <EyeOff size={16} className="text-primary" /> {t.blindOn}
-              <span className="font-semibold text-ink-muted">
-                — {t.blindOnSub}
-              </span>
-            </>
-          ) : (
-            <>
-              <Eye size={16} className="text-orange" /> {t.blindOff}
-              <span className="font-semibold text-orange">
-                — {t.blindOffSub}
-              </span>
-            </>
-          )}
-        </span>
-        <button
-          onClick={() => setBlind((b) => !b)}
-          className="shrink-0 rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-bold text-ink-soft transition hover:bg-cream-dark"
-        >
-          {blind ? t.blindSwitchOff : t.blindSwitchOn}
-        </button>
-      </div>
+      {/* Says why the system's verdict is missing, so its absence reads as
+          the method rather than as a fault. */}
+      <p className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-cream/60 px-4 py-2.5 text-sm font-extrabold text-ink">
+        <EyeOff size={16} className="text-primary" /> {t.blindOn}
+        <span className="font-semibold text-ink-muted">— {t.blindOnSub}</span>
+      </p>
 
       <ul className="divide-y divide-line">
       {attempts.map((a) => {
@@ -267,7 +256,9 @@ export default function ReviewList({
                 because a test that checks for it should be checking the
                 response body rather than a class name.
               */}
-              {!show ? (
+              {!show && !a.hasAudio ? (
+                <p className="text-sm font-semibold text-ink-muted">{t.noRecording}</p>
+              ) : !show ? (
                 <p className="text-sm font-semibold text-ink-muted">
                   {/* Both gaps are explicit rather than relying on the literal
                       space after the tag, which was being dropped here: this
@@ -360,60 +351,67 @@ export default function ReviewList({
               </button>
             )}
 
+            {/*
+              The buttons ask about the child, and the score is converted to an
+              agreement before it is stored: "read correctly" agrees with the
+              system only when the system also said correct. `readCorrectly`
+              reverses the same mapping for display, so the button that lights
+              up is the one the specialist actually pressed.
+
+              No recording, no score. A row scored before its recording was
+              cleared at close-out keeps its score on show, but it cannot be
+              changed without something to listen to.
+            */}
+            {(a.hasAudio || reviewed !== undefined) && (
             <div
               className="flex items-center gap-1.5"
               role="group"
-              aria-label={isProbe ? t.probeQuestion : t.agreeQuestion}
+              aria-label={isProbe ? t.probeQuestion : t.readQuestion}
             >
-              {/*
-                In probe mode the buttons ask about the child, not the machine,
-                so the verdict is converted to an agreement before it is stored:
-                saying "read it correctly" agrees with the system only when the
-                system also said correct. `readCorrectly` reverses the same
-                mapping for display, so the button that lights up is the one the
-                specialist actually pressed.
-              */}
               <button
-                onClick={() => review(a.id, isProbe ? a.correct === true : true)}
-                disabled={busy === a.id}
-                aria-pressed={isProbe ? readCorrectly === true : reviewed === true}
-                title={isProbe ? t.probeReadTitle : t.agreeTitle}
-                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
-                  (isProbe ? readCorrectly === true : reviewed === true)
+                onClick={() => scoreReading(a, true)}
+                disabled={busy === a.id || !a.hasAudio}
+                aria-pressed={readCorrectly === true}
+                title={isProbe ? t.probeReadTitle : t.readTitle}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition disabled:cursor-not-allowed ${
+                  readCorrectly === true
                     ? "border-green bg-green-soft text-green"
                     : "border-line bg-white text-ink-muted hover:border-green hover:text-green"
-                } ${isProbe ? "" : "w-9 px-0"}`}
-              >
-                <ThumbsUp size={16} />
-                {isProbe && <span className="text-xs font-bold">{t.readIt}</span>}
-              </button>
-              <button
-                onClick={() => review(a.id, isProbe ? a.correct === false : false)}
-                disabled={busy === a.id}
-                aria-pressed={isProbe ? readCorrectly === false : reviewed === false}
-                title={isProbe ? t.probeMisreadTitle : t.disagreeTitle}
-                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition ${
-                  (isProbe ? readCorrectly === false : reviewed === false)
-                    ? "border-red bg-red-soft text-red"
-                    : "border-line bg-white text-ink-muted hover:border-red hover:text-red"
-                } ${isProbe ? "" : "w-9 px-0"}`}
-              >
-                <ThumbsDown size={16} />
-                {isProbe && <span className="text-xs font-bold">{t.misread}</span>}
-              </button>
-              <button
-                onClick={() => setNoteOpen(noteOpen === a.id ? null : a.id)}
-                aria-pressed={noteOpen === a.id}
-                title={t.addObservationTitle}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
-                  notes[a.id]
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-line bg-white text-ink-muted hover:border-primary hover:text-primary"
                 }`}
               >
-                <StickyNote size={16} />
+                <Check size={16} />
+                <span className="text-xs font-bold">{t.readCorrectly}</span>
               </button>
+              <button
+                onClick={() => scoreReading(a, false)}
+                disabled={busy === a.id || !a.hasAudio}
+                aria-pressed={readCorrectly === false}
+                title={isProbe ? t.probeMisreadTitle : t.misreadTitle}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 transition disabled:cursor-not-allowed ${
+                  readCorrectly === false
+                    ? "border-red bg-red-soft text-red"
+                    : "border-line bg-white text-ink-muted hover:border-red hover:text-red"
+                }`}
+              >
+                <X size={16} />
+                <span className="text-xs font-bold">{t.misread}</span>
+              </button>
+              {reviewed !== undefined && (
+                <button
+                  onClick={() => setNoteOpen(noteOpen === a.id ? null : a.id)}
+                  aria-pressed={noteOpen === a.id}
+                  title={t.addObservationTitle}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
+                    notes[a.id]
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-line bg-white text-ink-muted hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  <StickyNote size={16} />
+                </button>
+              )}
             </div>
+            )}
 
             {noteOpen === a.id && (
               <div className="flex w-full items-center gap-2 pl-1">

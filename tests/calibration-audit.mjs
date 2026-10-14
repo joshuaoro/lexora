@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   BASE, passwordFor, api, json, check, section, report, one, query,
-  requireSpecialistLogin, createTestLearner, endSuite,
+  requireSpecialistLogin, createTestLearner, endSuite, STAND_IN_SOUND,
 } from "./helpers.mjs";
 
 console.log(`Calibration audit against ${BASE}`);
@@ -338,7 +338,7 @@ section("[7] blind review hides the machine's answer until a verdict exists");
  */
 const anchorLearner = await createTestLearner("blind");
 const anchorWords = await query(
-  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 3`
+  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 4`
 );
 for (const w of anchorWords) {
   await api("/api/attempts", {
@@ -347,13 +347,25 @@ for (const w of anchorWords) {
     body: { activityType: "READ_ALOUD", wordId: w.id, target: w.text, browserTranscript: "zzzz", responseMs: 1500 },
   });
 }
+// Readings are scored by ear, so only one with a recording can be scored. The
+// first three get a silent stand-in. The fourth, read last and so listed first,
+// keeps none, like a skipped word.
+await query(
+  `UPDATE "Attempt" SET audio = $2
+    WHERE id IN (SELECT id FROM "Attempt" WHERE "learnerId" = $1 ORDER BY "createdAt" LIMIT 3)`,
+  [anchorLearner.learnerId, STAND_IN_SOUND]
+);
+const [unrecorded] = await query(
+  `SELECT target FROM "Attempt" WHERE "learnerId" = $1 AND audio IS NULL`,
+  [anchorLearner.learnerId]
+);
 
 const blindPage = await (
   await api(`/specialist/learner/${anchorLearner.learnerId}`, { cookie: specialist })
 ).text();
 const count = (h, re) => (h.match(re) ?? []).length;
 check(
-  "the review list defaults to blind",
+  "the review list is blind",
   /Blind review/.test(blindPage) && /hidden until you decide/.test(blindPage),
   "banner + prompt present"
 );
@@ -373,9 +385,29 @@ check(
   `${count(blindPage, /Similarity to the target word/g)} leaked`
 );
 check(
-  "but the recording is still playable and the opt-out is offered",
-  /Switch to quick review/.test(blindPage),
-  "deliberate opt-out present"
+  "and there is no way to show the system's answer first",
+  !/quick review/i.test(blindPage),
+  /quick review/i.test(blindPage) ? "a quick-review switch is back" : "none"
+);
+/**
+ * The specialist scores the child, so the buttons say so in words, on every
+ * recorded row. A reading with nothing to play gets no buttons: a skip is
+ * wrong to both sides, and scoring it would add an agreement that tests nothing.
+ */
+check(
+  "each recorded reading asks whether it was read correctly",
+  count(blindPage, />Read correctly</g) === 3 && count(blindPage, />Misread</g) === 3,
+  `${count(blindPage, />Read correctly</g)} "Read correctly", ${count(blindPage, />Misread</g)} "Misread"`
+);
+check(
+  "a reading with no recording says so and offers no score",
+  count(blindPage, /No recording to play/g) === 1,
+  `${count(blindPage, /No recording to play/g)} row(s), for "${unrecorded?.target}"`
+);
+check(
+  "nobody is asked whether they agree with the system",
+  !/agree with the system/i.test(blindPage),
+  "no agree/disagree question"
 );
 
 /**
@@ -489,12 +521,14 @@ await provPage.goto(`${BASE}/specialist/learner/${anchorLearner.learnerId}`, {
 
 /**
  * These readings were transcribed as "zzzz", so the system marked them
- * incorrect. Agreeing with it is therefore the verdict that means "the child
- * misread this" — and only a misreading offers the observation chips, since a
- * correct reading has nothing to categorise.
+ * incorrect. "Misread" therefore agrees with it — and only a misreading offers
+ * the observation chips, since a correct reading has nothing to categorise.
+ *
+ * Rows run newest first: one with no recording (no buttons), then the three
+ * recorded ones, the oldest of which section 8 scored through the API.
  */
-const agreeBtn = provPage.getByRole("button", { name: /I agree with the system/ }).first();
-await agreeBtn.click();
+const [, olderWord, newerWord] = anchorWords.map((w) => w.text);
+await provPage.getByRole("button", { name: "Misread" }).first().click();
 await provPage.waitForTimeout(1500);
 const chip = provPage.getByRole("button", { name: "Vowel" }).first();
 const tagged = (await chip.count()) > 0;
@@ -508,19 +542,43 @@ if (tagged) {
  * errors. Self-correction ends in the right word, so by running-record
  * convention it is marked correct — and when the chips appeared only on
  * misreadings, a specialist following that convention could not record one.
- * Disagreeing with a "zzzz" transcript is the verdict "read correctly".
+ * "Read correctly" on a "zzzz" transcript disagrees with the system.
  */
-// Rows run newest first: the one just judged, one never reviewed, and the one
-// section 8 reviewed through the API. The second is the unreviewed one.
+// The second recorded row is the one never scored.
 const selfCorrected = () =>
   provPage.getByRole("button", { name: "Self-corrected in the recording" });
 const vowelBefore = await provPage.getByRole("button", { name: "Vowel" }).count();
 const selfBefore = await selfCorrected().count();
-await provPage.getByRole("button", { name: /I disagree with the system/ }).nth(1).click();
+await provPage.getByRole("button", { name: "Read correctly" }).nth(1).click();
 await selfCorrected().nth(selfBefore).waitFor({ timeout: 15000 }).catch(() => {});
 const selfAfter = await selfCorrected().count();
 const vowelAfter = await provPage.getByRole("button", { name: "Vowel" }).count();
 await provBrowser.close();
+
+/**
+ * The buttons save what the specialist meant.
+ *
+ * They asked "did the child read it correctly?" while storing "do you agree
+ * with the system?", so on a reading the system had marked wrong, "read
+ * correctly" was saved as agreement that it was wrong. Only the readings the
+ * system marked wrong can show it, which is why these are "zzzz" ones.
+ */
+const scoredRows = await query(
+  `SELECT a.target, r.agrees, r.blind FROM "AttemptReview" r JOIN "Attempt" a ON a.id = r."attemptId"
+    WHERE a."learnerId" = $1 AND a.target = ANY($2)`,
+  [anchorLearner.learnerId, [olderWord, newerWord]]
+);
+const scoredAs = (w) => scoredRows.find((r) => r.target === w);
+check(
+  '"Read correctly" on a reading the system marked wrong is saved as a disagreement',
+  scoredAs(olderWord)?.agrees === false && scoredAs(olderWord)?.blind === true,
+  JSON.stringify(scoredAs(olderWord) ?? "not saved")
+);
+check(
+  'and "Misread" on one is saved as an agreement',
+  scoredAs(newerWord)?.agrees === true && scoredAs(newerWord)?.blind === true,
+  JSON.stringify(scoredAs(newerWord) ?? "not saved")
+);
 
 check("the observation chips appear once a misreading is recorded", tagged, tagged ? "shown" : "no chips");
 check(

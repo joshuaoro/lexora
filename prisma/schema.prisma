@@ -243,7 +243,7 @@ model AttemptReview {
   attempt      Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   specialistId String
   specialist   User     @relation(fields: [specialistId], references: [id], onDelete: Cascade)
-  agrees       Boolean // specialist agrees with the system's correct/incorrect verdict
+  agrees       Boolean // the specialist's score (read correctly or not) matches the system's verdict
   note         String?
   /**
    * Whether the machine's verdict was hidden when this judgement was made.

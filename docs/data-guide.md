@@ -311,9 +311,11 @@ produces, so a skipped step has a visible cost.
 
 This is the work that turns recordings into the percentage of agreement.
 
-1. **Review blind** (the default). The machine's verdict stays hidden until the
-   specialist has given theirs. Do not switch to quick review without a reason;
-   note it if you do.
+1. **Score blind** (always). The specialist scores each recorded reading as *Read
+   correctly* or *Misread*. The machine's verdict stays hidden until they have, and
+   the app derives agreement from the two. A reading with no recording, such as a
+   skipped word, cannot be scored and stays out of the figure. A score changed after
+   the verdict appears is stored as not blind; note why if it happens.
 2. **Aim for 30 reviewed readings across the children as early as possible.**
    `MIN_SAMPLE = 30` in `src/lib/calibration.ts` is the point at which the
    application will suggest whether the acceptance threshold should move. The

@@ -34,8 +34,8 @@ Everything else in the app exists to keep those two honest. Connected text, flue
 
 **The one-sentence version for a panel:** *the child reads a word aloud, a pre-trained
 Whisper model transcribes it, the app scores the transcript against the target, and a
-reading specialist can confirm or dispute every one of those verdicts — which is what
-lets the study report agreement rather than assert accuracy.*
+reading specialist scores the same recordings by ear without seeing the system's verdict —
+which is what lets the study report agreement rather than assert accuracy.*
 
 ### Two roles
 
@@ -270,19 +270,27 @@ This is the instrument the study's Objective 2 rests on, so the procedure matter
    verdict, and the similarity score are **not shown** — they are absent from the page,
    not merely hidden.
 2. **Play the recording. Listen.**
-3. Answer the question asked: **did the learner read this correctly?** — *Correct* or
-   *Not correct*.
-4. Only then does the system's reading appear, so you can see whether it agreed.
-5. Optionally, chips appear: **"What did you observe?"** After *Not correct*: vowel, first
+3. Score the reading: **Read correctly** or **Misread**. You score the child, not the
+   system. You are never asked whether you agree with the system; the app works that out
+   from your score.
+4. Only then does the system's reading appear, so you can see whether it matched yours.
+5. Optionally, chips appear: **"What did you observe?"** After *Misread*: vowel, first
    sound, last sound, digraph, cluster, syllable dropped, syllable added, **stress**,
-   self-corrected, could not tell. After *Correct*: only self-corrected and could not
-   tell — a self-correction ends in the right word, so mark the reading correct and record
-   the self-correction here. Leaving them blank is fine and honest.
+   self-corrected, could not tell. After *Read correctly*: only self-corrected and could
+   not tell — a self-correction ends in the right word, so mark the reading correct and
+   record the self-correction here. Leaving them blank is fine and honest. A written note
+   (the note button) can be added once the reading is scored.
 
-**Why blind by default:** if you see the machine's answer first, your judgement is no
-longer independent of the thing it is measuring, and the agreement percentage, Cohen's κ
-and the fitted threshold all inherit that. The mode is displayed at all times, and
-leaving it takes a deliberate press of *"Switch to quick review"*.
+A row with **no recording** (a skipped word, or one whose recording was cleared) says so
+and offers no score: it cannot be scored by ear, and it stays out of the agreement figure.
+A child who read but whom the recogniser heard nothing in still has a recording, so that
+row can be scored. It is one of the failures Objective 2 should count.
+
+**Why always blind:** if you see the machine's answer first, your judgement is no longer
+independent of the thing it is measuring, and the agreement percentage, Cohen's κ and the
+fitted threshold all inherit that. There is no switch to show it first. If you change a
+score after the system's reading has appeared, the change is recorded as made with the
+answer visible, and it is reported apart from the blind scores.
 
 **Stress:** Filipino does not write it, so *búkas* and *bukás* reach the scorer as the
 same letters. Eight bank words carry a caveat telling you to judge by ear. The `stress`
@@ -446,8 +454,8 @@ Spend the time on:
 
 1. **The review workflow**, hands-on. Have them score five recordings themselves. This
    is what they will do most.
-2. **Why blind review**, briefly — then let them try *"Switch to quick review"* so they
-   feel the difference.
+2. **Why blind review**, briefly: they score the child, never the system, and the
+   system's reading appears only after their score.
 3. **The observation chips** — walk the vocabulary. Ask whether the categories match what
    they actually hear; that is real feedback worth writing down.
 4. **The word bank** — show them **🎤 Record**, because a specialist's own voice takes
@@ -573,8 +581,8 @@ later.
 ### 7.5 Weekly, by the specialist
 
 1. **Review recordings.** This is the study's main instrument, not an optional extra.
-   Review **blind** — do not switch to quick review unless you have a reason, and note it
-   if you do.
+   Score each reading by ear before looking at the system's. Avoid changing a score after
+   the system's reading appears; if you must, note why.
 2. Aim for **30 reviewed readings across the cohort** as early as you can; that is the
    threshold at which the calibration page starts recommending an operating point — the
    proposal's "refine … the feedback thresholds". Adopt a change once, when validation
