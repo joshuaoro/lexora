@@ -51,7 +51,7 @@ Three companion documents:
 | **Code, total** | **172** | **25,194** |
 | `docs/` and README — documents and instruments | 15 | 7,007 |
 
-15 migrations, 10 automated audit suites, 472 assertions (as of 10 October 2026).
+15 migrations, 10 automated audit suites, 476 assertions (as of 14 October 2026).
 
 ---
 
@@ -1900,18 +1900,18 @@ system.
 
 ### 9.1 The suites
 
-Ten suites, **472 checks** (10 October 2026, all passing against production). Run with `npm run audit [url]`.
+Ten suites, **476 checks** (14 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 67 | Authorization, validation, data scoping, erasure, the letter-sound routes, and the two RLS checks in §10.1a |
 | `logic-audit` | 26 | Scoring strictness, the skill-progression map (both sides of 80%), mastery, agreement |
 | `ui-audit` | 29 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the Reader's settings and Show syllables, specialist workflows, responsive sweep |
-| `links-audit` | 57 | Every route reachable from the navigation, as each role |
+| `links-audit` | 56 | Every route reachable from the navigation, as each role. One check per learner page it finds, so it grows by one for each learner enrolled (57 on 10 October, when a crashed suite had left a test learner behind) |
 | `stale-session-audit` | 27 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
 | `decoding-audit` | 72 | Probe walls, latency guard, stress caveat, exports, Filipino |
-| `calibration-audit` | 93 | Calibration arithmetic, agreement first, blind review, tags, demo, IEP, start/end record, Filipino throughout |
+| `calibration-audit` | 98 | Calibration arithmetic, agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
 | `a11y-audit` | 20 | WCAG 2.1 AA via axe-core (the Reader with syllables shown included), keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
