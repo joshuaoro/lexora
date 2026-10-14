@@ -167,8 +167,8 @@ has still not been tested on a device — do that before relying on it.
 
 **Reading assessment validation** — "Discrepancies will be documented and used to refine
 the scoring logic and the feedback thresholds." The application lists both kinds of
-discrepancy and, from 30 reviewed readings, recommends whether the acceptance threshold
-should move. It never moves it by itself. Refine it **once, when validation ends**, and
+discrepancy and, from 30 reviewed readings with at least 5 judged correct and 5 judged
+misread, recommends whether the acceptance threshold should move. It never moves it by itself. Refine it **once, when validation ends**, and
 report the percentage of agreement at both thresholds (the similarity is stored on every
 reading, so both can be computed).
 

@@ -177,8 +177,10 @@ deliberately because their colloquial sense is adult or upsetting (for example *
   the machine; the machine's answer appears only after yours, and the application works out
   the agreement. A reading with no recording (a skipped word) cannot be scored by ear and is
   left out.
-- Roughly **30** scored readings are needed before the application will suggest whether the
-  acceptance threshold (0.95 similarity) should move; it never moves it by itself.
+- Roughly **30** scored readings, **at least 5 of them misread**, are needed before the
+  application will suggest whether the acceptance threshold (0.95 similarity) should move;
+  it never moves it by itself. Misreadings come from the children's own readings: an adult
+  reading the words correctly cannot supply them.
 - Probe readings are yours alone to score; until you do, they count as neither right nor
   wrong.
 - *Optional:* tag the first and last sessions of testing (Study timeline on each learner's

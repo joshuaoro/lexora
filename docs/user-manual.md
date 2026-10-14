@@ -304,7 +304,10 @@ All learners side by side, plus accuracy per syllable-pattern family across the 
 
 The acceptance threshold (0.95) swept from 0.50 to 1.00 against every specialist verdict,
 reporting accuracy, sensitivity, specificity, precision, **Cohen's κ**, **MCC** and
-**Youden's J**, with a plateau and a bootstrap interval.
+**Youden's J**, with a plateau and a bootstrap interval. It recommends a threshold only
+once there are 30 reviewed real-word readings **with at least 5 judged correct and 5
+judged misread**. Before that, it shows the agreement at the threshold in force. Where
+thresholds tie, it keeps the one in force, or the nearest tied value to it.
 
 **It recommends; it never changes the threshold.** The proposal refines the threshold from
 the disagreements, so adopt a recommendation once, when validation ends — changing it
@@ -361,7 +364,7 @@ Current state of the database:
 | Review list | any recordings | **42 recordings** | ✅ works |
 | Reports / charts | a few readings | 135 + 68 readings | ✅ works |
 | Divergence | 10 real + 8 probe reviews | 4 real + 8 probe | ❌ empty |
-| Calibration | 30 reviewed readings | 12 reviews | ❌ empty |
+| Calibration | 30 reviewed readings, at least 5 correct and 5 misread | 12 reviews | ❌ empty |
 | Phase comparison | 10 readings each in BASELINE and ENDLINE | 0 BASELINE | ❌ empty |
 
 **You have two honest options, and the first is genuinely the stronger demo:**
@@ -583,8 +586,9 @@ later.
 1. **Review recordings.** This is the study's main instrument, not an optional extra.
    Score each reading by ear before looking at the system's. Avoid changing a score after
    the system's reading appears; if you must, note why.
-2. Aim for **30 reviewed readings across the cohort** as early as you can; that is the
-   threshold at which the calibration page starts recommending an operating point — the
+2. Aim for **30 reviewed readings across the cohort, at least 5 of them misread**, as
+   early as you can; that is when the calibration page starts recommending an operating
+   point — the
    proposal's "refine … the feedback thresholds". Adopt a change once, when validation
    ends, not repeatedly during testing.
 3. **Add observation chips** where you are confident. Coverage is reported alongside every

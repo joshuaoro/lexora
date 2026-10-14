@@ -102,7 +102,10 @@ specificity, precision, Cohen's κ, Matthews' correlation (MCC) and Youden's J**
   lower for students with disabilities** — which is this entire participant group. Treat
   them as context, not as targets.
 - **Guards against over-claiming.** No operating point is recommended below 30 reviewed
-  readings. Thresholds within 0.01 MCC of the peak are reported as a **plateau**, because
+  readings, or with fewer than 5 judged correct or 5 judged misread: a sample of one kind
+  ties every threshold. Where thresholds tie, the one in force is kept, or the nearest to
+  it if it is not among them, so a change is only ever the smallest the evidence
+  supports. Thresholds within 0.01 MCC of the peak are reported as a **plateau**, because
   a wide flat region means the optimum is weakly identified
   ([Youden index](https://www.sciencedirect.com/topics/medicine-and-dentistry/youden-index))
   and the single best value must not be quoted alone. A 95% interval for the optimum comes

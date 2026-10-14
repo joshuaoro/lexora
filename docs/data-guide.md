@@ -316,9 +316,13 @@ This is the work that turns recordings into the percentage of agreement.
    the app derives agreement from the two. A reading with no recording, such as a
    skipped word, cannot be scored and stays out of the figure. A score changed after
    the verdict appears is stored as not blind; note why if it happens.
-2. **Aim for 30 reviewed readings across the children as early as possible.**
-   `MIN_SAMPLE = 30` in `src/lib/calibration.ts` is the point at which the
-   application will suggest whether the acceptance threshold should move. The
+2. **Aim for 30 reviewed readings across the children as early as possible,
+   including at least 5 misreadings.** `MIN_SAMPLE = 30` and `MIN_PER_CLASS = 5`
+   in `src/lib/calibration.ts` are the point at which the application will
+   suggest whether the acceptance threshold should move. The threshold is the
+   line between correct readings and misreadings, so a sample of only one kind
+   cannot place it; until both are there, the page reports the agreement at the
+   threshold in force and recommends nothing. The
    proposal: "Discrepancies will be documented and used to refine the scoring
    logic and the feedback thresholds". The suggestion is that refinement; the
    application never moves the threshold by itself.

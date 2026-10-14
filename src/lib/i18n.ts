@@ -816,6 +816,9 @@ const en = {
     notEnoughTitle: "Not enough reviewed readings yet",
     notEnoughBody: (n: number, min: number) =>
       `${n} of ${min} needed. A threshold fitted to fewer than this is a number with a decimal point and very little behind it — it would move with the next handful of readings, and it would be quoted in a paper as though it were settled.`,
+    classShortTitle: "Not enough of both kinds of reading yet",
+    classShortBody: (correct: number, misread: number, min: number) =>
+      `The specialists judged ${correct} of the reviewed readings read correctly and ${misread} misread. A threshold is the line between those two kinds, so it can only be fitted once there are at least ${min} of each. Until then every threshold scores alike, so no value can be called best. The agreement at the threshold in force, below, is still a real figure.`,
     notEnoughHintBefore: "Review more readings on each learner's page — the ",
     notEnoughHintStrong: "Borderline readings",
     notEnoughHintAfter:
@@ -1639,6 +1642,9 @@ const fil: Dict = {
     notEnoughTitle: "Kulang pa ang mga nasuring pagbasa",
     notEnoughBody: (n, min) =>
       `${n} sa ${min} ang kailangan. Ang threshold na iniangkop sa mas kaunti rito ay numerong may decimal point na halos walang batayan — gagalaw ito sa susunod na ilang pagbasa, at mababanggit ito sa papel na para bang tiyak na.`,
+    classShortTitle: "Kulang pa ang dalawang uri ng pagbasa",
+    classShortBody: (correct, misread, min) =>
+      `Sa mga nasuring pagbasa, ${correct} ang hinatulan ng mga specialist na nabasa nang tama at ${misread} ang namali. Ang threshold ay ang linya sa pagitan ng dalawang uring iyon, kaya maiaangkop lamang ito kapag may hindi bababa sa ${min} sa bawat isa. Hanggang doon, pare-pareho ang iskor ng bawat threshold, kaya walang halagang matatawag na pinakamainam. Tunay pa ring bilang ang pagkakasundo sa kasalukuyang threshold, sa ibaba.`,
     notEnoughHintBefore: "Magsuri pa ng mga pagbasa sa page ng bawat mag-aaral — ang panel na ",
     notEnoughHintStrong: "Mga borderline na pagbasa",
     notEnoughHintAfter:

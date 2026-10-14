@@ -1,6 +1,6 @@
 import { Scale, AlertTriangle, Download } from "lucide-react";
 import type { Calibration, ThresholdMetrics } from "@/lib/calibration";
-import { MIN_SAMPLE } from "@/lib/calibration";
+import { MIN_PER_CLASS, MIN_SAMPLE } from "@/lib/calibration";
 import { getDict, type Dict, type Lang } from "@/lib/i18n";
 
 type T = Dict["calibrationPage"];
@@ -162,19 +162,43 @@ export default function CalibrationReport({ cal, lang = "en" }: { cal: Calibrati
       </div>
 
       {!cal.enoughData ? (
-        <section className="rounded-2xl border border-orange/40 bg-orange-soft p-6">
-          <h2 className="flex items-center gap-2 text-lg font-extrabold text-orange">
-            <AlertTriangle size={20} /> {t.notEnoughTitle}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm font-semibold text-ink-soft">
-            {t.notEnoughBody(cal.sampleSize, MIN_SAMPLE)}
-          </p>
-          <p className="mt-3 max-w-2xl text-sm font-semibold text-ink-soft">
-            {t.notEnoughHintBefore}
-            <strong>{t.notEnoughHintStrong}</strong>
-            {t.notEnoughHintAfter}
-          </p>
-        </section>
+        <>
+          <section className="rounded-2xl border border-orange/40 bg-orange-soft p-6">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-orange">
+              <AlertTriangle size={20} />{" "}
+              {cal.sampleSize < MIN_SAMPLE ? t.notEnoughTitle : t.classShortTitle}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold text-ink-soft">
+              {cal.sampleSize < MIN_SAMPLE
+                ? t.notEnoughBody(cal.sampleSize, MIN_SAMPLE)
+                : t.classShortBody(cal.classes.correct, cal.classes.misread, MIN_PER_CLASS)}
+            </p>
+            <p className="mt-3 max-w-2xl text-sm font-semibold text-ink-soft">
+              {t.notEnoughHintBefore}
+              <strong>{t.notEnoughHintStrong}</strong>
+              {t.notEnoughHintAfter}
+            </p>
+          </section>
+
+          {/* Enough readings, but only one kind: no threshold can be fitted,
+              yet the agreement at the one in force is a real figure, and
+              Objective 2's. It stays on screen with the table it comes from. */}
+          {cal.sampleSize >= MIN_SAMPLE && (
+            <>
+              <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                <Stat label={t.statReviewed} value={`${cal.sampleSize}`} />
+                <Stat
+                  label={t.statAgreementNow}
+                  value={pct(cal.current.accuracy)}
+                  hint={`${t.atThreshold(cal.current.threshold.toFixed(2))} · κ ${cal.current.kappa.toFixed(2)} · MCC ${cal.current.mcc.toFixed(2)}`}
+                />
+              </div>
+              <div className="max-w-md">
+                <Matrix m={cal.current} title={t.matrixAtCurrent} t={t} />
+              </div>
+            </>
+          )}
+        </>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">

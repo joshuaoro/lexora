@@ -87,6 +87,7 @@ it refuses to render and says how many more are needed:
 | Module | Constant | Value | Reasoning |
 |---|---|---:|---|
 | `calibration.ts` | `MIN_SAMPLE` | 30 | Below this a fitted cut-point is a decimal point with nothing behind it |
+| `calibration.ts` | `MIN_PER_CLASS` | 5 | Readings judged correct, and judged misread, each needed: with one kind every threshold ties (§8.22) |
 | `divergence.ts` | `MIN_REAL_REVIEWS` | 10 | Reviewed real words needed before the comparison is honest |
 | `divergence.ts` | `MIN_PROBE_REVIEWS` | 8 | One complete probe run; the calibration's 30 is unreachable behind a 7-day cooldown |
 | `divergence.ts` | `THIN_SAMPLE` | 20 | Below this a single item moves a proportion by several points — flagged, not hidden |
@@ -554,8 +555,9 @@ chance" and what a degenerate classifier deserves.
 
 **Guards against over-claiming**, all three of them:
 
-- **No recommendation below 30 labelled readings.** The panel says how many more
-  are needed instead.
+- **No recommendation below 30 labelled readings, or with fewer than 5 of either
+  kind** (judged correct, judged misread). The panel says what is missing
+  instead. The second condition was added on 14 October (§8.22).
 - **Plateau reporting.** Every threshold within 0.01 MCC of the peak is reported
   as a span. A wide flat region means the optimum is weakly identified and the
   single "best" value must not be quoted alone.
@@ -1933,6 +1935,43 @@ checked against the registry. It dropped the lockfile's `@emnapi/*` entries,
 which only the WebAssembly fallbacks of Tailwind, sharp and the resolver use;
 they are never installed on Windows or on Vercel's Linux.
 
+### 8.22 A recommendation needs both kinds of reading, 14 October
+
+The calibration page reported its first fit: 37 reviewed real-word readings, a
+best-fitting threshold of **0.50**, a bootstrap interval of 0.50–0.50, and "the
+optimum is weakly identified". Every one of the 37 had been judged read
+correctly, all by one account named *Calibration* on that day. With no
+misreading in the sample, the right-hand column of every confusion matrix was
+empty, MCC was 0.00 at all 51 thresholds, and the "best" was simply the first
+one checked. The interval looked precise for the same reason: every bootstrap
+resample tied too. At 0.50, *bata* read as "bola" would be accepted.
+
+Two flaws, both fixed in `src/lib/calibration.ts`:
+
+- **One kind of reading cannot place a line between two.** A recommendation now
+  needs at least `MIN_PER_CLASS = 5` readings judged correct and 5 judged
+  misread, as well as `MIN_SAMPLE = 30` in all. Short of that, the page says
+  which kind is missing. Above 30, it keeps the percentage of agreement at the
+  threshold in force on screen with its matrix, because that figure is
+  Objective 2's and does not depend on fitting anything.
+- **Ties went to the most lenient threshold.** The matrix changes only where the
+  line crosses a reading's similarity, so long runs of thresholds tie, and
+  taking the first of a run always proposed the lowest value the data could not
+  rule out. Ties now go to the threshold in force, or to the tied value nearest
+  it (the stricter if two are equally near). The best by MCC, the best by
+  Youden's J, and every bootstrap resample use the same rule. The plateau still
+  reports the whole tied range. In the calibration suite's end-to-end case (ten
+  "buhay" readings heard as correct), the recommendation moves from 0.50 to
+  0.80, the smallest change that accepts them.
+
+On the live sample the page now recommends nothing. It shows 83.8% agreement
+at 0.95, with six readings the specialist heard as correct but the system
+rejected: four at similarity 0.80 (*lamok* "lamor", *sulat* "sulaq", *kamot*
+"kamut", *takot* "takut") and two short words not matched exactly (*abo*
+"aboh", *buo* "buko"). `calibration:check` gained seven checks (33 in all), and
+`calibration-audit` §4 now mirrors the rule and leaves demo learners out of its
+count, as the page does.
+
 ---
 
 ## 9. Verification
@@ -2331,8 +2370,9 @@ The full protocol is `docs/data-guide.md` §3. In short:
   (`L1`, `l1@participant.lexora`) — never their names, never the demo accounts.
 - Pair a **listening activity** with Read aloud in every session: the
   skill-progression map needs both before a child moves up.
-- Review roughly 30 readings **blind**, to reach `MIN_SAMPLE` for the
-  calibration; refine the threshold once, when validation ends.
+- Review roughly 30 readings **blind**, at least 5 of them misread, to reach
+  `MIN_SAMPLE` and `MIN_PER_CLASS` for the calibration; refine the threshold
+  once, when validation ends.
 - Near the end of testing, the specialists complete instrument 06 Parts B and C
   (Part C blind).
 - Check each device at `/diagnostics` before the first session — Firefox

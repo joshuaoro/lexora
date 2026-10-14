@@ -221,6 +221,19 @@ export const SWEEP_STEP = 0.01;
  */
 export const MIN_SAMPLE = 30;
 
+/**
+ * And at least this many of each kind: readings the specialist judged correct,
+ * and readings they judged misread.
+ *
+ * A threshold is the line between the two, so a sample of only one kind holds
+ * no information about where it goes. The first real sample showed what
+ * happens without this: thirty-seven readings, every one judged correct, so MCC
+ * was zero at every threshold and the "best" was simply the first one checked,
+ * 0.50, with a bootstrap interval of 0.50–0.50 that looked precise and meant
+ * nothing. At 0.50, "bola" would pass for *bata*.
+ */
+export const MIN_PER_CLASS = 5;
+
 /** How close to peak MCC still counts as "as good as the best". */
 const PLATEAU_EPSILON = 0.01;
 
@@ -243,6 +256,8 @@ export type Calibration = {
   /** 95% bootstrap interval for the MCC-optimal threshold. */
   interval: { low: number; high: number } | null;
   sampleSize: number;
+  /** How the specialists judged the real-word readings: the two classes the threshold separates. */
+  classes: { correct: number; misread: number };
   /** Reviewed probe readings, reported apart — never used to pick the point. */
   pseudoSampleSize: number;
   pseudo: ThresholdMetrics | null;
@@ -283,8 +298,31 @@ function sweep(replayed: Replayed[], labels: boolean[]): ThresholdMetrics[] {
   return out;
 }
 
-function argmax(curve: ThresholdMetrics[], of: (m: ThresholdMetrics) => number) {
-  return curve.reduce((best, m) => (of(m) > of(best) ? m : best), curve[0]);
+/**
+ * The threshold with the highest value of `of`, ties going to the one nearest
+ * the threshold in force (and, equally near, to the stricter).
+ *
+ * Ties are common, not an edge case: the confusion matrix changes only where
+ * the line crosses a reading's similarity, so long runs of thresholds score
+ * identically. Taking the first of a run, as this once did, always proposed the
+ * lowest and most lenient value the data could not rule out. Preferring the
+ * setting in force means a change is proposed only when the evidence favours
+ * one, and then the smallest change it supports.
+ */
+function argmax(
+  curve: ThresholdMetrics[],
+  of: (m: ThresholdMetrics) => number,
+  current: number
+): ThresholdMetrics {
+  const top = Math.max(...curve.map(of));
+  const tied = curve.filter((m) => of(m) >= top - 1e-12);
+  return tied.reduce((best, m) => {
+    const d = Math.abs(m.threshold - current);
+    const bestD = Math.abs(best.threshold - current);
+    if (d < bestD - 1e-9) return m;
+    if (Math.abs(d - bestD) <= 1e-9 && m.threshold > best.threshold) return m;
+    return best;
+  });
 }
 
 /**
@@ -297,7 +335,8 @@ function argmax(curve: ThresholdMetrics[], of: (m: ThresholdMetrics) => number) 
  */
 function bootstrapInterval(
   replayed: Replayed[],
-  labels: boolean[]
+  labels: boolean[],
+  current: number
 ): { low: number; high: number } | null {
   const n = replayed.length;
   if (n === 0) return null;
@@ -311,7 +350,7 @@ function bootstrapInterval(
       rs[i] = replayed[j];
       ls[i] = labels[j];
     }
-    peaks.push(argmax(sweep(rs, ls), (m) => m.mcc).threshold);
+    peaks.push(argmax(sweep(rs, ls), (m) => m.mcc, current).threshold);
   }
 
   peaks.sort((a, b) => a - b);
@@ -338,7 +377,12 @@ export function calibrate(
     curve.find((m) => m.threshold === currentRounded) ??
     metricsFor(confusionAt(replayed, labels, currentThreshold), currentRounded);
 
-  const enoughData = real.length >= MIN_SAMPLE;
+  const classes = {
+    correct: labels.filter(Boolean).length,
+    misread: labels.filter((l) => !l).length,
+  };
+  const enoughData =
+    real.length >= MIN_SAMPLE && classes.correct >= MIN_PER_CLASS && classes.misread >= MIN_PER_CLASS;
 
   let bestByMcc: ThresholdMetrics | null = null;
   let bestByYouden: ThresholdMetrics | null = null;
@@ -346,13 +390,13 @@ export function calibrate(
   let interval: { low: number; high: number } | null = null;
 
   if (enoughData) {
-    bestByMcc = argmax(curve, (m) => m.mcc);
-    bestByYouden = argmax(curve, (m) => m.youden);
+    bestByMcc = argmax(curve, (m) => m.mcc, currentRounded);
+    bestByYouden = argmax(curve, (m) => m.youden, currentRounded);
 
     const near = curve.filter((m) => m.mcc >= bestByMcc!.mcc - PLATEAU_EPSILON);
     plateau = { from: near[0].threshold, to: near[near.length - 1].threshold };
 
-    interval = bootstrapInterval(replayed, labels);
+    interval = bootstrapInterval(replayed, labels, currentRounded);
   }
 
   // Probe items are measured but never allowed to move the operating point:
@@ -390,6 +434,7 @@ export function calibrate(
     plateau,
     interval,
     sampleSize: real.length,
+    classes,
     pseudoSampleSize: pseudoReadings.length,
     pseudo,
     enoughData,

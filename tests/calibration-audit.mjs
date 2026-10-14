@@ -41,7 +41,7 @@ const arithmeticOk = await new Promise((resolve) => {
 check(
   "κ, MCC and the threshold replay match hand-computed values",
   arithmeticOk,
-  arithmeticOk ? "20 checks" : "run `npm run calibration:check` to see which failed"
+  arithmeticOk ? "33 checks" : "run `npm run calibration:check` to see which failed"
 );
 
 /* ── 2. the page ───────────────────────────────────────────────────────── */
@@ -178,26 +178,52 @@ check("the threshold in force is marked", marked.length === 1, marked.map((r) =>
 /* ── 4. what it reports depends honestly on how much data there is ─────── */
 section("[4] the sample-size guard");
 
-const reviewed = await one(
-  `SELECT COUNT(*)::int AS n
+/**
+ * The same sample the page fits: first readings of real words, scored, demo
+ * learners left out. The specialist's own verdict is the stored agreement
+ * applied to the system's (`agrees = correct` means "read correctly").
+ *
+ * MIN_SAMPLE = 30 and MIN_PER_CLASS = 5 in src/lib/calibration.ts. A fit needs
+ * both: thirty readings that were all judged correct once produced a "best"
+ * threshold of 0.50, because with one kind of reading every threshold ties.
+ */
+const sample = await one(
+  `SELECT COUNT(*)::int AS n,
+          COUNT(*) FILTER (WHERE r.agrees = a.correct)::int AS correct,
+          COUNT(*) FILTER (WHERE r.agrees <> a.correct)::int AS misread
      FROM "Attempt" a
      JOIN "AttemptReview" r ON r."attemptId" = a.id
+     JOIN "LearnerProfile" lp ON lp.id = a."learnerId"
      LEFT JOIN "Word" w ON w.id = a."wordId"
     WHERE a."isRetry" = false
       AND a."activityType" IN ('READ_ALOUD','PRACTICE')
-      AND COALESCE(w."isPseudo", false) = false`
+      AND COALESCE(w."isPseudo", false) = false
+      AND NOT lp."isDemo"`
 );
 const hasFit = rows.some((r) => r.marker.includes("best_mcc"));
+const sampleNote = `n=${sample.n}, ${sample.correct} correct, ${sample.misread} misread`;
 
-if (reviewed.n >= 30) {
-  check("with enough reviewed readings, an operating point is recommended", hasFit, `n=${reviewed.n}`);
+if (sample.n >= 30 && sample.correct >= 5 && sample.misread >= 5) {
+  check("with enough of both kinds of reading, an operating point is recommended", hasFit, sampleNote);
   check(
     "and the page reports the fitted point rather than a bare number",
     /Best-fitting threshold/i.test(html),
     "shown"
   );
+} else if (sample.n >= 30) {
+  check("with enough readings but too few of one kind, no operating point is recommended", !hasFit, sampleNote);
+  check(
+    "and the page says which kind is missing",
+    /Not enough of both kinds of reading/i.test(html) && !/Best-fitting threshold/i.test(html),
+    "shortfall shown"
+  );
+  check(
+    "while still reporting the agreement at the threshold in force",
+    /Percentage of agreement now/.test(html),
+    "Objective 2 figure kept"
+  );
 } else {
-  check("below the minimum, no operating point is recommended", !hasFit, `n=${reviewed.n}`);
+  check("below the minimum, no operating point is recommended", !hasFit, sampleNote);
   check(
     "and the page says how many more are needed",
     /Not enough reviewed readings/i.test(html),
@@ -220,7 +246,9 @@ section("[5] end to end: a too-strict threshold is found in the data");
  * At the 0.95 in force those ten are scored as misreadings. The calibration
  * should see that and put the optimum at or below 0.80. Asserted directionally
  * rather than on an exact figure, because the cohort already holds a handful of
- * real reviewed readings and the point is the finding, not a float.
+ * real reviewed readings and the point is the finding, not a float. (Every
+ * threshold from 0.50 to 0.80 ties here; the tie goes to the one nearest the
+ * setting in force, so the recommendation is 0.80, not 0.50.)
  */
 const cal = await createTestLearner("calibfit");
 

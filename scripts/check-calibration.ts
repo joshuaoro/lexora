@@ -16,6 +16,7 @@ import {
   calibrate,
   kappa,
   mcc,
+  MIN_PER_CLASS,
   MIN_SAMPLE,
   type LabelledReading,
 } from "../src/lib/calibration";
@@ -123,6 +124,77 @@ check(
   "the plateau spans the whole sweep, because no threshold is better than another",
   clean.plateau?.from === 0.5 && clean.plateau?.to === 1,
   `${clean.plateau?.from}–${clean.plateau?.to}`
+);
+
+// Enough readings, but all of one kind. MCC is 0 at every threshold, so no
+// threshold is better than another, and the first real sample (37 readings,
+// every one judged correct) was shown a "best" of 0.50 with an interval of
+// 0.50–0.50. A threshold is the line between two kinds of reading; with one
+// kind there is nothing to fit.
+const allCorrect = calibrate(
+  Array.from({ length: 40 }, (_, i) => reading("bahay", i % 4 ? "bahay" : "buhay", true)),
+  0.95
+);
+check(
+  "no recommendation when every reading was judged correct",
+  !allCorrect.enoughData && allCorrect.bestByMcc === null && allCorrect.interval === null,
+  `n=${allCorrect.sampleSize}, correct ${allCorrect.classes.correct}, misread ${allCorrect.classes.misread}`
+);
+check(
+  "but the agreement at the threshold in force is still computed",
+  close(allCorrect.current.accuracy, 30 / 40),
+  `${(allCorrect.current.accuracy * 100).toFixed(1)}%`
+);
+const fewMisread = calibrate(
+  [
+    ...Array.from({ length: 30 }, () => reading("bahay", "bahay", true)),
+    ...Array.from({ length: MIN_PER_CLASS - 1 }, () => reading("bahay", "zzzzz", false)),
+  ],
+  0.95
+);
+check(
+  `nor with fewer than ${MIN_PER_CLASS} misreadings`,
+  !fewMisread.enoughData && fewMisread.classes.misread === MIN_PER_CLASS - 1
+);
+
+/* ── 3b. ties go to the threshold in force ─────────────────────────────── */
+console.log("\n[3b] ties go to the setting in force, then to the smallest change");
+
+// The separable sample ties everywhere, so the evidence favours no change.
+check(
+  "a tie that includes the threshold in force keeps it",
+  calibrate(separable, 0.95).bestByMcc?.threshold === 0.95 &&
+    calibrate(separable, 0.85).bestByMcc?.threshold === 0.85,
+  `${calibrate(separable, 0.95).bestByMcc?.threshold} at 0.95, ${calibrate(separable, 0.85).bestByMcc?.threshold} at 0.85`
+);
+check(
+  "and the bootstrap interval collapses onto it, not onto 0.50",
+  calibrate(separable, 0.95).interval?.low === 0.95 && calibrate(separable, 0.95).interval?.high === 0.95,
+  `${calibrate(separable, 0.95).interval?.low}–${calibrate(separable, 0.95).interval?.high}`
+);
+
+// Twenty exact readings, ten total misses, and ten "buhay" for *bahay* that the
+// specialist heard as correct (similarity 0.80). Every threshold from 0.50 to
+// 0.80 accepts the ten and scores the same; 0.81 and above rejects them. The
+// first rule proposed 0.50, the most lenient value the data could not rule out.
+// The smallest change that accepts them is 0.80.
+const tooStrict = calibrate(
+  [
+    ...Array.from({ length: 20 }, () => reading("bahay", "bahay", true)),
+    ...Array.from({ length: 10 }, () => reading("bahay", "zzzzz", false)),
+    ...Array.from({ length: 10 }, () => reading("bahay", "buhay", true)),
+  ],
+  0.95
+);
+check(
+  "a tie away from the threshold in force goes to the nearest tied value",
+  tooStrict.bestByMcc?.threshold === 0.8 && tooStrict.bestByYouden?.threshold === 0.8,
+  `MCC best ${tooStrict.bestByMcc?.threshold}, Youden best ${tooStrict.bestByYouden?.threshold}`
+);
+check(
+  "while the plateau still reports the whole tied range",
+  tooStrict.plateau?.from === 0.5 && tooStrict.plateau?.to === 0.8,
+  `${tooStrict.plateau?.from}–${tooStrict.plateau?.to}`
 );
 
 /* ── 4. probe non-words are measured but never fitted to ───────────────── */
