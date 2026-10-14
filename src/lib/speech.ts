@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { prisma } from "./db";
-import { synthesizeSpeech } from "./word-tts";
+import { synthesizeSpeech, type SynthesisOptions } from "./word-tts";
 
 /**
  * Neural speech for interface text, synthesized once and reused.
@@ -51,7 +51,9 @@ export async function getOrCreateSpeech(
   text: string,
   lang: string,
   /** Who is asking, for the synthesis budget. Omitted by the warm-up script. */
-  quotaKey?: string
+  quotaKey?: string,
+  /** How long synthesis may retry; the warm-up script waits out throttling. */
+  synthesis?: SynthesisOptions
 ): Promise<{ audio: string; generated: boolean } | "quota" | null> {
   const trimmed = text.trim().slice(0, MAX_SPEECH_CHARS);
   if (!trimmed) return null;
@@ -81,7 +83,7 @@ export async function getOrCreateSpeech(
 
   let audio: string;
   try {
-    audio = await synthesizeSpeech(trimmed, SPEECH_VOICE, SPEECH_RATE);
+    audio = await synthesizeSpeech(trimmed, SPEECH_VOICE, SPEECH_RATE, synthesis);
   } catch (err) {
     console.error("Instruction speech synthesis failed:", err);
     return null;

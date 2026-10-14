@@ -40,7 +40,6 @@
     "dotenv": "^17.4.2",
     "jose": "^6.2.7",
     "lucide-react": "^1.28.0",
-    "msedge-tts": "^2.0.7",
     "next": "16.2.12",
     "pg": "^8.22.0",
     "prisma": "^7.9.1",
@@ -69,7 +68,6 @@
     "prisma": true,
     "esbuild": true,
     "sharp": true,
-    "unrs-resolver": true,
-    "msedge-tts": false
+    "unrs-resolver": true
   }
 }

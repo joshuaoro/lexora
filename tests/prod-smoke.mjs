@@ -61,7 +61,7 @@ check("specialist can add a word", created.status === 201, `HTTP ${created.statu
 if (created.body?.id) {
   const gen = await api(`/api/words/${created.body.id}/audio/generate`, { cookie: specialist, method: "POST" });
   const row = await one(`SELECT "audioWord" IS NOT NULL AS has FROM "Word" WHERE id = $1`, [created.body.id]);
-  check("msedge-tts works from the host", gen.ok && row?.has === true, gen.ok ? "generated" : `HTTP ${gen.status}`);
+  check("Azure AI Speech works from the host", gen.ok && row?.has === true, gen.ok ? "generated" : `HTTP ${gen.status}`);
 
   const served = await api(`/api/word-audio/${created.body.id}?kind=word`, { cookie: learner.cookie });
   check("the new clip is served back", served.ok, `HTTP ${served.status} ${served.headers.get("content-type")}`);

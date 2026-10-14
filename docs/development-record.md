@@ -214,7 +214,7 @@ fine-tune that could not be defended.
 | Database | Supabase Postgres via Prisma 7 + `@prisma/adapter-pg` | Managed Postgres on a free tier. **Supabase Auth, Storage and RLS are deliberately unused** — LEXORA keeps its own JWT-cookie auth so every access check is in this repository and covered by the audit suite, rather than split between application code and database policy. |
 | Auth | bcryptjs + JWT session cookie (jose) | httpOnly cookie; no client-readable session state. |
 | ASR | Groq-hosted `whisper-large-v3-turbo`, language `tl` | Pre-trained, OpenAI-compatible API. Web Speech API as automatic fallback. |
-| TTS | `fil-PH-BlessicaNeural` via `msedge-tts` | Synthesized server-side, cached in the database. |
+| TTS | `fil-PH-BlessicaNeural` via Azure AI Speech (REST, keyed) | Synthesized server-side, cached in the database. Was `msedge-tts` until 14 October (§8.21). |
 | Validation | Zod 4 | Every route handler validates its body. |
 | Charts | Recharts | |
 | Tests | `playwright-core` (msedge channel), axe-core | No browser download needed on Windows. |
@@ -1893,6 +1893,45 @@ recording, leaves one without, and checks the buttons by what they save:
 disagreement, *Misread* as an agreement, both blind; the unrecorded row offers no
 score; and nothing on the page asks whether the specialist agrees with the
 system.
+
+### 8.21 Speech moved to Azure AI Speech, 14 October
+
+The same day's production run failed two integrity checks: a phrase not yet
+cached came back 503. `msedge-tts` drives the Edge browser's Read Aloud
+service, which is unofficial and unkeyed, and Microsoft had begun refusing it
+with HTTP 403. The refusal reproduced from a workstation as well as from Vercel,
+for the installed 2.0.7 and for 2.0.9. Clips already stored kept playing.
+Anything new, such as a word a specialist adds, its syllables, or a new
+instruction, fell back to the browser's own voice, the English-sounding one
+the team had rejected (§8.18).
+
+A 2.1.0 published the day before did work. It moved to a new Microsoft
+endpoint, and its diff was reviewed. But the research team had an Azure
+account, and Azure AI Speech is the supported service behind the same voices.
+`src/lib/word-tts.ts` now makes one keyed HTTPS request per clip
+(`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, server-only), and `msedge-tts` and
+its 26 transitive packages are gone. So are its `allowScripts` entry and its
+`serverExternalPackages` line.
+
+- **Unchanged output.** Same voice, the same rates (-10% words and
+  instructions, -25% syllable clips) and the same 24 kHz 48 kbit/s MP3. The
+  cache keys did not move, so no stored clip is regenerated. The stored *bahay*
+  and a fresh Azure one differ by a tenth of a second.
+- **Throttling.** The free F0 tier limits requests per minute. A call retries
+  a 429 or a 5xx, waiting `Retry-After` or backing off. Routes give up after
+  about 8 seconds and let the browser's voice stand in. The bulk scripts allow
+  ten minutes per clip, so a full run of the bank waits instead of leaving
+  words without audio.
+- **Fails fast when retrying cannot help.** A bad key (401) or bad SSML (400)
+  is not retried. Text is XML-escaped before it goes into the SSML.
+- **Manuscript.** Table 6's text-to-speech row names Azure AI Speech
+  (proposal-alignment §6), an officially supported service.
+
+Removing the package also let npm re-hoist `picomatch`, a development-only
+file matcher: 4.0.5 became 4.0.7, published in August, with its integrity hash
+checked against the registry. It dropped the lockfile's `@emnapi/*` entries,
+which only the WebAssembly fallbacks of Tailwind, sharp and the resolver use;
+they are never installed on Windows or on Vercel's Linux.
 
 ---
 

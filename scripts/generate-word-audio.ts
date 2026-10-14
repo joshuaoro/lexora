@@ -13,13 +13,15 @@
  * Specialist recordings live in separate columns and are never touched here.
  * Individual words can also be (re)generated from the Word bank UI.
  *
- * If msedge-tts ever breaks, the Python `edge-tts` CLI produces identical
- * output: edge-tts --voice fil-PH-BlessicaNeural --text "bahay" --write-media bahay.mp3
+ * Synthesis is Azure AI Speech (AZURE_SPEECH_KEY, AZURE_SPEECH_REGION in .env).
+ * The free tier throttles requests per minute, so each clip may wait and retry
+ * for up to PATIENCE_MS; a full run of the bank takes a while, and that is
+ * expected.
  */
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { createSynthesizer, TTS_VOICE } from "../src/lib/word-tts";
+import { synthesizeWord, TTS_VOICE } from "../src/lib/word-tts";
 import { databaseSsl } from "../src/lib/db-ssl";
 
 // Long-running script: use the direct (session) connection when available.
@@ -28,6 +30,9 @@ if (!connectionString) throw new Error("Set DATABASE_URL (and ideally DIRECT_URL
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString, max: 2, ssl: databaseSsl(connectionString) }),
 });
+
+/** Ten minutes of retrying per clip: room for the free tier's throttling. */
+const PATIENCE_MS = 10 * 60 * 1000;
 
 async function main() {
   const force = process.argv.includes("--force");
@@ -48,13 +53,14 @@ async function main() {
   }
 
   console.log(`Generating audio for ${todo.length} of ${words.length} words (voice: ${TTS_VOICE})…`);
-  const synth = await createSynthesizer();
 
   let done = 0;
   let failed = 0;
   for (const word of todo) {
     try {
-      const { audioWord, audioSyll } = await synth(word.text, word.syllables);
+      const { audioWord, audioSyll } = await synthesizeWord(word.text, word.syllables, {
+        patienceMs: PATIENCE_MS,
+      });
       await prisma.word.update({
         where: { id: word.id },
         data: { audioWord, audioSyll, audioVersion: { increment: 1 } },

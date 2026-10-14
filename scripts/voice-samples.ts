@@ -7,9 +7,10 @@
  * Writes .mp3 files to voice-samples/ (gitignored). "Comforting and gentle" is
  * not something a voice list tells you.
  */
-import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
+import "dotenv/config";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { synthesizeAudio } from "../src/lib/word-tts";
 
 const OUT = "voice-samples";
 
@@ -30,18 +31,9 @@ const VOICES = [
 /** Words are spoken at -10%; instructions are longer, so try a couple of rates. */
 const RATES = ["-10%", "-20%"];
 
-async function speak(voice: string, text: string, rate: string): Promise<Buffer> {
-  const tts = new MsEdgeTTS();
-  await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-  const { audioStream } = await tts.toStream(text, { rate });
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    audioStream.on("data", (c: Buffer) => chunks.push(c));
-    audioStream.on("end", () => resolve());
-    audioStream.on("error", reject);
-  });
-  return Buffer.concat(chunks);
-}
+/** Azure AI Speech, as the app uses it; a minute of patience for throttling. */
+const speak = (voice: string, text: string, rate: string) =>
+  synthesizeAudio(text, voice, rate, { patienceMs: 60_000 });
 
 async function main() {
   await mkdir(OUT, { recursive: true });

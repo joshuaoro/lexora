@@ -228,7 +228,7 @@ recognizer. **Suggested browser row:** *Google Chrome, Microsoft Edge, or Safari
 | Back-end | Next.js route handlers on Node.js; input validation (Zod); signed session tokens; bcrypt password hashing |
 | Database | PostgreSQL 17 (Supabase), accessed through the Prisma ORM |
 | Speech recognition | Pre-trained Whisper large-v3-turbo, hosted by Groq, through an API, with Tagalog as the language; no custom model is trained |
-| Text-to-speech | Microsoft neural Filipino voice (fil-PH-BlessicaNeural), clips stored for reuse; browser speech synthesis as a fallback; synchronized highlighting and adjustable rate |
+| Text-to-speech | Microsoft Azure AI Speech, neural Filipino voice (fil-PH-BlessicaNeural); clips synthesized once and stored for reuse; browser speech synthesis as a fallback; synchronized highlighting and adjustable rate |
 | Development tools | Visual Studio Code; Git and GitHub for version control |
 | Testing tools | Ten automated test suites driving a headless browser (authorization, logic, interface, navigation, sessions, reporting, decoding, calibration, data integrity, and WCAG 2.1 AA accessibility), performance budgets measured on the study's minimum end-user specification, and manual and user acceptance testing |
 | Documentation | Word processing and diagramming tools; the repository's own documentation |

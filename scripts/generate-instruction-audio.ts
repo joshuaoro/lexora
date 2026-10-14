@@ -7,7 +7,7 @@
  * Every fixed line the speaker button can say, in both languages, and every
  * syllable of every real word in the bank (the exercises play a word's parts
  * one clip at a time), synthesized ahead of time. Without this the first child to press the speaker on study day
- * waits a second or two for a WebSocket round trip; with it, nothing is cold.
+ * waits a second or two for Azure AI Speech; with it, nothing is cold.
  *
  * Lines are read from the dictionaries rather than copied here, so a reworded
  * instruction is picked up the next time this runs instead of quietly serving
@@ -86,8 +86,9 @@ async function main() {
         await prisma.speechClip.deleteMany({ where: { hash: speechHash(text, lang) } });
       }
       // No quota key: this is the operator warming the cache, not a visitor
-      // spending their budget, so the per-account ceiling does not apply.
-      const clip = await getOrCreateSpeech(text, lang);
+      // spending their budget, so the per-account ceiling does not apply. Ten
+      // minutes of patience per phrase, to wait out the free tier's throttling.
+      const clip = await getOrCreateSpeech(text, lang, undefined, { patienceMs: 10 * 60 * 1000 });
       const label = text.length > 58 ? text.slice(0, 55) + "…" : text;
 
       if (clip === "quota") {

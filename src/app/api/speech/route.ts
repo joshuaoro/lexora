@@ -13,8 +13,9 @@ import { getOrCreateSpeech, MAX_SPEECH_CHARS } from "@/lib/speech";
  * instruction never leaves the device. The database caches the synthesis, so
  * the first child to hear a phrase pays for it and nobody else does.
  *
- * Synthesis is a WebSocket round trip, so the first call for a new phrase is
- * slow enough to need more than the default budget.
+ * Synthesis is a round trip to Azure AI Speech, and a throttled one retries
+ * for a few seconds, so the first call for a new phrase can need more than the
+ * default budget.
  */
 export const maxDuration = 30;
 

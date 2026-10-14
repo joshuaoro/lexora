@@ -27,6 +27,8 @@ Verified on Windows 11, PowerShell 5.1 + Git Bash, Node v24.11.1, npm 11.6.2,
   (session pooler, 5432). Without them nothing runs; there is no offline mode.
 - `GROQ_API_KEY` is optional — scoring falls back to the browser recognizer, and
   the driver's flows work without it.
+- `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` are optional too — clips already in
+  the database still play, and anything new falls back to the browser's voice.
 
 ```bash
 npm install

@@ -313,8 +313,13 @@ From **Word bank**, a specialist can:
 - **🎤 Record** — record the word in their own voice, then **preview it and choose Use this / Redo / discard** before it goes live. Saved recordings are stored separately from the generated clip, so **🗑 Remove** restores the synthesized voice instantly without re-running any script.
 - **✨ Generate** — synthesize Filipino audio for a word that has none. Words added through **Add word** get their audio generated automatically.
 
-*If `msedge-tts` ever breaks, the Python `edge-tts` CLI produces identical output:*
-`edge-tts --voice fil-PH-BlessicaNeural --text "bahay" --write-media bahay.mp3`
+**Where the voice comes from:** Azure AI Speech, with `AZURE_SPEECH_KEY` and
+`AZURE_SPEECH_REGION` set (`.env` locally, Environment Variables on Vercel). The free F0
+tier throttles requests per minute; the routes retry for a few seconds and then let the
+browser's voice stand in, and the bulk scripts wait it out. Until 14 October synthesis went
+through `msedge-tts`, which drives the Edge browser's unofficial Read Aloud service; that
+week Microsoft began refusing it (HTTP 403), so it was replaced. The voice, the rates and
+the format did not change, so every clip already stored is still used.
 
 ### UI language toggle (EN / FIL)
 Every learner screen, every specialist screen (word bank and calibration included), the homepage and the auth pages can switch between **English** and **Filipino (Taglish)** with the EN/FIL toggle (sidebar on desktop, top bar on mobile). The choice is stored in a cookie; reading content is always Filipino regardless of UI language. Dictionary: `src/lib/i18n.ts`. Two pages stay English: the device check (`/diagnostics`), which the researchers run, and the privacy notice — the consent form carries the same commitments in both languages.
@@ -438,7 +443,7 @@ attempts export.
 | Database | Supabase Postgres via Prisma 7 (`@prisma/adapter-pg`); transaction pooler at runtime, session pooler for migrations |
 | Auth | bcryptjs password hashing + JWT session cookie (jose) |
 | Speech recognition | **`whisper-large-v3-turbo`** (pre-trained, via Groq's OpenAI-compatible API, language `tl`), with the Web Speech API as automatic fallback. No custom model is trained — consistent with the study delimitation |
-| Text-to-speech | `fil-PH-BlessicaNeural` clips for both words (whole word + syllables) and interface instructions, synthesized server-side and cached in the database; Web Speech `speechSynthesis` only as an offline fallback. Word-by-word playback with synchronized highlighting and adjustable rate |
+| Text-to-speech | `fil-PH-BlessicaNeural` clips from **Azure AI Speech** for both words (whole word + syllables) and interface instructions, synthesized server-side and cached in the database; Web Speech `speechSynthesis` only as an offline fallback. Word-by-word playback with synchronized highlighting and adjustable rate |
 | Fonts | Nunito (UI); reader options: Lexend, Atkinson Hyperlegible, Comic Neue |
 
 ## Getting started
@@ -447,7 +452,7 @@ Requirements: **Node.js 20+**, a **Supabase** project (free tier), a working **m
 
 ```bash
 npm install
-cp .env.example .env       # fill in the Supabase URLs, AUTH_SECRET, SPECIALIST_CODE, GROQ_API_KEY
+cp .env.example .env       # fill in the Supabase URLs, AUTH_SECRET, SPECIALIST_CODE, GROQ_API_KEY, AZURE_SPEECH_KEY/REGION
 npx prisma migrate deploy  # creates the schema
 npx prisma db seed         # word bank + demo accounts + sample history
 npm run audio:generate     # Filipino pronunciation clips for all 115 words (~2 min)
@@ -517,8 +522,8 @@ Data API on or off. Present the anon key instead, for a table
 
 1. Push the repository to GitHub, then import it at **vercel.com/new**.
 2. Set the environment variables (Project → Settings → Environment Variables):
-   `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SPECIALIST_CODE`, `GROQ_API_KEY`, and
-   `ENROLMENT_CODE` before anyone is enrolled. Use a **fresh** `AUTH_SECRET` and **private**
+   `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SPECIALIST_CODE`, `GROQ_API_KEY`,
+   `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, and `ENROLMENT_CODE` before anyone is enrolled. Use a **fresh** `AUTH_SECRET` and **private**
    codes — not the local ones. Without `ENROLMENT_CODE`, anyone with the URL can create a
    learner account that would sit in the cohort figures beside real participants.
 3. Deploy. Vercel runs `vercel-build`, which regenerates the Prisma client, applies
