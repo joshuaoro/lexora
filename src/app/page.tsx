@@ -20,20 +20,15 @@ import LangToggle from "@/components/LangToggle";
 import SyllableWord from "@/components/SyllableWord";
 
 /**
- * Colour carries meaning here rather than cycling for variety: the three
- * strands of the app — what the learner sees, what they hear and say, and what
- * the specialist reads — each keep one hue across the page. `rule` is a stripe
- * along the top of the card, which groups the six at a glance without adding
- * headings that would only be more to read.
+ * One per feature card, in the order of `home.features`: seeing, hearing,
+ * speaking, sounds, then progress twice.
+ *
+ * All six are LEXORA's blue. They were once grouped by colour (blue for what
+ * the learner sees, peach for hearing and speaking, green for progress), but
+ * the research team found the mix distracting, and the icons and titles
+ * already tell the cards apart.
  */
-const FEATURE_ICONS = [
-  { icon: Eye, tone: "bg-primary-soft text-primary", rule: "bg-primary" }, // seeing
-  { icon: Volume2, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // hearing
-  { icon: Mic, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // speaking
-  { icon: Puzzle, tone: "bg-peach-soft text-peach-deep", rule: "bg-peach-deep" }, // sounds
-  { icon: ListChecks, tone: "bg-green-soft text-green", rule: "bg-green" }, // progress
-  { icon: LineChart, tone: "bg-green-soft text-green", rule: "bg-green" }, // progress
-];
+const FEATURE_ICONS = [Eye, Volume2, Mic, Puzzle, ListChecks, LineChart];
 
 export default async function HomePage() {
   const [session, lang] = await Promise.all([getSession(), getLang()]);
@@ -192,17 +187,15 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {t.features.map((f, i) => {
-              const { icon: Icon, tone, rule } = FEATURE_ICONS[i];
+              const Icon = FEATURE_ICONS[i];
               return (
                 <div
                   key={f.title}
                   className="group overflow-hidden rounded-3xl border border-line bg-cream/70 transition hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div className={`h-1.5 w-full ${rule}`} />
+                  <div className="h-1.5 w-full bg-primary" />
                   <div className="p-6">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl transition group-hover:scale-105 ${tone}`}
-                    >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition group-hover:scale-105">
                       <Icon size={23} strokeWidth={2.2} />
                     </div>
                     <h3 className="mt-4 text-lg font-extrabold text-ink">{f.title}</h3>
