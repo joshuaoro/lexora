@@ -612,7 +612,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (476 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (477 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure, RLS  (67)
 npm run audit:logic       # scoring, skill-progression map, mastery, review  (26)
@@ -621,7 +621,7 @@ npm run audit:links       # every route reachable from the navigation  (56, +1 p
 npm run audit:stale       # a learner or specialist erased mid-session  (27)
 npm run audit:reporting   # decoding time, calibration, retries, phase, retention  (43)
 npm run audit:decoding    # probe, latency guard, stress, exports, Filipino  (72)
-npm run audit:calibration # calibration, blind review, tags, demo, IEP, Filipino  (98)
+npm run audit:calibration # calibration, blind review, tags, demo, IEP, Filipino  (99)
 npm run audit:integrity   # language switch mid-exercise, partial progress  (38)
 npm run audit:a11y        # WCAG 2.1 AA, keyboard, reduced motion  (20)
 npm run audit:perf        # budgets on a throttled low-end device

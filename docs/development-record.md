@@ -51,7 +51,7 @@ Three companion documents:
 | **Code, total** | **172** | **25,194** |
 | `docs/` and README — documents and instruments | 15 | 7,007 |
 
-15 migrations, 10 automated audit suites, 476 assertions (as of 14 October 2026).
+15 migrations, 10 automated audit suites, 477 assertions (as of 14 October 2026).
 
 ---
 
@@ -1978,7 +1978,7 @@ count, as the page does.
 
 ### 9.1 The suites
 
-Ten suites, **476 checks** (14 October 2026). Run with `npm run audit [url]`.
+Ten suites, **477 checks** (14 October 2026). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
@@ -1989,7 +1989,7 @@ Ten suites, **476 checks** (14 October 2026). Run with `npm run audit [url]`.
 | `stale-session-audit` | 27 | A learner or specialist erased mid-session |
 | `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
 | `decoding-audit` | 72 | Probe walls, latency guard, stress caveat, exports, Filipino |
-| `calibration-audit` | 98 | Calibration arithmetic, agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
+| `calibration-audit` | 99 | Calibration arithmetic (§4 runs two or three checks, depending on whether the live sample can be fitted), agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
 | `a11y-audit` | 20 | WCAG 2.1 AA via axe-core (the Reader with syllables shown included), keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
