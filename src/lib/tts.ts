@@ -61,27 +61,27 @@ function playUiClip(
     // this the setting silently governs the words and not the sentences.
     // Clamped: below ~0.6 the browser's time-stretch is unintelligible.
     audio.playbackRate = Math.min(1.5, Math.max(0.6, rate));
-    currentAudio = audio;
     let settled = false;
     const done = () => {
       if (settled) return;
       settled = true;
-      if (currentAudio === audio) currentAudio = null;
+      release(audio);
       resolve();
+    };
+    // A cut settles the clip, so the AbortError a clip cut while still loading
+    // raises below finds it settled: the device's voice must not read out a
+    // line that something else has just silenced.
+    own(audio, done);
+    const fallBack = () => {
+      if (settled) return;
+      settled = true;
+      release(audio);
+      browserSpeak(trimmed, lang, rate).then(resolve);
     };
     audio.onended = done;
     audio.onplaying = () => onStart?.();
-    audio.onerror = () => {
-      if (settled) return;
-      settled = true;
-      if (currentAudio === audio) currentAudio = null;
-      browserSpeak(trimmed, lang, rate).then(resolve);
-    };
-    audio.play().catch(() => {
-      if (settled) return;
-      settled = true;
-      browserSpeak(trimmed, lang, rate).then(resolve);
-    });
+    audio.onerror = fallBack;
+    audio.play().catch(fallBack);
   });
 }
 
@@ -106,6 +106,24 @@ function browserSpeak(text: string, lang: "en" | "fil", rate: number): Promise<v
 let currentAudio: HTMLAudioElement | null = null;
 
 /**
+ * Settles the playing clip's promise. A paused <audio> fires neither `ended`
+ * nor `error`, so without this a cut clip never settled: whatever awaited it
+ * hung, and the model held the mic until its cap ran out.
+ */
+let settleCurrent: (() => void) | null = null;
+
+function own(audio: HTMLAudioElement, settle: () => void) {
+  currentAudio = audio;
+  settleCurrent = settle;
+}
+
+function release(audio: HTMLAudioElement) {
+  if (currentAudio !== audio) return;
+  currentAudio = null;
+  settleCurrent = null;
+}
+
+/**
  * Play a stored pronunciation clip. Used in preference to browser TTS for
  * word-bank words, because most devices have no Filipino voice installed and
  * would read Tagalog with English phonics.
@@ -121,11 +139,11 @@ function playMedia(url: string, rate: number): Promise<void> {
     const audio = new Audio(url);
     // Clamp: below ~0.6 the browser's time-stretch makes speech unintelligible.
     audio.playbackRate = Math.min(1.5, Math.max(0.6, rate));
-    currentAudio = audio;
     const done = () => {
-      if (currentAudio === audio) currentAudio = null;
+      release(audio);
       resolve();
     };
+    own(audio, done);
     audio.onended = done;
     audio.onerror = done;
     audio.play().catch(done);
@@ -296,21 +314,20 @@ export async function speakModel(
   await playUiClip(tail, lang, rate);
 }
 
-/** Stop the clip that is playing without ending a sequence it belongs to. */
+/** Stop the clip that is playing, and settle it, without ending a sequence it belongs to. */
 function cutCurrent() {
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
+  const audio = currentAudio;
+  const settle = settleCurrent;
+  currentAudio = null;
+  settleCurrent = null;
+  audio?.pause();
+  settle?.();
 }
 
 export function stopSpeaking() {
   generation += 1;
   if (ttsSupported()) window.speechSynthesis.cancel();
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
+  cutCurrent();
 }
 
 /**

@@ -237,6 +237,45 @@ export async function until(probe, { timeout = 30000, interval = 500 } = {}) {
   }
 }
 
+/**
+ * A page init script that watches the app's speech, for the checks on when it
+ * speaks. Every <audio> it plays is logged in `window.__audio` as
+ * { src (decoded), start, playing, end, cut } in performance.now() time; the
+ * ones sounding now are in `window.__active`; every line handed to the
+ * device's own voice is in `window.__spoken`. Passive: each call passes through.
+ */
+export const AUDIO_PROBE = `(() => {
+  window.__audio = [];
+  window.__spoken = [];
+  window.__active = new Set();
+  const P = HTMLMediaElement.prototype;
+  const play = P.play;
+  const pause = P.pause;
+  P.play = function () {
+    const e = { src: decodeURIComponent(this.src || ""), start: performance.now(), playing: null, end: null, cut: null };
+    window.__audio.push(e);
+    window.__active.add(this);
+    this.__probe = e;
+    this.addEventListener("playing", () => { if (e.playing === null) e.playing = performance.now(); });
+    this.addEventListener("ended", () => { e.end = performance.now(); window.__active.delete(this); }, { once: true });
+    this.addEventListener("error", () => window.__active.delete(this), { once: true });
+    return play.call(this);
+  };
+  P.pause = function () {
+    const e = this.__probe;
+    if (e && e.end === null && e.cut === null) e.cut = performance.now();
+    window.__active.delete(this);
+    return pause.call(this);
+  };
+  if (window.speechSynthesis) {
+    const speak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+    window.speechSynthesis.speak = (u) => {
+      window.__spoken.push(u.text);
+      return speak(u);
+    };
+  }
+})();`;
+
 /* ── fixtures ──────────────────────────────────────────────────────────── */
 
 /** Register a throwaway learner and return { email, cookie, learnerId }. */

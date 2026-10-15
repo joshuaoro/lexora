@@ -40,6 +40,7 @@ import {
   deleteTestLearner,
   cleanupTestAccounts,
   until,
+  AUDIO_PROBE,
 } from "./helpers.mjs";
 
 console.log(`Reporting audit against ${BASE}`);
@@ -345,6 +346,14 @@ async function main() {
   check("a missed word offers 'Your turn!'", missText.includes("Your turn!"), "");
 
   await sayIt.click();
+  // Final review, 16 October: "Hear it again" stayed live during the take, so
+  // a tap played the app's voice into the child's recording.
+  await upage.getByRole("button", { name: /Tap the mic again/ }).waitFor({ timeout: 15000 });
+  check(
+    "“Hear it again” is held while the re-read records",
+    await upage.getByRole("button", { name: /Hear it again/ }).first().isDisabled(),
+    ""
+  );
   // The take runs to its own timeout on a silent device, then is scored, so the
   // row appears well after the click. Poll for it rather than sleeping past it.
   const uiRows = await until(
@@ -372,6 +381,34 @@ async function main() {
 
   await uctx.close();
   await deleteTestLearner(ui.email);
+
+  section("[4c] pressing the microphone silences the app");
+
+  // Final review, 16 October: the mic did not stop the app's own speech, so the
+  // instruction spoken on Start, or a prompt, could be recorded into a reading.
+  const quiet = await createTestLearner("micquiet");
+  const qctx = await contextWithCookie(quiet.cookie, { permissions: ["microphone"] });
+  await qctx.addInitScript(AUDIO_PROBE);
+  const qpage = await qctx.newPage();
+  await qpage.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+  await qpage.getByRole("button", { name: /Start!/i }).click();
+  const mic = qpage.getByRole("button", { name: "Press and read the word aloud" });
+  await mic.waitFor({ timeout: 30000 });
+  // Start! speaks the instruction; the mic is pressed while it is speaking.
+  const speaking = await qpage
+    .waitForFunction(() => window.__active.size > 0, null, { timeout: 10000 })
+    .then(() => true)
+    .catch(() => false);
+  await mic.click();
+  await new Promise((r) => setTimeout(r, 400));
+  const sounding = await qpage.evaluate(() => window.__active.size);
+  check(
+    "pressing the microphone stops the app speaking",
+    speaking && sounding === 0,
+    speaking ? `${sounding} clip(s) still sounding` : "the instruction never started"
+  );
+  await qctx.close();
+  await deleteTestLearner(quiet.email);
 
   if (login.ok) {
     const specCookie = login.headers

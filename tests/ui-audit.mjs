@@ -9,7 +9,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE, api, passwordFor, check, section, report, one, query,
-  createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND,
+  createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND, AUDIO_PROBE,
 } from "./helpers.mjs";
 
 console.log(`UI audit against ${BASE}`);
@@ -214,6 +214,83 @@ section("[1c] Read aloud teaches after the reading");
   );
   await r.close();
 }
+{
+  // Final review, 16 October: a model cut while its first clip was still
+  // loading handed that phrase to the device's own voice, and the cut model
+  // then freed the mic while the new one was speaking. The opening phrase is
+  // held back 1.5 s here so "Hear it again" lands while it loads.
+  const r = await ctx.newPage();
+  watch(r, "learner:read-aloud-cut");
+  await r.addInitScript(AUDIO_PROBE);
+  const LEAD = /\/api\/speech\?.*text=This%20word%20is/;
+  await r.route(LEAD, async (route) => {
+    await new Promise((ok) => setTimeout(ok, 1500));
+    await route.continue();
+  });
+  await r.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+  await r.locator("button:has-text('Start!')").click();
+  const skip = r.locator("button:has-text('Skip this word')").first();
+  await skip.waitFor({ timeout: 30000 });
+  const leadAsked = r.waitForRequest(LEAD, { timeout: 30000 });
+  await skip.click();
+  await leadAsked;
+  await r.locator("button", { hasText: "Hear it again" }).first().click();
+  // For 8 s, sample whether the mic is free while the app is speaking.
+  const freeMidSpeech = await r.evaluate(
+    () =>
+      new Promise((ok) => {
+        const t0 = Date.now();
+        let n = 0;
+        const tick = () => {
+          const mic = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Say it");
+          if (mic && !mic.disabled && window.__active.size > 0) n++;
+          if (Date.now() - t0 > 8000) ok(n);
+          else setTimeout(tick, 50);
+        };
+        tick();
+      })
+  );
+  const spoken = await r.evaluate(() => window.__spoken);
+  check(
+    "a model cut while loading is not read out by the device's own voice",
+    spoken.length === 0,
+    JSON.stringify(spoken)
+  );
+  check(
+    "the mic stays held while a restarted model speaks",
+    freeMidSpeech === 0,
+    `${freeMidSpeech} samples with the mic free mid-speech`
+  );
+
+  // An interruption ends the model: the mic is free again at once, not when
+  // the 8-second cap runs out.
+  await r.unroute(LEAD);
+  const before = await r.evaluate(() => window.__audio.length);
+  await r.locator("button", { hasText: "Hear it again" }).first().click();
+  await r.waitForFunction((n) => window.__audio.slice(n).some((e) => e.playing !== null), before, {
+    timeout: 15000,
+  });
+  await r.getByRole("button", { name: "Listen to the instruction" }).first().click();
+  const freed = await r.evaluate(
+    () =>
+      new Promise((ok) => {
+        const t0 = Date.now();
+        const tick = () => {
+          const mic = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Say it");
+          if (mic && !mic.disabled) ok(Date.now() - t0);
+          else if (Date.now() - t0 > 12000) ok(-1);
+          else setTimeout(tick, 50);
+        };
+        tick();
+      })
+  );
+  check(
+    "an interrupted model frees the mic at once",
+    freed >= 0 && freed < 2000,
+    freed >= 0 ? `${freed}ms` : "still held after 12s"
+  );
+  await r.close();
+}
 
 section("[1d] Practice teaches first, then checks on a later day");
 {
@@ -229,6 +306,7 @@ section("[1d] Practice teaches first, then checks on a later day");
   const openPractice = async () => {
     const pp = await ctx.newPage();
     watch(pp, "learner:practice");
+    await pp.addInitScript(AUDIO_PROBE);
     await pp.goto(`${BASE}/practice/session`, { waitUntil: "networkidle" });
     await pp.locator("button:has-text('Start!')").click();
     return pp;
@@ -241,6 +319,25 @@ section("[1d] Practice teaches first, then checks on a later day");
     .then(() => true)
     .catch(() => false);
   check("a word new to Practice is a lesson, labelled “Listen first”", lessonLabel);
+  // Final review, 16 October: the first lesson's model cut the spoken
+  // instruction 350 ms in, on every Practice run.
+  const order = await lessonPage
+    .waitForFunction(() => window.__audio.some((e) => e.src.includes("text=This word is")), null, {
+      timeout: 40000,
+    })
+    .then(() =>
+      lessonPage.evaluate(() => {
+        const how = window.__audio.find((e) => e.src.includes("text=LEXORA says each new word first"));
+        const lead = window.__audio.find((e) => e.src.includes("text=This word is"));
+        return { how: how ? { end: how.end, cut: how.cut } : null, leadStart: lead.start };
+      })
+    )
+    .catch(() => null);
+  check(
+    "the spoken instruction plays to its end before the first lesson's model",
+    order?.how != null && order.how.cut === null && order.how.end !== null && order.how.end <= order.leadStart,
+    JSON.stringify(order)
+  );
   await lessonPage.close();
 
   // A day passes for every word on the list: each is now a check.

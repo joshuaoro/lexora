@@ -102,6 +102,9 @@ function playSwapPrompt(swap: NonNullable<ExerciseItem["swap"]>, rate: number) {
 /** The longest the mic waits for a model to finish playing (spec 2026-10-16). */
 const MODEL_CAP_MS = 8000;
 
+/** The longest a Practice run's first prompt waits for the spoken instruction, should its clip stall. */
+const INSTRUCTION_WAIT_MS = 15000;
+
 /** Word display size that shrinks gracefully on small screens. */
 function wordSize(base: number, factor: number) {
   return `clamp(26px, 11vw, ${Math.round(base * factor)}px)`;
@@ -158,6 +161,13 @@ export default function ExerciseSession({
    */
   const [modelPlaying, setModelPlaying] = useState(false);
   const modelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Advanced by every prompt scheduled or played, every new item and every mic
+   * press. A model releases the mic, and a waiting prompt starts, only if
+   * nothing has advanced it since: a model cut by a newer one would otherwise
+   * free the mic while the newer one is still speaking.
+   */
+  const modelGen = useRef(0);
   /** Practice: what the server recorded for this reading (lesson, or a check's progress). */
   const [practiceResult, setPracticeResult] = useState<{
     mode: "lesson" | "check";
@@ -248,6 +258,7 @@ export default function ExerciseSession({
    */
   const playModel = useCallback(
     async (it: ExerciseItem, kind: "lesson" | "correction" | "confirm", tail?: string) => {
+      const mine = ++modelGen.current;
       setModelPlaying(true);
       await Promise.race([
         speakModel(
@@ -259,30 +270,54 @@ export default function ExerciseSession({
         ),
         new Promise((r) => setTimeout(r, MODEL_CAP_MS)),
       ]);
-      setModelPlaying(false);
+      // Cut short by a newer model, the next item or the mic: the hold is theirs now.
+      if (modelGen.current === mine) setModelPlaying(false);
     },
     [t, lang, settings.ttsRate]
   );
 
+  /**
+   * Run a spoken prompt after `delayMs`, counted from the end of `after` (the
+   * instruction spoken on Start) when given — unless the child or a newer
+   * prompt has moved on by then.
+   */
+  const schedulePrompt = useCallback((run: () => void, delayMs: number, after?: Promise<unknown>) => {
+    if (modelTimer.current) clearTimeout(modelTimer.current);
+    const mine = ++modelGen.current;
+    const start = () => {
+      if (modelGen.current === mine) modelTimer.current = setTimeout(run, delayMs);
+    };
+    if (after) void Promise.race([after, new Promise((r) => setTimeout(r, INSTRUCTION_WAIT_MS))]).then(start);
+    else start();
+  }, []);
+
   /** Start a model after `delayMs`, holding the mic from now so it cannot be pressed in the gap. */
   const scheduleModel = useCallback(
-    (it: ExerciseItem, kind: "lesson" | "correction" | "confirm", delayMs: number, tail?: string) => {
-      if (modelTimer.current) clearTimeout(modelTimer.current);
+    (
+      it: ExerciseItem,
+      kind: "lesson" | "correction" | "confirm",
+      delayMs: number,
+      tail?: string,
+      after?: Promise<unknown>
+    ) => {
       setModelPlaying(true);
-      modelTimer.current = setTimeout(() => void playModel(it, kind, tail), delayMs);
+      schedulePrompt(() => void playModel(it, kind, tail), delayMs, after);
     },
-    [playModel]
+    [playModel, schedulePrompt]
   );
 
   const beginItem = useCallback(
     // `list` is passed explicitly when a new run starts, because the state
     // holding the previous run's words has not been applied yet at that point.
-    (i: number, list: ExerciseItem[] = items) => {
+    // `after` is the instruction spoken on Start, which Practice's first prompt
+    // waits for: started together, the model cut the instruction short.
+    (i: number, list: ExerciseItem[] = items, after?: Promise<unknown>) => {
       setIndex(i);
       setFeedback(null);
       setRetry(null);
       setPracticeResult(null);
       if (modelTimer.current) clearTimeout(modelTimer.current);
+      modelGen.current++;
       setModelPlaying(false);
       setPhase("item");
       itemStartRef.current = now();
@@ -319,11 +354,11 @@ export default function ExerciseSession({
       // Practice: a lesson models the word first; a check asks the child to
       // read it alone (spec 2026-10-16, §3).
       if (next?.practice && type === "PRACTICE") {
-        if (next.practice.mode === "lesson") scheduleModel(next, "lesson", 350);
-        else setTimeout(() => void speakUi(t.checkFirst, lang, settings.ttsRate), 350);
+        if (next.practice.mode === "lesson") scheduleModel(next, "lesson", 350, undefined, after);
+        else schedulePrompt(() => void speakUi(t.checkFirst, lang, settings.ttsRate), 350, after);
       }
     },
-    [items, type, settings.ttsRate, scheduleModel, lang, t.checkFirst]
+    [items, type, settings.ttsRate, scheduleModel, schedulePrompt, lang, t.checkFirst]
   );
 
   async function startSession() {
@@ -351,14 +386,15 @@ export default function ExerciseSession({
     // Adopt whatever the server last sent — a replay should not repeat the
     // same eight words — and start on those rather than the previous run's.
     setItems(serverItems);
-    beginItem(0, serverItems);
 
     // Say what to do, once. This runs on the Start press, so the browser's
     // autoplay rules are satisfied — a child who cannot read the instruction
     // now hears it without having to know to ask for it. Only for the spoken
     // activities: the receptive ones play the target word by themselves, and
-    // two voices at once helps nobody.
-    if (isOral) speakUi(intro.how, lang, settings.ttsRate);
+    // two voices at once helps nobody. Practice's first model or prompt waits
+    // for it to finish.
+    const instruction = isOral ? speakUi(intro.how, lang, settings.ttsRate) : undefined;
+    beginItem(0, serverItems, instruction);
   }
 
   async function submitAttempt(payload: {
@@ -497,6 +533,11 @@ export default function ExerciseSession({
     }
     if (micState !== "idle" || posting || modelPlaying) return;
     setScoreError(null);
+    // Silence the app before the take, and cancel a prompt still waiting to
+    // start, so its voice is never recorded into the child's reading.
+    if (modelTimer.current) clearTimeout(modelTimer.current);
+    modelGen.current++;
+    stopSpeaking();
     const { audio, browserTranscript } = await listen();
     await submitAttempt({ audio, browserTranscript });
   }
@@ -1132,9 +1173,12 @@ export default function ExerciseSession({
                     <p className="mt-3 text-lg font-extrabold text-ink" style={wordStyle}>
                       {item.syllables ?? item.target}
                     </p>
+                    {/* Held while the re-read records or is being scored: the
+                        model would be spoken into the child's take. */}
                     <button
                       onClick={isOral ? () => void playModel(item, "correction") : sayTarget}
-                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream"
+                      disabled={isOral && (micState !== "idle" || posting)}
+                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream disabled:opacity-60"
                     >
                       <Volume2 size={16} /> {t.hearItAgain}
                     </button>
