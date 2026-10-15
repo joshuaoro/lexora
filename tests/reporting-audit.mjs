@@ -604,13 +604,20 @@ async function main() {
     check("and only by a specialist", anon.status === 403, `HTTP ${anon.status}`);
 
     const missing = await api(`/api/attempt-audio/${cuid("att")}`, { cookie: specCookie });
-    // The body and the firewall header say whose 403 it is when this fails:
-    // the app's ({"error":"Unauthorized"}) or Vercel's.
-    const missingWhy =
-      missing.status === 404
-        ? "HTTP 404"
-        : `HTTP ${missing.status} ${(await missing.text()).slice(0, 80).replace(/\s+/g, " ")} mitigated=${missing.headers.get("x-vercel-mitigated")}`;
-    check("a missing recording is a 404", missing.status === 404, missingWhy);
+    if (missing.headers.get("x-vercel-mitigated")) {
+      // Vercel's bot protection answered, not the app: on 16 October this came
+      // back as a 403 HTML challenge page, twice, after the suite's burst of
+      // requests, while the same request alone gave 404. The app cannot be
+      // judged through a challenge, so it is skipped, as the integrity suite
+      // does for the speech budget.
+      check(
+        "a missing recording is a 404 — skipped, the host challenged the traffic",
+        true,
+        "run against localhost, or again later, to exercise it"
+      );
+    } else {
+      check("a missing recording is a 404", missing.status === 404, `HTTP ${missing.status}`);
+    }
   }
 
   await deleteTestLearner(rl.email);
