@@ -140,7 +140,12 @@ await page.goto(`${BASE}/practice/session`, { waitUntil: "networkidle" });
 const practiceStart = page.locator("button:has-text('Start!')");
 if (await practiceStart.count()) {
   await practiceStart.click();
-  await page.locator("button[aria-label]").first().waitFor({ timeout: 30000 });
+  // Wait on the card's lesson/check label: any bare button[aria-label] can be
+  // the header's language toggle, hidden at this width, which never shows.
+  await page
+    .getByText(/^(Listen first|You first)$/)
+    .first()
+    .waitFor({ state: "visible", timeout: 30000 });
   allViolations.push(...(await scan(page, "/practice/session (mid-exercise)")));
 }
 
