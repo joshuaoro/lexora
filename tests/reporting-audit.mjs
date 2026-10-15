@@ -604,7 +604,13 @@ async function main() {
     check("and only by a specialist", anon.status === 403, `HTTP ${anon.status}`);
 
     const missing = await api(`/api/attempt-audio/${cuid("att")}`, { cookie: specCookie });
-    check("a missing recording is a 404", missing.status === 404, `HTTP ${missing.status}`);
+    // The body and the firewall header say whose 403 it is when this fails:
+    // the app's ({"error":"Unauthorized"}) or Vercel's.
+    const missingWhy =
+      missing.status === 404
+        ? "HTTP 404"
+        : `HTTP ${missing.status} ${(await missing.text()).slice(0, 80).replace(/\s+/g, " ")} mitigated=${missing.headers.get("x-vercel-mitigated")}`;
+    check("a missing recording is a 404", missing.status === 404, missingWhy);
   }
 
   await deleteTestLearner(rl.email);
