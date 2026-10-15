@@ -248,14 +248,7 @@ export async function speakSwap(
 ) {
   stopSpeaking();
   const mine = generation;
-  if (word.wordId && word.hasAudio) {
-    await playMedia(
-      `/api/word-audio/${word.wordId}?kind=word&v=${word.version}`,
-      Math.max(0.6, rate + 0.15)
-    );
-  } else {
-    await playUiClip(word.text, "fil", rate);
-  }
+  await playWordClip(word, rate);
   if (generation !== mine) return;
   await pause(700, rate);
   if (generation !== mine) return;
@@ -264,6 +257,43 @@ export async function speakSwap(
   await pause(500, rate);
   if (generation !== mine) return;
   await playMedia(toSound, rate);
+}
+
+/** A word's own clip (a specialist's recording when there is one), else the neural voice. */
+function playWordClip(
+  word: { wordId: string | null; hasAudio: boolean; text: string; version: number },
+  rate: number
+): Promise<void> {
+  return word.wordId && word.hasAudio
+    ? playMedia(`/api/word-audio/${word.wordId}?kind=word&v=${word.version}`, Math.max(0.6, rate + 0.15))
+    : playUiClip(word.text, "fil", rate);
+}
+
+/**
+ * The model: a phrase in the app's voice, then the word itself, then an
+ * optional closing phrase — "Ang salitang ito ay … bahay. … Ikaw naman!"
+ * (spec 2026-10-16). The phrases follow the interface language; the word is
+ * always the Filipino clip. Cancelled like any sequence; resolves when it has
+ * finished or been cut off.
+ */
+export async function speakModel(
+  word: { wordId: string | null; hasAudio: boolean; text: string; version: number },
+  lead: string,
+  lang: "en" | "fil",
+  rate = 0.85,
+  tail?: string
+): Promise<void> {
+  stopSpeaking();
+  const mine = generation;
+  await playUiClip(lead, lang, rate);
+  if (generation !== mine) return;
+  await pause(150, rate);
+  if (generation !== mine) return;
+  await playWordClip(word, rate);
+  if (!tail || generation !== mine) return;
+  await pause(350, rate);
+  if (generation !== mine) return;
+  await playUiClip(tail, lang, rate);
 }
 
 /** Stop the clip that is playing without ending a sequence it belongs to. */

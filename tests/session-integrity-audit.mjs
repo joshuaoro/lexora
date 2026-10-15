@@ -118,7 +118,7 @@ async function main() {
   // In the feedback phase the word is shown as syllables, so wait on the
   // Filipino feedback copy rather than the item-phase prompts.
   await page.getByRole("button", { name: "Filipino" }).click();
-  await page.locator("main").getByText(/Hindi pa tama|Ngayon, subukan mo/i).first().waitFor({
+  await page.locator("main").getByText(/Hindi pa tama|Ikaw naman/i).first().waitFor({
     timeout: 30000,
   });
 
@@ -130,7 +130,7 @@ async function main() {
   );
   check(
     "the feedback is still showing, now in Filipino",
-    /Hindi pa tama|Ngayon, subukan mo/i.test(feedbackFil),
+    /Hindi pa tama|Ikaw naman/i.test(feedbackFil),
     feedbackFil.replace(/\s+/g, " ").slice(0, 70)
   );
 

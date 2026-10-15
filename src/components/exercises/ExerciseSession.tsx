@@ -21,6 +21,7 @@ import {
   playAudioUrl,
   speakSyllables as speakParts,
   speakSwap,
+  speakModel,
   speakUi,
   stopSpeaking,
 } from "@/lib/tts";
@@ -97,6 +98,9 @@ function playSwapPrompt(swap: NonNullable<ExerciseItem["swap"]>, rate: number) {
   );
 }
 
+/** The longest the mic waits for a model to finish playing (spec 2026-10-16). */
+const MODEL_CAP_MS = 8000;
+
 /** Word display size that shrinks gracefully on small screens. */
 function wordSize(base: number, factor: number) {
   return `clamp(26px, 11vw, ${Math.round(base * factor)}px)`;
@@ -146,6 +150,13 @@ export default function ExerciseSession({
    * after hearing the word is repetition rather than decoding.
    */
   const [retry, setRetry] = useState<"offered" | "correct" | "incorrect" | null>(null);
+  /**
+   * True while LEXORA is modeling a word. The mic waits for it, so a child who
+   * presses early does not record the app's own voice, and never waits longer
+   * than MODEL_CAP_MS, so a clip that fails to load cannot trap them.
+   */
+  const [modelPlaying, setModelPlaying] = useState(false);
+  const modelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef(0);
@@ -224,6 +235,38 @@ export default function ExerciseSession({
     };
   }, [flushProgress]);
 
+  /**
+   * Model a word: a lesson ends with "Ikaw naman!", a correction ends on the
+   * word, a confirmation starts "Tama!". `tail` replaces the closing phrase.
+   */
+  const playModel = useCallback(
+    async (it: ExerciseItem, kind: "lesson" | "correction" | "confirm", tail?: string) => {
+      setModelPlaying(true);
+      await Promise.race([
+        speakModel(
+          { wordId: it.wordId, hasAudio: it.hasAudio, text: it.target, version: it.audioVersion },
+          kind === "confirm" ? t.modelConfirm : t.modelLead,
+          lang,
+          settings.ttsRate,
+          tail ?? (kind === "lesson" ? t.modelYourTurn : undefined)
+        ),
+        new Promise((r) => setTimeout(r, MODEL_CAP_MS)),
+      ]);
+      setModelPlaying(false);
+    },
+    [t, lang, settings.ttsRate]
+  );
+
+  /** Start a model after `delayMs`, holding the mic from now so it cannot be pressed in the gap. */
+  const scheduleModel = useCallback(
+    (it: ExerciseItem, kind: "lesson" | "correction" | "confirm", delayMs: number, tail?: string) => {
+      if (modelTimer.current) clearTimeout(modelTimer.current);
+      setModelPlaying(true);
+      modelTimer.current = setTimeout(() => void playModel(it, kind, tail), delayMs);
+    },
+    [playModel]
+  );
+
   const beginItem = useCallback(
     // `list` is passed explicitly when a new run starts, because the state
     // holding the previous run's words has not been applied yet at that point.
@@ -231,6 +274,8 @@ export default function ExerciseSession({
       setIndex(i);
       setFeedback(null);
       setRetry(null);
+      if (modelTimer.current) clearTimeout(modelTimer.current);
+      setModelPlaying(false);
       setPhase("item");
       itemStartRef.current = now();
       const next = list[i];
@@ -395,11 +440,20 @@ export default function ExerciseSession({
     setFeedback({ correct, heard: data.heard || null, chosen: payload.chosen ?? null });
     setPhase("feedback");
     playChime(correct);
-    if (!correct) {
-      // Immediate corrective feedback: hear the right word, then take a turn.
+    if (isOral) {
+      // The model always follows the child's own reading (spec 2026-10-16):
+      // "Ang salitang ito ay bahay" after a miss, "Tama! bahay" after a correct
+      // Read aloud reading or a correct practice check.
+      if (!correct) {
+        scheduleModel(item, "correction", 700);
+        if (micOk) setRetry("offered");
+      } else if (type === "READ_ALOUD" || data.practice?.mode === "check") {
+        // The second correct check ends with "Natutunan mo na!".
+        scheduleModel(item, "confirm", 700, data.practice?.mastered ? t.learnedIt : undefined);
+      }
+    } else if (!correct && type !== "SYLLABLES") {
       // Count the syllables plays its parts instead (SyllableCount).
-      if (type !== "SYLLABLES") setTimeout(() => sayTarget(), 700);
-      if (isOral && micOk) setRetry("offered");
+      setTimeout(() => sayTarget(), 700);
     }
   }
 
@@ -413,7 +467,7 @@ export default function ExerciseSession({
       stopListening();
       return;
     }
-    if (micState !== "idle" || posting) return;
+    if (micState !== "idle" || posting || modelPlaying) return;
     stopSpeaking();
     const { audio, browserTranscript } = await listen();
     await submitAttempt({ audio, browserTranscript, isRetry: true });
@@ -426,7 +480,7 @@ export default function ExerciseSession({
       stopListening();
       return;
     }
-    if (micState !== "idle" || posting) return;
+    if (micState !== "idle" || posting || modelPlaying) return;
     setScoreError(null);
     const { audio, browserTranscript } = await listen();
     await submitAttempt({ audio, browserTranscript });
@@ -443,6 +497,7 @@ export default function ExerciseSession({
   }
 
   async function next() {
+    if (modelTimer.current) clearTimeout(modelTimer.current);
     stopSpeaking();
     if (index + 1 < items.length) {
       beginItem(index + 1);
@@ -689,7 +744,7 @@ export default function ExerciseSession({
                 <div className="mt-8 flex flex-col items-center gap-3">
                   <button
                     onClick={onMicPress}
-                    disabled={micState === "processing" || posting}
+                    disabled={micState === "processing" || posting || modelPlaying}
                     aria-label={micState === "listening" ? t.tapWhenDone : t.micAria}
                     className={`flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg transition ${
                       micState === "listening"
@@ -1041,7 +1096,7 @@ export default function ExerciseSession({
                       {item.syllables ?? item.target}
                     </p>
                     <button
-                      onClick={sayTarget}
+                      onClick={isOral ? () => void playModel(item, "correction") : sayTarget}
                       className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream"
                     >
                       <Volume2 size={16} /> {t.hearItAgain}
@@ -1049,14 +1104,15 @@ export default function ExerciseSession({
                   </>
                 )}
 
-                {/* "Now you try" — closes the corrective sequence so the last
-                    time the child says this word, they say it right. */}
+                {/* "Ikaw naman!" — closes the corrective sequence so the last
+                    time the child says this word, they say it right. Held while
+                    the model plays, so the take cannot record the app's voice. */}
                 {retry === "offered" && (
                   <div className="mt-4 border-t border-red/20 pt-4">
                     <p className="text-sm font-extrabold text-ink">{t.nowYouTry}</p>
                     <button
                       onClick={onRetryPress}
-                      disabled={posting}
+                      disabled={posting || modelPlaying}
                       className={`mt-2 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-base font-extrabold text-white shadow-sm transition disabled:opacity-60 ${
                         micState === "listening"
                           ? "animate-pulse bg-red"

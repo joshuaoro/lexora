@@ -182,6 +182,39 @@ for (const [slug, label] of [
   await q.close();
 }
 
+section("[1c] Read aloud teaches after the reading");
+{
+  const r = await ctx.newPage();
+  watch(r, "learner:read-aloud");
+  await r.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+  await r.locator("button:has-text('Start!')").click();
+  await r.locator("button:has-text('Skip this word')").first().waitFor({ timeout: 30000 });
+  await r.locator("button:has-text('Skip this word')").first().click();
+  const turn = r.locator("button", { hasText: "Say it" }).first();
+  await turn.waitFor({ timeout: 45000 });
+  check("a skipped word is taught: “Your turn!” follows", (await r.locator("text=Your turn!").count()) >= 1);
+  check(
+    "with a button to hear the sentence again",
+    (await r.locator("button", { hasText: "Hear it again" }).count()) >= 1
+  );
+  // Review focus 2: the mic waits for the model, but never for long.
+  const enabled = await turn.evaluate(
+    (b) =>
+      new Promise((ok) => {
+        const t0 = Date.now();
+        const tick = () =>
+          !b.disabled ? ok(Date.now() - t0) : Date.now() - t0 > 12000 ? ok(-1) : setTimeout(tick, 200);
+        tick();
+      })
+  );
+  check(
+    "the second-attempt mic is enabled once the model has played",
+    enabled >= 0,
+    enabled >= 0 ? `${enabled}ms` : "still disabled after 12s"
+  );
+  await r.close();
+}
+
 section("[2] display settings persist and apply to the Reader");
 await p.goto(`${BASE}/settings`, { waitUntil: "networkidle" });
 await p.click("button:has-text('Atkinson Hyperlegible')");

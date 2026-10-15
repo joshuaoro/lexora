@@ -342,7 +342,7 @@ async function main() {
   const sayIt = upage.getByRole("button", { name: /^Say it$/ });
   await sayIt.waitFor({ timeout: 45000 });
   const missText = await upage.locator("body").innerText();
-  check("a missed word offers 'Now you try it!'", missText.includes("Now you try it!"), "");
+  check("a missed word offers 'Your turn!'", missText.includes("Your turn!"), "");
 
   await sayIt.click();
   // The take runs to its own timeout on a silent device, then is scored, so the
