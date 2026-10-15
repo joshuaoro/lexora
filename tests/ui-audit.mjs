@@ -8,7 +8,7 @@
  */
 import { chromium } from "playwright-core";
 import {
-  BASE, passwordFor, check, section, report, one, query,
+  BASE, api, passwordFor, check, section, report, one, query,
   createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND,
 } from "./helpers.mjs";
 
@@ -213,6 +213,58 @@ section("[1c] Read aloud teaches after the reading");
     enabled >= 0 ? `${enabled}ms` : "still disabled after 12s"
   );
   await r.close();
+}
+
+section("[1d] Practice teaches first, then checks on a later day");
+{
+  // Two Read aloud misreads put two words on this learner's list.
+  const pWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text DESC LIMIT 2`);
+  for (const w of pWords) {
+    await api("/api/attempts", {
+      cookie: learner.cookie,
+      method: "POST",
+      body: { activityType: "READ_ALOUD", wordId: w.id, target: w.text, browserTranscript: "zzzz", responseMs: 1500 },
+    });
+  }
+  const openPractice = async () => {
+    const pp = await ctx.newPage();
+    watch(pp, "learner:practice");
+    await pp.goto(`${BASE}/practice/session`, { waitUntil: "networkidle" });
+    await pp.locator("button:has-text('Start!')").click();
+    return pp;
+  };
+  const lessonPage = await openPractice();
+  const lessonLabel = await lessonPage
+    .locator("text=Listen first")
+    .first()
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  check("a word new to Practice is a lesson, labelled “Listen first”", lessonLabel);
+  await lessonPage.close();
+
+  // A day passes for every word on the list: each is now a check.
+  await query(
+    `UPDATE "PracticeItem" SET "lastTaughtOn" = CURRENT_DATE - 1, "lastSeenOn" = CURRENT_DATE - 1 WHERE "learnerId" = $1`,
+    [learner.learnerId]
+  );
+  const checkPage = await openPractice();
+  const checkLabel = await checkPage
+    .locator("text=You first")
+    .first()
+    .waitFor({ timeout: 20000 })
+    .then(() => true)
+    .catch(() => false);
+  check("a word taught on an earlier day is a check, labelled “You first”", checkLabel);
+  await checkPage.close();
+
+  const listPage = await ctx.newPage();
+  await listPage.goto(`${BASE}/practice`, { waitUntil: "networkidle" });
+  check(
+    "the practice list shows progress toward reading each word alone",
+    (await listPage.locator("[aria-label*='read on your own']").count()) >= 1
+  );
+  await listPage.close();
 }
 
 section("[2] display settings persist and apply to the Reader");

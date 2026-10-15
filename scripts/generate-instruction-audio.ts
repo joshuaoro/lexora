@@ -59,6 +59,15 @@ function phrasesFor(lang: Lang): string[] {
     out.push(`${d.dashboard.helloSpoken} ${d.dashboard.streak(n)}`);
   }
 
+  // The model's phrases (spec 2026-10-16), said before or after a word's clip.
+  out.push(
+    d.session.modelLead,
+    d.session.modelConfirm,
+    d.session.modelYourTurn,
+    d.session.checkFirst,
+    d.session.learnedIt
+  );
+
   return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
 }
 

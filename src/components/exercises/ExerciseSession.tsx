@@ -12,6 +12,7 @@ import {
   ArrowRight,
   RotateCcw,
   Home,
+  Ear,
   PartyPopper,
 } from "lucide-react";
 import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
@@ -157,6 +158,12 @@ export default function ExerciseSession({
    */
   const [modelPlaying, setModelPlaying] = useState(false);
   const modelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Practice: what the server recorded for this reading (lesson, or a check's progress). */
+  const [practiceResult, setPracticeResult] = useState<{
+    mode: "lesson" | "check";
+    streak: number;
+    mastered: boolean;
+  } | null>(null);
 
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef(0);
@@ -274,6 +281,7 @@ export default function ExerciseSession({
       setIndex(i);
       setFeedback(null);
       setRetry(null);
+      setPracticeResult(null);
       if (modelTimer.current) clearTimeout(modelTimer.current);
       setModelPlaying(false);
       setPhase("item");
@@ -308,8 +316,14 @@ export default function ExerciseSession({
           350
         );
       }
+      // Practice: a lesson models the word first; a check asks the child to
+      // read it alone (spec 2026-10-16, §3).
+      if (next?.practice && type === "PRACTICE") {
+        if (next.practice.mode === "lesson") scheduleModel(next, "lesson", 350);
+        else setTimeout(() => void speakUi(t.checkFirst, lang, settings.ttsRate), 350);
+      }
     },
-    [items, type, settings.ttsRate]
+    [items, type, settings.ttsRate, scheduleModel, lang, t.checkFirst]
   );
 
   async function startSession() {
@@ -438,6 +452,7 @@ export default function ExerciseSession({
     void flushProgress(false);
     setResults((r) => [...r, correct]);
     setFeedback({ correct, heard: data.heard || null, chosen: payload.chosen ?? null });
+    if (data.practice) setPracticeResult(data.practice);
     setPhase("feedback");
     playChime(correct);
     if (isOral) {
@@ -562,6 +577,11 @@ export default function ExerciseSession({
         <h1 className="text-3xl font-extrabold text-ink">{intro.title}</h1>
         <p className="mt-3 text-lg text-ink-soft">{intro.blurb}</p>
         <p className="mt-2 text-sm font-semibold text-ink-muted">{intro.how}</p>
+        {type === "PRACTICE" && items.length > 0 && items.every((i) => i.practice?.seenToday) && (
+          <p className="mt-3 rounded-xl bg-primary-soft px-4 py-2.5 text-sm font-bold text-primary">
+            {t.tomorrowAlone}
+          </p>
+        )}
         {/* The instructions above are text, aimed at children who struggle to
             decode text. This reads them out. */}
         <div className="mt-5 flex justify-center">
@@ -726,9 +746,21 @@ export default function ExerciseSession({
         {/* ——— Oral reading (READ_ALOUD / PRACTICE) ——— */}
         {isOral && (
           <>
+            {/* Practice says which kind of turn this is (spec 2026-10-16):
+                listen to LEXORA first, or read it on your own first. */}
+            {type === "PRACTICE" && item.practice && (
+              <p
+                className={`mx-auto mb-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-extrabold ${
+                  item.practice.mode === "lesson" ? "bg-peach-soft text-peach-deep" : "bg-primary-soft text-primary"
+                }`}
+              >
+                {item.practice.mode === "lesson" ? <Ear size={16} /> : <Mic size={16} />}
+                {item.practice.mode === "lesson" ? t.listenFirst : t.youFirst}
+              </p>
+            )}
             <div className="flex items-center justify-center gap-2">
               <p className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-                {t.readWordAloud}
+                {type === "PRACTICE" && item.practice?.mode === "check" ? t.checkFirst : t.readWordAloud}
               </p>
               <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
             </div>
@@ -1045,6 +1077,11 @@ export default function ExerciseSession({
                 <p className="flex items-center justify-center gap-2 text-2xl font-extrabold text-green">
                   <Check size={28} /> {t.correctFeedback}
                 </p>
+                {practiceResult?.mode === "check" && (
+                  <p className="mt-2 text-base font-extrabold text-ink">
+                    {practiceResult.mastered ? `${t.learnedIt} 🎉` : t.checkProgress(practiceResult.streak)}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="mx-auto max-w-md rounded-2xl bg-red-soft px-6 py-5">

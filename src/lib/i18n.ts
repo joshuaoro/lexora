@@ -164,7 +164,7 @@ const en = {
       PRACTICE: {
         title: "My practice words",
         blurb: "These are your tricky words. Read each one out loud — you've got this!",
-        how: "Read a word correctly two times in a row to master it. ⭐",
+        how: "LEXORA says each new word first, then it's your turn. Read a word on your own on two different days to learn it. ⭐",
       },
       // Framed as a game with made-up words rather than as a test. It is a
       // test, and the child will be told so by the adult sitting with them —
@@ -227,6 +227,11 @@ const en = {
     modelConfirm: "That's right!",
     modelYourTurn: "Your turn!",
     learnedIt: "You've learned it!",
+    listenFirst: "Listen first",
+    youFirst: "You first",
+    checkFirst: "Try it on your own first!",
+    checkProgress: (n: number) => `✓ ${n} of 2 read on your own`,
+    tomorrowAlone: "Tomorrow you'll try these on your own!",
     nowYouTry: "Your turn!",
     tryItNow: "Say it",
     retryGood: "That's it! Well done.",
@@ -256,7 +261,7 @@ const en = {
     fromTeacher: "added by your teacher",
     missed: (n: number) => `missed ×${n}`,
     mastered: (n: number) => `Mastered ⭐ (${n})`,
-    streakAria: (s: number) => `${s} of 2 correct in a row`,
+    streakAria: (s: number) => `${s} of 2 read on your own`,
   },
   /**
    * The specialist workspace.
@@ -1037,7 +1042,7 @@ const fil: Dict = {
       PRACTICE: {
         title: "Mga praktis na salita ko",
         blurb: "Ito ang mga mahirap mong salita. Basahin ang bawat isa nang malakas — kaya mo 'yan!",
-        how: "Basahin nang tama ang salita nang dalawang sunod para ma-master ito. ⭐",
+        how: "Sasabihin muna ni LEXORA ang bawat bagong salita, saka ikaw naman. Basahin ito nang mag-isa sa dalawang magkaibang araw para matutunan. ⭐",
       },
       PSEUDO_PROBE: {
         title: "Mga salitang imbento",
@@ -1093,6 +1098,11 @@ const fil: Dict = {
     modelConfirm: "Tama!",
     modelYourTurn: "Ikaw naman!",
     learnedIt: "Natutunan mo na!",
+    listenFirst: "Pakinggan muna",
+    youFirst: "Ikaw muna",
+    checkFirst: "Subukan mo muna!",
+    checkProgress: (n) => `✓ ${n} sa 2 nang mag-isa`,
+    tomorrowAlone: "Bukas, susubukan mo na itong mag-isa!",
     nowYouTry: "Ikaw naman!",
     tryItNow: "Basahin mo",
     retryGood: "Ayan! Magaling ka.",
@@ -1122,7 +1132,7 @@ const fil: Dict = {
     fromTeacher: "idinagdag ng guro mo",
     missed: (n) => `namali ×${n}`,
     mastered: (n) => `Na-master ⭐ (${n})`,
-    streakAria: (s) => `${s} sa 2 na sunod na tama`,
+    streakAria: (s) => `${s} sa 2 nang mag-isa`,
   },
   specialist: {
     welcomeBack: "Kumusta ulit",

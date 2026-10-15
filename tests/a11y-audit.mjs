@@ -133,6 +133,17 @@ await page
   .waitFor({ state: "visible", timeout: 30000 });
 allViolations.push(...(await scan(page, "/exercises/syllables (mid-exercise)")));
 
+// Practice shows a lesson or check label above the word and holds the mic while
+// the model plays: scanned mid-item. Skipped when the demo learner's list is
+// empty, since there is then no item to scan.
+await page.goto(`${BASE}/practice/session`, { waitUntil: "networkidle" });
+const practiceStart = page.locator("button:has-text('Start!')");
+if (await practiceStart.count()) {
+  await practiceStart.click();
+  await page.locator("button[aria-label]").first().waitFor({ timeout: 30000 });
+  allViolations.push(...(await scan(page, "/practice/session (mid-exercise)")));
+}
+
 section("[5] keyboard-only navigation");
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 const reachable = await page.evaluate(() => {
