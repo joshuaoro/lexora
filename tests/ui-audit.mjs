@@ -401,6 +401,10 @@ await waitForLevel(juanId, levelBefore);
 await query(`UPDATE "LearnerProfile" SET stage = $2 WHERE id = $1`, [juanId, before.stage]);
 
 check("data-protection panel is present", (await sp.locator("text=Data protection").count()) === 1);
+check(
+  "the learner page lists practice readings in their own panel",
+  (await sp.locator("text=Practice readings").count()) === 1
+);
 
 await sp.goto(`${BASE}/specialist/words`, { waitUntil: "networkidle" });
 check("word bank shows accepted spellings", (await sp.locator("text=Accepted spellings").count()) === 1);

@@ -323,9 +323,14 @@ for (const col of [
 
 const attemptsCsv = await (await api("/api/export?what=attempts", { cookie: specialist })).text();
 const attemptsHeader = attemptsCsv.split("\r\n")[0];
-for (const col of ["is_pseudoword", "specialist_correct", "stress_pair", "review_blind", "review_tags", "learner_id"]) {
+for (const col of ["is_pseudoword", "specialist_correct", "stress_pair", "review_blind", "review_tags", "learner_id", "practice_mode"]) {
   check(`attempts export carries ${col}`, attemptsHeader.includes(col));
 }
+check(
+  "practice_mode is the last column, so no existing column moved",
+  attemptsHeader.split(",").at(-1) === "practice_mode",
+  attemptsHeader.split(",").at(-1)
+);
 
 /* ── 7. the latency guard on level-up ──────────────────────────────────── */
 section("[7] a learner who is accurate but slowing down is not promoted");

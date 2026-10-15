@@ -306,6 +306,14 @@ const en = {
       `${confirmed} confirmed · ${overturned} overturned`,
     practiceEvidenceNote:
       "×n is how often the system scored the word as misread. Where you have reviewed those readings, the count you confirmed and the count you overturned follow it — a word whose misreads you mostly overturned may not belong on the list. This is the evidence for checking the list against the words this learner really misreads.",
+    practicePanelTitle: "Practice readings",
+    practicePanelSub:
+      "Readings from the practice list. A lesson is read straight after LEXORA says the word; a check is read alone, on a later day, and only checks move a word toward leaving the list. None of these count toward accuracy, level or agreement.",
+    practicePanelEmpty: "No practice readings yet.",
+    practiceLesson: "lesson",
+    practiceCheck: "check",
+    practiceReread: "re-read",
+    practiceProgress: (n: number) => `✓ ${n} of 2 checks`,
     difficultyLevel: "Difficulty level",
     levelOption: (l: number) => `Level ${l}`,
     levelStage: (level: number, stage: number) => `Level ${level} · Marungko stage ${stage}`,
@@ -1162,6 +1170,14 @@ const fil: Dict = {
       `${confirmed} kinumpirma · ${overturned} binaliktad`,
     practiceEvidenceNote:
       "Ang ×n ay kung ilang beses itinuring ng sistema na mali ang pagbasa ng salita. Kung nasuri mo na ang mga pagbasang iyon, kasunod nito ang bilang na kinumpirma mo at ang binaliktad mo — ang salitang karamihan ng mali ay binaliktad mo ay maaaring hindi dapat nasa listahan. Ito ang ebidensya sa pagsusuri kung tugma ang listahan sa mga salitang talagang nababasa nang mali ng mag-aaral.",
+    practicePanelTitle: "Mga pagbasa sa praktis",
+    practicePanelSub:
+      "Mga pagbasa mula sa listahan ng praktis. Ang aralin ay binabasa matapos sabihin ni LEXORA ang salita; ang pagsusuri ay binabasa nang mag-isa sa ibang araw, at ang mga pagsusuri lamang ang naglalapit sa salita sa pag-alis sa listahan. Wala sa mga ito ang kasama sa accuracy, level o pagkakasundo.",
+    practicePanelEmpty: "Wala pang pagbasa sa praktis.",
+    practiceLesson: "aralin",
+    practiceCheck: "pagsusuri",
+    practiceReread: "muling basa",
+    practiceProgress: (n) => `✓ ${n} sa 2 pagsusuri`,
     difficultyLevel: "Antas ng hirap",
     levelOption: (l) => `Level ${l}`,
     levelStage: (level, stage) => `Level ${level} · Marungko stage ${stage}`,

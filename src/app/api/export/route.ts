@@ -143,6 +143,7 @@ export async function GET(req: Request) {
           levelAtTime: true,
           isRetry: true,
           learnerId: true,
+          practiceMode: true,
           learner: { select: { user: { select: { name: true } } } },
           word: {
             select: {
@@ -199,6 +200,7 @@ export async function GET(req: Request) {
       // semicolon so the cell never needs quoting.
       a.review ? a.review.tags.map((t) => t.tag).sort().join(";") : "",
       a.learnerId,
+      a.practiceMode ?? "",
     ]);
 
     return csvResponse(
@@ -241,6 +243,11 @@ export async function GET(req: Request) {
           // participant code on the intake sheet, and drop `learner` before the
           // data leaves the research team.
           "learner_id",
+          // Practice only: "lesson" (read straight after the word was modeled)
+          // or "check" (read alone, on a later day). Blank for every other
+          // activity and for practice readings saved before 16 October. Last,
+          // so no existing column moves.
+          "practice_mode",
         ],
         rows
       ),

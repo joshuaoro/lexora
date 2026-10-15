@@ -10,6 +10,7 @@ import LearnerDataControls from "@/components/specialist/LearnerDataControls";
 import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
 import SessionPhases, { type PhaseSession } from "@/components/specialist/SessionPhases";
 import Rereads, { type RereadPair } from "@/components/specialist/Rereads";
+import PracticePanel, { type PracticeReading } from "@/components/specialist/PracticePanel";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
 import { isScoredActivity } from "@/lib/activity";
@@ -61,6 +62,7 @@ export default async function LearnerDetailPage({
     retryRows,
     sessionRows,
     probeRows,
+    practiceRows,
   ] = await Promise.all([
     // First readings only. A retry is taken seconds after the child heard the
     // word pronounced, so it skews clear and correct; including retries would
@@ -190,6 +192,13 @@ export default async function LearnerDetailPage({
         session: { select: { phase: true } },
       },
     }),
+    // Practice readings, newest first, for their own panel (never the review list).
+    prisma.attempt.findMany({
+      where: { learnerId: id, activityType: "PRACTICE" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, target: true, correct: true, transcript: true, createdAt: true, practiceMode: true, isRetry: true },
+    }),
   ]);
 
   /**
@@ -278,6 +287,17 @@ export default async function LearnerDetailPage({
   }));
 
   const recorded = new Set(withRecording.map((a) => a.id));
+
+  const practiceReadings: PracticeReading[] = practiceRows.map((a) => ({
+    id: a.id,
+    word: a.target,
+    date: formatDate(a.createdAt, dateLocale(lang), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
+    mode: a.practiceMode === "lesson" || a.practiceMode === "check" ? a.practiceMode : null,
+    isRetry: a.isRetry,
+    correct: a.correct,
+    heard: a.transcript,
+    hasAudio: recorded.has(a.id),
+  }));
 
   const reviewed = reviewStats.reduce((n, g) => n + g._count, 0);
   const agreed = reviewStats.find((g) => g.agrees)?._count ?? 0;
@@ -405,6 +425,7 @@ export default async function LearnerDetailPage({
                     {p.word.text}
                     <span className="ml-1.5 text-xs font-semibold text-ink-muted">
                       {p.source === "SPECIALIST" ? t.pinned : `×${p.missCount}`}
+                      {p.streak > 0 && ` · ${t.practiceProgress(p.streak)}`}
                       {reviewed && ` · ${t.practiceReviewed(reviewed.confirmed, reviewed.overturned)}`}
                     </span>
                   </span>
@@ -480,6 +501,8 @@ export default async function LearnerDetailPage({
       />
 
       <Rereads pairs={rereads} lang={lang} />
+
+      <PracticePanel readings={practiceReadings} lang={lang} />
 
       <PhaseComparison c={learnerPhases} scope="learner" lang={lang} />
 
