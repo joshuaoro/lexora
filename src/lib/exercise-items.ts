@@ -1,6 +1,8 @@
 import { prisma } from "./db";
 import { effectiveStage } from "./marungko";
 import { firstSound, isLoneVowel, letterSoundUrl } from "./letter-sounds";
+import { dayKey } from "./time";
+import { practiceModeFor, practiceDayKey } from "./practice";
 
 export type ExerciseType =
   | "READ_ALOUD"
@@ -37,6 +39,8 @@ export type ExerciseItem = {
     fromSound: string;
     toSound: string;
   };
+  /** Practice only: lesson or check, and the word's progress (spec 2026-10-16). */
+  practice?: { mode: "lesson" | "check"; streak: number; seenToday: boolean };
 };
 
 /**
@@ -247,18 +251,29 @@ export async function buildItems(
   }
 
   if (type === "PRACTICE") {
-    const practice = await prisma.practiceItem.findMany({
+    // Words not yet seen today first, so a second run the same day moves on
+    // to other words; then the most missed; then the most recent.
+    const today = dayKey(new Date());
+    const listed = await prisma.practiceItem.findMany({
       where: { learnerId, mastered: false },
-      orderBy: [{ missCount: "desc" }, { updatedAt: "desc" }],
-      take: count,
       include: { word: { select: WORD_FIELDS } },
     });
-    return practice.map((p) => ({
+    const seenToday = (p: (typeof listed)[number]) => practiceDayKey(p.lastSeenOn) === today;
+    const chosen = listed
+      .sort(
+        (a, b) =>
+          Number(seenToday(a)) - Number(seenToday(b)) ||
+          b.missCount - a.missCount ||
+          b.updatedAt.getTime() - a.updatedAt.getTime()
+      )
+      .slice(0, count);
+    return chosen.map((p) => ({
       wordId: p.wordId,
       target: p.word.text,
       syllables: p.word.syllables,
       options: null,
       answer: null,
+      practice: { mode: practiceModeFor(p, today), streak: p.streak, seenToday: seenToday(p) },
       ...flags(p.wordId),
     }));
   }

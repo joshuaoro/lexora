@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { getLearnerContext, sessionExpired } from "@/lib/guards";
 import { scoreReading, activeScoreThreshold } from "@/lib/scoring";
 import { transcribeAudio } from "@/lib/asr";
-import { updateAdaptiveLevel, recordMiss, recordPracticeResult } from "@/lib/adaptive";
+import { updateAdaptiveLevel, recordMiss } from "@/lib/adaptive";
 import { MEASURED_READING_TYPES } from "@/lib/measures";
+import { practiceModeFor, applyPracticeReading, type PracticeProgress } from "@/lib/practice";
+import { dayKey } from "@/lib/time";
 
 /**
  * Scoring a reading is the slowest thing a learner waits on: upload, then
@@ -174,6 +176,19 @@ export async function POST(req: Request) {
     errorType = correct ? "correct" : "substitution";
   }
 
+  // Practice: lesson or check, decided here from the word's own dates and
+  // stored as decided — never taken from the client, whose copy can be a day
+  // old (a tablet left open overnight) or simply claimed.
+  const today = dayKey(new Date());
+  const practiceItem =
+    data.activityType === "PRACTICE" && wordRow && !wordRow.isPseudo
+      ? await prisma.practiceItem.findUnique({
+          where: { learnerId_wordId: { learnerId, wordId: wordRow.id } },
+          select: { id: true, streak: true, lastTaughtOn: true, lastSeenOn: true },
+        })
+      : null;
+  const practiceMode = practiceItem ? practiceModeFor(practiceItem, today) : null;
+
   const attempt = await prisma.attempt.create({
     data: {
       learnerId,
@@ -191,6 +206,7 @@ export async function POST(req: Request) {
       audio,
       levelAtTime: profile.level,
       isRetry,
+      practiceMode,
     },
   });
 
@@ -200,9 +216,10 @@ export async function POST(req: Request) {
   // it must not master a practice word or move them up a level.
   // Never for a probe word, whatever activity the request claims: the practice
   // list exists to teach, and a taught non-word stops being one.
+  let practice: PracticeProgress | null = null;
   if (wordRow && !wordRow.isPseudo && !isRetry) {
-    if (data.activityType === "PRACTICE") {
-      await recordPracticeResult(learnerId, wordRow.id, correct);
+    if (practiceItem && practiceMode) {
+      practice = await applyPracticeReading(practiceItem, practiceMode, correct, today);
     } else if (!correct && ADAPTIVE_TYPES.includes(data.activityType)) {
       await recordMiss(learnerId, wordRow.id);
     }
@@ -232,5 +249,6 @@ export async function POST(req: Request) {
     engine,
     level,
     levelChanged,
+    practice,
   });
 }

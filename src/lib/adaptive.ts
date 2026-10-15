@@ -250,23 +250,3 @@ export async function recordMiss(learnerId: string, wordId: string) {
     update: { missCount: { increment: 1 }, streak: 0, mastered: false },
   });
 }
-
-/** Track mastery: two consecutive correct practice reads master the word. */
-export async function recordPracticeResult(learnerId: string, wordId: string, correct: boolean) {
-  const item = await prisma.practiceItem.findUnique({
-    where: { learnerId_wordId: { learnerId, wordId } },
-  });
-  if (!item) return;
-  if (correct) {
-    const streak = item.streak + 1;
-    await prisma.practiceItem.update({
-      where: { id: item.id },
-      data: { streak, mastered: streak >= 2 },
-    });
-  } else {
-    await prisma.practiceItem.update({
-      where: { id: item.id },
-      data: { streak: 0, missCount: { increment: 1 }, mastered: false },
-    });
-  }
-}

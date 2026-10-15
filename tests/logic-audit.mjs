@@ -194,37 +194,93 @@ const mLevel = await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [me
 check("nor move the level", mLevel.level === 1, `L${mLevel.level}`);
 await deleteTestLearner(measured.email);
 
-/* ── 3. practice list ──────────────────────────────────────────────────── */
-section("[3] practice list and mastery");
-// Misread three real words (with ids, so they can be tracked) to populate it.
+/* ── 3. practice list: lessons, checks and mastery ─────────────────────── */
+section("[3] practice list: lessons, checks and mastery");
+// Read aloud misreads (with word ids) put words on the list.
 const missWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 3`);
 for (const w of missWords) await read(w.id, w.text, "zzzz");
 
 const practice = await query(
-  `SELECT p."wordId", w.text FROM "PracticeItem" p JOIN "Word" w ON w.id = p."wordId" WHERE p."learnerId" = $1`,
+  `SELECT p."wordId", w.text FROM "PracticeItem" p JOIN "Word" w ON w.id = p."wordId" WHERE p."learnerId" = $1 ORDER BY w.text`,
   [learner.learnerId]
 );
 check("misread words are collected automatically", practice.length > 0, `${practice.length} words`);
 
-const item = practice[0];
-const practiceRead = (heard) =>
+const itemRow = (wordId) =>
+  one(
+    `SELECT streak, mastered, "missCount", "lastTaughtOn"::text AS taught, "lastSeenOn"::text AS seen
+       FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`,
+    [learner.learnerId, wordId]
+  );
+const lastMode = () =>
+  one(
+    `SELECT "practiceMode" FROM "Attempt" WHERE "learnerId" = $1 AND "activityType" = 'PRACTICE'
+      ORDER BY "createdAt" DESC LIMIT 1`,
+    [learner.learnerId]
+  ).then((r) => r?.practiceMode ?? null);
+const practiceRead = (w, heard, extra = {}) =>
   json("/api/attempts", {
     cookie: learner.cookie,
     method: "POST",
-    body: { activityType: "PRACTICE", wordId: item.wordId, target: item.text, browserTranscript: heard, responseMs: 1200 },
+    body: { activityType: "PRACTICE", wordId: w.wordId, target: w.text, browserTranscript: heard, responseMs: 1200, ...extra },
   });
+/** Pretend the word's last lesson and last sighting were a day earlier. */
+const aDayPasses = (w) =>
+  query(
+    `UPDATE "PracticeItem" SET "lastTaughtOn" = "lastTaughtOn" - 1, "lastSeenOn" = "lastSeenOn" - 1
+      WHERE "learnerId" = $1 AND "wordId" = $2`,
+    [learner.learnerId, w.wordId]
+  );
 
-await practiceRead(item.text);
-const afterOne = await one(`SELECT streak, mastered FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, item.wordId]);
-check("one correct read is not yet mastery", afterOne.mastered === false, `streak=${afterOne.streak}`);
+const [first, second] = practice;
+const lesson1 = await practiceRead(first, first.text);
+check("a word's first Practice reading is a lesson", (await lastMode()) === "lesson" && lesson1.body.practice?.mode === "lesson", String(await lastMode()));
+check("a lesson is not progress", (await itemRow(first.wordId)).streak === 0);
+await practiceRead(first, first.text);
+check("a second reading the same day is a lesson again", (await lastMode()) === "lesson");
 
-await practiceRead(item.text);
-const afterTwo = await one(`SELECT streak, mastered FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, item.wordId]);
-check("two correct reads in a row master the word", afterTwo.mastered === true, `streak=${afterTwo.streak}`);
+await aDayPasses(first);
+const check1 = await practiceRead(first, first.text);
+const afterCheck1 = await itemRow(first.wordId);
+check("on a later day it is a check", (await lastMode()) === "check" && check1.body.practice?.mode === "check");
+check("a correct check is one step, not mastery", afterCheck1.streak === 1 && !afterCheck1.mastered, `streak=${afterCheck1.streak}`);
+await practiceRead(first, first.text);
+check("a second reading that day is a lesson, not a second check", (await lastMode()) === "lesson" && (await itemRow(first.wordId)).streak === 1);
 
-await practiceRead("qqqq");
-const afterMiss = await one(`SELECT streak, mastered FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, item.wordId]);
-check("a later miss un-masters it", afterMiss.mastered === false && afterMiss.streak === 0);
+await aDayPasses(first);
+const check2 = await practiceRead(first, first.text);
+check("a correct check on another day masters the word", (await itemRow(first.wordId)).mastered === true && check2.body.practice?.mastered === true);
+
+// Review focus 4: misread again in Read aloud, it comes back as a check.
+await read(first.wordId, first.text, "zzzz");
+const back = await itemRow(first.wordId);
+check("a mastered word misread in Read aloud returns to the list", back.mastered === false && back.streak === 0, `missCount=${back.missCount}`);
+await aDayPasses(first);
+await practiceRead(first, first.text);
+check("and its next Practice is a check, not a fresh lesson", (await lastMode()) === "check");
+
+// A misread check resets progress and is taught again.
+await practiceRead(second, second.text); // lesson
+await aDayPasses(second);
+await practiceRead(second, "qqqq"); // check, misread
+const failed = await itemRow(second.wordId);
+const today = (await one(`SELECT (now() AT TIME ZONE 'Asia/Manila')::date::text AS d`)).d;
+check("a misread check resets progress and teaches the word again", failed.streak === 0 && failed.taught === today, `taught=${failed.taught}`);
+check("practice misreads do not add to times missed", failed.missCount === 1, `missCount=${failed.missCount}`);
+
+// Review focus 5: the stored mode is the server's.
+await aDayPasses(second);
+await practiceRead(second, second.text, { practiceMode: "lesson" });
+check("the stored mode is the server's, whatever the client sends", (await lastMode()) === "check");
+
+// Review focus 3: a word no longer on the list.
+const offList = await one(`SELECT id, text FROM "Word" WHERE level = 2 AND NOT "isPseudo" ORDER BY text LIMIT 1`);
+const stray = await practiceRead({ wordId: offList.id, text: offList.text }, offList.text);
+check(
+  "a Practice reading of a word not on the list is saved, with no mode",
+  stray.status === 200 && (await lastMode()) === null && stray.body.practice === null,
+  `HTTP ${stray.status}`
+);
 
 /* ── 4. specialist controls ────────────────────────────────────────────── */
 section("[4] specialist intervention controls");

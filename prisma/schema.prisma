@@ -221,6 +221,9 @@ model Attempt {
   // decoding time and mastery — reported only as a re-read after modelling
   // (not self-correction, which is unprompted and recorded as a review tag).
   isRetry      Boolean  @default(false)
+  // Practice only: "lesson" (read straight after the word was modeled) or
+  // "check" (read alone, on a later day). Decided by the server. Null elsewhere.
+  practiceMode String?
   createdAt    DateTime @default(now())
 
   review AttemptReview?
@@ -311,8 +314,10 @@ model PracticeItem {
   word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
   source    String   @default("AUTO") // AUTO | SPECIALIST
   missCount Int      @default(1)
-  streak    Int      @default(0) // consecutive correct practice reads
+  streak    Int      @default(0) // correct checks in a row, 0–2 (src/lib/practice.ts)
   mastered  Boolean  @default(false)
+  lastTaughtOn DateTime? @db.Date // Manila day a lesson was last given for this word
+  lastSeenOn   DateTime? @db.Date // Manila day this word last came up in Practice
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
