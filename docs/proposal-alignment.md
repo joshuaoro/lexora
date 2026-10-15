@@ -85,10 +85,10 @@ onset-rime awareness, and phoneme-level manipulation)".
 
 | Task in the proposal | In the application |
 |---|---|
-| Segmentation | *Count the syllables* — syllable level |
+| Segmentation | *Count the syllables* — syllable level. Since 16 October the word is heard, not shown, and once answered the app counts its parts with the child, clap by clap (the reading specialist's consultation) |
 | Blending | *Blend the parts* — **added 8 October**; syllable level. Until then, blending was missing, and "Listen & choose" (hearing a whole word and finding it, which is word recognition) carried the label. Each syllable is spoken as its own clip, about half a second to a second apart: the original generated clips ran the syllables together, so blending would have played the answer. A syllable that is a lone vowel (*a-so*) is played from the specialist's recording of that vowel; until it is recorded, the word is left out |
-| Rhyming | *Rhyme time* — onset–rime |
-| Sound isolation | *First sound* — phoneme isolation |
+| Rhyming | *Rhyme time* — onset–rime. Prompt word heard, not shown, until answered (16 October) |
+| Sound isolation | *First sound* — phoneme isolation. Prompt word heard, not shown, until answered (16 October) |
 | Phoneme-level manipulation | *Change the sound* — **added 9 October**, phoneme substitution: the child hears a word (*bata*), then the sound to take out (/b/) and the sound to put in (/m/), and picks the word that makes (*mata*, against *bata* unchanged and *lata*). Built from the 48 pairs of bank words that differ only in their first sound. The sounds are **recorded by the reading specialists** — the speech voice says a lone letter by its name ("bi", "ey"), the opposite of Marungko's sounds before names — so a pair is used only once both of its sounds are recorded |
 
 **The letter sounds.** The research team decided on 9 October that the specialists record

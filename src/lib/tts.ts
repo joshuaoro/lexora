@@ -187,8 +187,19 @@ export const SYLLABLE_SLOT_MS = 1200;
  * voice — a lone vowel (the "a" of a-so), recorded as the sound and not the
  * letter name. A recording is already trimmed to the sound, so it plays whole
  * with a short pause after it rather than inside a slot.
+ *
+ * `onPart(i)` is called as part `i` is heard, so something on screen can follow
+ * along (Count the syllables claps with each one). It fires when the clip
+ * starts playing, or, if the clip failed and the browser's voice stood in, when
+ * that finished: either way, in order and once per part. Never after the
+ * sequence has been cancelled.
  */
-export async function speakSyllables(parts: string[], rate = 0.85, clips?: (string | null)[]) {
+export async function speakSyllables(
+  parts: string[],
+  rate = 0.85,
+  clips?: (string | null)[],
+  onPart?: (i: number) => void
+) {
   stopSpeaking();
   const mine = generation;
   const slot = SYLLABLE_SLOT_MS / Math.min(1.5, Math.max(0.6, rate));
@@ -196,6 +207,7 @@ export async function speakSyllables(parts: string[], rate = 0.85, clips?: (stri
     if (generation !== mine) return;
     const clip = clips?.[i];
     if (clip) {
+      onPart?.(i);
       await playMedia(clip, rate);
       if (i === parts.length - 1 || generation !== mine) return;
       await pause(RECORDED_GAP_MS, rate);
@@ -204,6 +216,9 @@ export async function speakSyllables(parts: string[], rate = 0.85, clips?: (stri
     let started = () => {};
     const playing = new Promise<void>((r) => (started = r));
     const done = playUiClip(parts[i], "fil", rate, () => started());
+    void Promise.race([done, playing]).then(() => {
+      if (generation === mine) onPart?.(i);
+    });
     if (i === parts.length - 1) return done; // the last one plays out
 
     // The slot runs from the first sound, not from the request, so a clip that

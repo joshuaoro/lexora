@@ -36,9 +36,12 @@ scope.
   own clip, about 0.4–1.0 s apart, because the single generated clip ran them together; a
   syllable that is a lone vowel (*a-so*) is played from the specialist's recording of that
   vowel, and the word waits until there is one.
-- **Count the syllables** — segmentation (pantig), with syllable-by-syllable audio.
-- **Rhyme time** — rhyming awareness from a curated item bank.
-- **First sound** — sound isolation: which word begins with the same sound.
+- **Count the syllables** — segmentation (pantig). The word is heard, not shown; once
+  answered, the app counts its parts with the child, a clap and a number per syllable.
+- **Rhyme time** — rhyming awareness from a curated item bank. The prompt word is heard,
+  not shown, until answered.
+- **First sound** — sound isolation: which word begins with the same sound. The prompt word
+  is heard, not shown, until answered.
 - **Change the sound** — phoneme manipulation: hear *bata*, then /b/ → /m/, and pick the word
   that makes (*mata*). The two sounds are the reading specialists' own recordings (word bank
   → *Letter sounds*), because the speech voice says a lone letter by its name; a word pair is

@@ -125,6 +125,63 @@ for (const [slug, type, label] of [
   }
 }
 
+section("[1b] the listening activities say the word; they do not show it");
+/**
+ * The reading specialist's consultation (16 October): in Count the syllables,
+ * First sound and Rhyme time the child should hear the word, not read it — a
+ * printed prompt turns a listening task into a reading one. Asserted on the
+ * rendered card: no printed word while the question is open, the word once it
+ * is answered. Each activity gets its own tab, closed rather than navigated
+ * away from, because leaving mid-activity is guarded.
+ */
+for (const [slug, label] of [
+  ["syllables", "count the syllables"],
+  ["first-sound", "first sound"],
+  ["rhyme", "rhyme time"],
+]) {
+  const q = await ctx.newPage();
+  watch(q, `learner:${slug}`);
+  await q.goto(`${BASE}/exercises/${slug}`, { waitUntil: "networkidle" });
+  await q.locator("button:has-text('Start!')").click();
+  const card = q.locator("div.rounded-3xl.text-center").first();
+  const options = q.locator(
+    "div.grid > button:not([disabled]), div.flex-wrap > button.h-20:not([disabled]):not([aria-label])"
+  );
+  await options.first().waitFor({ state: "visible", timeout: 30000 });
+
+  const printedBefore = await card.locator("p.wrap-break-word").count();
+  const speaker = await card.getByRole("button", { name: "Hear the word again" }).count();
+  check(`${label}: no printed word while the question is open`, printedBefore === 0, `${printedBefore} printed`);
+  check(`${label}: the word is a speaker to tap instead`, speaker === 1, `${speaker} speaker button(s)`);
+
+  await options.first().click();
+  await q.locator("button:has-text('Next word'), button:has-text('Finish')").first().waitFor({ timeout: 45000 });
+
+  if (slug === "syllables") {
+    // The app counts with the child: one card per syllable, a counter that
+    // ends on the number of parts.
+    const counted = await q
+      .locator("text=/^\\d+ parts? \\(pantig\\)$/")
+      .first()
+      .waitFor({ timeout: 20000 })
+      .then(() => true)
+      .catch(() => false);
+    const cards = await card.locator("ol li").count();
+    const total = counted
+      ? Number((await q.locator("text=/^\\d+ parts? \\(pantig\\)$/").first().innerText()).match(/\d+/)[0])
+      : -1;
+    check(
+      "count the syllables: after answering, the app counts the parts with the child",
+      counted && cards > 0 && total === cards,
+      `${cards} card(s), counted to ${total}`
+    );
+  } else {
+    const printedAfter = await card.locator("p.wrap-break-word").count();
+    check(`${label}: the word appears once it is answered`, printedAfter >= 1, `${printedAfter} printed`);
+  }
+  await q.close();
+}
+
 section("[2] display settings persist and apply to the Reader");
 await p.goto(`${BASE}/settings`, { waitUntil: "networkidle" });
 await p.click("button:has-text('Atkinson Hyperlegible')");

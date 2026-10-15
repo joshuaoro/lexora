@@ -130,9 +130,9 @@ segmentation, rhyming, sound isolation, phoneme manipulation).
 | **Read aloud** | `read-aloud` | Sees a word, presses the mic, reads it. **This is the one that records audio and produces the scored data.** |
 | **Listen & choose** | `listen-choose` | Hears a word, picks it from look-alike options (word recognition) |
 | **Blend the parts** | `blend` | Hears a word only in its syllables — *ba… ta*, each its own clip, about half a second to a second apart — and picks the word they make (blending). The whole word plays only as feedback. A lone-vowel syllable (*a-so*) is played from the specialist's recording of that vowel; until there is one, the word is left out |
-| **Count the syllables** | `syllables` | Taps how many *pantig* a word has |
-| **Rhyme time** | `rhyme` | Picks the word that rhymes |
-| **First sound** | `first-sound` | Picks the word starting with the same sound |
+| **Count the syllables** | `syllables` | Hears a word (it is not shown) and taps how many *pantig* it has. Once answered, the app counts it with them: each part plays in turn, its card lights up, a 👏 pops above it and a number counts under it, ending on the total. *Count again* replays it |
+| **Rhyme time** | `rhyme` | Hears a word (not shown until answered) and picks the printed word that rhymes |
+| **First sound** | `first-sound` | Hears a word (not shown until answered) and picks the printed word starting with the same sound |
 | **Change the sound** | `change-sound` | Hears a word (*bata*), then the sound to take out and the sound to put in (/b/ → /m/), and picks the word that makes (*mata*). The sounds are the specialists' recordings; until both sounds of a pair exist, the screen says the game is waiting for them |
 | **Practice list** | (via `/practice`) | Their own previously-misread words |
 | **Silly words** | `silly-words` | **The decoding probe.** Made-up words. Assessment only |

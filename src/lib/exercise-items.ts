@@ -409,8 +409,9 @@ export async function buildItems(
     });
   }
 
-  // SYLLABLES — count the syllables (pantig) of the word. Its "Hear the parts"
-  // speaks them one at a time too, so the same rule decides which words qualify.
+  // SYLLABLES — count the syllables (pantig) of the word. Once answered, the
+  // count is shown by speaking the parts one at a time (SyllableCount), so the
+  // same rule decides which words qualify.
   return pool.filter(speakable).slice(0, count).map((w) => {
     const n = w.syllables.split("-").length;
     const opts = new Set<number>([n]);

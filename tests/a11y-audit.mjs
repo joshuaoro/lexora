@@ -123,6 +123,16 @@ await page
   .waitFor({ state: "visible", timeout: 30000 });
 allViolations.push(...(await scan(page, "/exercises/listen-choose (mid-exercise)")));
 
+// Count the syllables is heard, not read: its main control mid-question is a
+// speaker button, and the answers are bare numbers. Both need names.
+await page.goto(`${BASE}/exercises/syllables`, { waitUntil: "networkidle" });
+await page.locator("button:has-text('Start!')").click();
+await page
+  .locator("div.flex-wrap > button.h-20:not([disabled])")
+  .first()
+  .waitFor({ state: "visible", timeout: 30000 });
+allViolations.push(...(await scan(page, "/exercises/syllables (mid-exercise)")));
+
 section("[5] keyboard-only navigation");
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 const reachable = await page.evaluate(() => {

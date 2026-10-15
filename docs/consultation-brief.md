@@ -205,7 +205,9 @@ synthesis of "ba, hay", relying on the comma for a pause; most had none ("bahay"
 "salamat" had no gap at all), and Whisper transcribed the clip of "sa, la, mat" as
 "Salamat!" — the activity would have played the answer. Each syllable is now its own clip
 in the same voice, about **half a second to a second** apart (longer at a slower
-speech-rate setting). The syllable-counting activity's *Hear the parts* button uses the same.
+speech-rate setting). *Count the syllables* uses the same clips once the child has answered,
+when it counts the word with them, part by part, a clap and a number at a time. During the
+question it plays the word whole, as you asked on 16 October.
 
 **Lone vowels — your recordings.** Spoken on its own, a lone vowel comes out as an English
 letter name: the research team listened on 9 October and found it "so English and not so

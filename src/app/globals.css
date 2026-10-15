@@ -40,6 +40,22 @@
   --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
 }
 
+/* Count the syllables: the clap that pops above each part as it is heard. */
+@keyframes clap {
+  0% {
+    transform: scale(0.4) rotate(-12deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.25) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
 /* Respect the OS "reduce motion" setting. Several controls pulse or animate —
    the recording mic in particular — which can be distracting or uncomfortable
    for some learners. */

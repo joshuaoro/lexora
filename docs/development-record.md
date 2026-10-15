@@ -1972,6 +1972,45 @@ rejected: four at similarity 0.80 (*lamok* "lamor", *sulat* "sulaq", *kamot*
 `calibration-audit` §4 now mirrors the rule and leaves demo learners out of its
 count, as the page does.
 
+### 8.23 The listening activities are heard, not read, 16 October
+
+The first consultation with a reading specialist asked, among other things,
+that *Count the syllables* and *First sound* say the word without showing it.
+A printed prompt turns a listening task into a reading one: a child who cannot
+yet decode the word cannot use it, and one who can is answering from the
+letters. The research team extended the change to *Rhyme time*, which had the
+same prompt. In all three the prompt word is now a speaker button. It plays by
+itself when the item opens and appears in print only once the item is
+answered. The answer choices stay printed, as the team chose.
+
+*Count the syllables* had a second problem once the word was hidden. Its only
+audio was a "Hear the parts" button that played the word a syllable at a time,
+which, with nothing to read, hands over the count. During the question it now
+plays the word whole. The parts move to the answer: `SyllableCount` plays them
+one clip at a time, and as each is heard its card lights up, a 👏 pops above
+it and a number counts under it, ending on "2 pantig". The specialist's
+"clap along if it helps" was first written into the instruction. The team
+pointed out that plain text would not teach a child to clap, so the app now
+shows the clapping instead, after the answer, where it cannot give the answer
+away. `speakSyllables` gained an `onPart(i)` callback that fires when each part
+is heard (or, if its clip failed and the browser's voice stood in, when that
+finished), so the claps keep time with the sound. The demonstration always
+plays the parts clip by clip, so the one word whose syllables a specialist
+recorded as a single take is counted from the generated clips here. Reduced
+motion suppresses the pop; the highlight and the count still step along.
+
+What is recorded (target, choice, right or wrong), scoring and the
+skill-progression map are unchanged. Only test accounts had used these
+activities before the change. The proposal-alignment wording that the
+phonological-awareness activities present "the prompt as audio" is now true of
+all five.
+
+`ui-audit` §1b checks, for each of the three, that no word is printed while the
+question is open, that a speaker stands in for it, that the word appears once
+answered and, for syllables, that the count shows one card per part and ends
+on that number. Written first and run against the previous deployment, five
+of its checks failed. `a11y-audit` scans *Count the syllables* mid-question.
+
 ---
 
 ## 9. Verification

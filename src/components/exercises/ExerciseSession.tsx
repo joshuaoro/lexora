@@ -12,7 +12,6 @@ import {
   ArrowRight,
   RotateCcw,
   Home,
-  Ear,
   PartyPopper,
 } from "lucide-react";
 import type { ExerciseItem, ExerciseType } from "@/lib/exercise-items";
@@ -28,6 +27,7 @@ import {
 import { getDict, type Lang } from "@/lib/i18n";
 import SpeakButton from "@/components/SpeakButton";
 import LeaveGuard from "./LeaveGuard";
+import SyllableCount from "./SyllableCount";
 import { tryFetch } from "@/lib/net";
 import { useOralReading } from "./useOralReading";
 
@@ -244,8 +244,13 @@ export default function ExerciseSession({
         const swap = next.swap;
         setTimeout(() => void playSwapPrompt(swap, settings.ttsRate), 350);
       }
-      // Receptive activities speak the target automatically
-      if (next && (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND")) {
+      // Receptive activities speak the target automatically. Count the
+      // syllables too: its word is heard, never shown, while the question is
+      // open (the reading specialist's consultation, 16 October).
+      if (
+        next &&
+        (type === "LISTEN_CHOOSE" || type === "RHYME" || type === "FIRST_SOUND" || type === "SYLLABLES")
+      ) {
         setTimeout(
           () =>
             sayWord({
@@ -392,7 +397,8 @@ export default function ExerciseSession({
     playChime(correct);
     if (!correct) {
       // Immediate corrective feedback: hear the right word, then take a turn.
-      setTimeout(() => sayTarget(), 700);
+      // Count the syllables plays its parts instead (SyllableCount).
+      if (type !== "SYLLABLES") setTimeout(() => sayTarget(), 700);
       if (isOral && micOk) setRetry("offered");
     }
   }
@@ -854,7 +860,12 @@ export default function ExerciseSession({
           </>
         )}
 
-        {/* ——— Syllable counting ——— */}
+        {/* ——— Syllable counting ———
+             Heard, not read, while the question is open (the reading
+             specialist's consultation, 16 October): a printed word turns a
+             listening task into a reading one, and hearing it in parts would
+             give the count away. Once answered, SyllableCount counts it with
+             the child, clap by clap. */}
         {type === "SYLLABLES" && (
           <>
             <div className="flex items-center justify-center gap-2">
@@ -863,18 +874,24 @@ export default function ExerciseSession({
               </p>
               <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
             </div>
-            <p
-              className="wrap-break-word mt-6 font-bold text-ink"
-              style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 1.4) }}
-            >
-              {phase === "feedback" ? item.syllables : item.target}
-            </p>
-            <button
-              onClick={speakSyllables}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-peach px-5 py-2.5 font-bold text-peach-deep transition hover:opacity-90"
-            >
-              <Ear size={18} /> {t.hearParts}
-            </button>
+            {phase === "item" ? (
+              <button
+                onClick={sayTarget}
+                aria-label={t.hearAgainAria}
+                className="mt-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-peach text-peach-deep shadow-md transition hover:scale-105"
+              >
+                <Volume2 size={36} />
+              </button>
+            ) : (
+              <SyllableCount
+                key={index}
+                syllables={item.syllables ?? item.target}
+                clips={item.partClips}
+                rate={settings.ttsRate}
+                wordStyle={wordStyle}
+                labels={{ total: t.partsCount, again: t.countAgain, groupAria: t.countingAria }}
+              />
+            )}
             {phase === "item" && (
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 {item.options!.map((opt) => (
@@ -895,7 +912,9 @@ export default function ExerciseSession({
         {/* ——— Rhyme and sound isolation ———
              Same interaction: hear the prompt, pick the word that matches it.
              Only the question changes — rhyme asks about the ending sound,
-             first-sound about the beginning. */}
+             first-sound about the beginning. The prompt word is heard, not
+             shown, until it is answered (the reading specialist's
+             consultation, 16 October); the choices stay printed. */}
         {(type === "RHYME" || type === "FIRST_SOUND") && (
           <>
             <div className="flex items-center justify-center gap-2">
@@ -904,21 +923,31 @@ export default function ExerciseSession({
               </p>
               <SpeakButton text={intro.how} lang={lang} rate={settings.ttsRate} size="sm" />
             </div>
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <p
-                className="wrap-break-word font-bold text-ink"
-                style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 1.3) }}
-              >
-                {item.target}
-              </p>
+            {phase === "item" ? (
               <button
                 onClick={sayTarget}
                 aria-label={t.hearAgainAria}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-peach text-peach-deep transition hover:scale-105"
+                className="mt-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-peach text-peach-deep shadow-md transition hover:scale-105"
               >
-                <Volume2 size={22} />
+                <Volume2 size={36} />
               </button>
-            </div>
+            ) : (
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <p
+                  className="wrap-break-word font-bold text-ink"
+                  style={{ ...wordStyle, fontSize: wordSize(settings.fontSize, 1.3) }}
+                >
+                  {item.target}
+                </p>
+                <button
+                  onClick={sayTarget}
+                  aria-label={t.hearAgainAria}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-peach text-peach-deep transition hover:scale-105"
+                >
+                  <Volume2 size={22} />
+                </button>
+              </div>
+            )}
             {phase === "item" && (
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {item.options!.map((opt) => (
@@ -1003,15 +1032,22 @@ export default function ExerciseSession({
                     {t.changeAnswer(item.swap.fromText, item.answer ?? "")}
                   </p>
                 )}
-                <p className="mt-3 text-lg font-extrabold text-ink" style={wordStyle}>
-                  {item.syllables ?? item.target}
-                </p>
-                <button
-                  onClick={sayTarget}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream"
-                >
-                  <Volume2 size={16} /> {t.hearItAgain}
-                </button>
+                {/* The listening activities reveal the word above once it is
+                    answered, with its own speaker (or, for syllables, the count
+                    and its replay), so it is not repeated here. */}
+                {type !== "SYLLABLES" && type !== "RHYME" && type !== "FIRST_SOUND" && (
+                  <>
+                    <p className="mt-3 text-lg font-extrabold text-ink" style={wordStyle}>
+                      {item.syllables ?? item.target}
+                    </p>
+                    <button
+                      onClick={sayTarget}
+                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream"
+                    >
+                      <Volume2 size={16} /> {t.hearItAgain}
+                    </button>
+                  </>
+                )}
 
                 {/* "Now you try" — closes the corrective sequence so the last
                     time the child says this word, they say it right. */}
