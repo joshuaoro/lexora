@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { scoreReading, activeScoreThreshold } from "./scoring";
 import { viaLearnerScope } from "./demo";
+import { MEASURED_READING_TYPES } from "./measures";
 
 /**
  * Fitting LEXORA's acceptance threshold to specialist judgements.
@@ -53,7 +54,7 @@ export async function loadLabelledReadings(
   const rows = await prisma.attempt.findMany({
     where: {
       isRetry: false,
-      activityType: { in: ["READ_ALOUD", "PRACTICE", "PSEUDO_PROBE"] },
+      activityType: { in: [...MEASURED_READING_TYPES, "PSEUDO_PROBE"] },
       review: { isNot: null },
       // Demo learners carry fabricated readings; a threshold fitted to those
       // would be fitted to a seed script.

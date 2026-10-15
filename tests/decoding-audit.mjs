@@ -195,7 +195,7 @@ check(
 
 const inAccuracy = await one(
   `SELECT COUNT(*)::int AS n FROM "Attempt"
-    WHERE "learnerId" = $1 AND "activityType" IN ('READ_ALOUD','PRACTICE')`,
+    WHERE "learnerId" = $1 AND "activityType" = 'READ_ALOUD'`,
   [learner.learnerId]
 );
 check("probe readings sit outside the measured activity types", inAccuracy.n === 0, `${inAccuracy.n}`);

@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { PLAUSIBLE, median } from "./stats";
 import { effectiveStage } from "./marungko";
+import { MEASURED_READING_TYPES } from "./measures";
 
 /**
  * Adaptive difficulty: the learner's level (1–5) is recomputed from the most
@@ -120,7 +121,7 @@ async function decodingTally(learnerId: string, level: number) {
     where: {
       learnerId,
       levelAtTime: level,
-      activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+      activityType: { in: MEASURED_READING_TYPES },
       // A retry follows the correct word being modelled, so letting it count
       // would move the learner up on repetition rather than on decoding.
       isRetry: false,
@@ -218,7 +219,7 @@ async function decodingSlowingDown(learnerId: string, level: number): Promise<bo
     where: {
       learnerId,
       levelAtTime: level,
-      activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+      activityType: { in: MEASURED_READING_TYPES },
       isRetry: false,
       correct: true,
       responseMs: PLAUSIBLE,

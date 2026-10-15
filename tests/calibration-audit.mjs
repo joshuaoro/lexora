@@ -196,7 +196,7 @@ const sample = await one(
      JOIN "LearnerProfile" lp ON lp.id = a."learnerId"
      LEFT JOIN "Word" w ON w.id = a."wordId"
     WHERE a."isRetry" = false
-      AND a."activityType" IN ('READ_ALOUD','PRACTICE')
+      AND a."activityType" = 'READ_ALOUD'
       AND COALESCE(w."isPseudo", false) = false
       AND NOT lp."isDemo"`
 );
@@ -1084,7 +1084,7 @@ await filPage.waitForTimeout(500);
 const anyLearner = await one(
   `SELECT lp.id FROM "LearnerProfile" lp
      JOIN "Attempt" a ON a."learnerId" = lp.id
-    WHERE a."activityType" IN ('READ_ALOUD','PRACTICE') AND NOT a."isRetry"
+    WHERE a."activityType" = 'READ_ALOUD' AND NOT a."isRetry"
     GROUP BY lp.id ORDER BY COUNT(a.id) DESC LIMIT 1`
 );
 await filPage.goto(`${BASE}/specialist/learner/${anyLearner.id}?demo=1`, {

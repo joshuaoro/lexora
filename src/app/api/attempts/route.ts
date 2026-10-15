@@ -5,6 +5,7 @@ import { getLearnerContext, sessionExpired } from "@/lib/guards";
 import { scoreReading, activeScoreThreshold } from "@/lib/scoring";
 import { transcribeAudio } from "@/lib/asr";
 import { updateAdaptiveLevel, recordMiss, recordPracticeResult } from "@/lib/adaptive";
+import { MEASURED_READING_TYPES } from "@/lib/measures";
 
 /**
  * Scoring a reading is the slowest thing a learner waits on: upload, then
@@ -59,15 +60,15 @@ const schema = z.object({
 const ASR_TYPES = ["READ_ALOUD", "PRACTICE", "PSEUDO_PROBE"];
 
 /**
- * Activities whose result is allowed to move the learner's level or practice
- * list — which is every spoken one except the probe.
+ * Activities whose result may move the learner's level or add to the practice
+ * list: Read aloud only (Practice keeps its own bookkeeping, src/lib/practice.ts).
  *
  * The probe is a measurement, not a lesson. Letting it feed the adaptive level
  * would move a child down for failing items nobody has taught them, and letting
  * it feed the practice list would schedule non-words for teaching, which is the
  * one thing these must never be used for.
  */
-const ADAPTIVE_TYPES = ["READ_ALOUD", "PRACTICE"];
+const ADAPTIVE_TYPES = MEASURED_READING_TYPES;
 
 /**
  * The probe's automatic verdict is recorded but never shown or trusted.

@@ -6,6 +6,7 @@ import { patternFamily } from "@/lib/stats";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import { learnerScope, includeDemoFromParams } from "@/lib/demo";
+import { MEASURED_READINGS } from "@/lib/measures";
 import DemoToggle from "@/components/specialist/DemoToggle";
 import { divergence } from "@/lib/divergence";
 import DivergencePanel from "@/components/specialist/DivergencePanel";
@@ -30,7 +31,7 @@ import PhaseComparison from "@/components/specialist/PhaseComparison";
  * the word was modelled is repetition, not decoding.
  */
 
-const MEASURED = { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false };
+const MEASURED = MEASURED_READINGS;
 
 function pct(correct: number, total: number) {
   return total ? Math.round((correct / total) * 100) : null;

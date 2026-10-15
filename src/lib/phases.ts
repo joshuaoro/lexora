@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { median, PLAUSIBLE } from "./stats";
 import { viaLearnerScope } from "./demo";
+import { MEASURED_READING_TYPES } from "./measures";
 
 /**
  * The start and the end of testing, side by side — a record, not an outcome.
@@ -65,7 +66,7 @@ export type PhaseComparison = {
   untaggedReadings: number;
 };
 
-const MEASURED_TYPES = ["READ_ALOUD", "PRACTICE"];
+const MEASURED_TYPES = MEASURED_READING_TYPES;
 
 /** Pass a learnerId for one child, or omit it for the cohort. */
 export async function phaseComparison(

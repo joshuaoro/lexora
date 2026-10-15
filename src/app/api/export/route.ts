@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { patternFamily as patternFamilyFor, PLAUSIBLE, median } from "@/lib/stats";
 import { calibrationReport } from "@/lib/calibration";
 import { learnerScope, viaLearnerScope, includeDemoFrom } from "@/lib/demo";
+import { MEASURED_READINGS, MEASURED_READING_TYPES } from "@/lib/measures";
 import { buildIepDraft } from "@/lib/iep";
 import { phaseComparison } from "@/lib/phases";
 
@@ -292,7 +293,7 @@ export async function GET(req: Request) {
     for (const l of learners) {
       // Every figure below is over first readings only; retries are counted
       // separately as re-reads after modelling so they can never inflate accuracy.
-      const measured = { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false };
+      const measured = MEASURED_READINGS;
 
       const [attempts, errorGroups, sessions, sessionsCompleted, practice, reviews, retries] =
         await Promise.all([
@@ -330,7 +331,7 @@ export async function GET(req: Request) {
         }),
         prisma.attempt.groupBy({
           by: ["correct"],
-          where: { learnerId: l.id, activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: true },
+          where: { learnerId: l.id, activityType: { in: MEASURED_READING_TYPES }, isRetry: true },
           _count: true,
         }),
       ]);

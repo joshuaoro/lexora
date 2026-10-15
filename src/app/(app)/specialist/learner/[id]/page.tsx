@@ -23,6 +23,7 @@ import PhaseComparison from "@/components/specialist/PhaseComparison";
 import SkillProgression from "@/components/specialist/SkillProgression";
 import { progressionStatus } from "@/lib/adaptive";
 import { formatDate, dateLocale } from "@/lib/time";
+import { MEASURED_READING_TYPES } from "@/lib/measures";
 
 /** How far below the threshold still counts as a borderline reading. */
 const BORDERLINE_BAND = 0.15;
@@ -68,7 +69,7 @@ export default async function LearnerDetailPage({
     prisma.attempt.findMany({
       where: {
         learnerId: id,
-        activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+        activityType: { in: MEASURED_READING_TYPES },
         isRetry: false,
       },
       orderBy: { createdAt: "desc" },
@@ -101,7 +102,7 @@ export default async function LearnerDetailPage({
     prisma.attemptReview.groupBy({
       by: ["agrees"],
       where: {
-        attempt: { learnerId: id, activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false },
+        attempt: { learnerId: id, activityType: { in: MEASURED_READING_TYPES }, isRetry: false },
       },
       _count: true,
     }),
@@ -123,7 +124,7 @@ export default async function LearnerDetailPage({
     prisma.attempt.findMany({
       where: {
         learnerId: id,
-        activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+        activityType: { in: MEASURED_READING_TYPES },
         isRetry: false,
         correct: false,
         score: { gte: activeScoreThreshold() - BORDERLINE_BAND, lt: activeScoreThreshold() },
@@ -206,7 +207,7 @@ export default async function LearnerDetailPage({
         where: {
           learnerId: id,
           wordId: { in: practiceItems.map((p) => p.wordId) },
-          activityType: { in: ["READ_ALOUD", "PRACTICE"] },
+          activityType: { in: MEASURED_READING_TYPES },
           isRetry: false,
           correct: false,
           review: { isNot: null },

@@ -1,12 +1,12 @@
 import { prisma } from "./db";
 import { dayKey, startOfDay, formatDate } from "./time";
+import { MEASURED_READINGS } from "./measures";
 
 export type DailyAccuracy = { day: string; accuracy: number | null };
 
-const READ_TYPES = ["READ_ALOUD", "PRACTICE"];
-
 /**
- * The filter every measurement shares: oral readings that were a first attempt.
+ * The filter every measurement shares: first readings in Read aloud (see
+ * measures.ts).
  *
  * A retry is taken after the child has just heard the word pronounced, so it
  * measures repetition rather than decoding. Counting retries would inflate
@@ -14,7 +14,7 @@ const READ_TYPES = ["READ_ALOUD", "PRACTICE"];
  * describe — so they are excluded from every figure here and reported
  * separately as re-reads after modelling.
  */
-const MEASURED = { activityType: { in: READ_TYPES }, isRetry: false };
+const MEASURED = MEASURED_READINGS;
 
 /**
  * Latencies outside this range are not readings.

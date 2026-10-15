@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { viaLearnerScope } from "./demo";
+import { MEASURED_READING_TYPES } from "./measures";
 
 /**
  * Reading from memory, or reading the letters?
@@ -92,7 +93,7 @@ export async function divergence(
     where: {
       ...(learnerId ? { learnerId } : viaLearnerScope(includeDemo)),
       isRetry: false,
-      activityType: { in: ["READ_ALOUD", "PRACTICE", "PSEUDO_PROBE"] },
+      activityType: { in: [...MEASURED_READING_TYPES, "PSEUDO_PROBE"] },
       review: { isNot: null },
       wordId: { not: null },
     },

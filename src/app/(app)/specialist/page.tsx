@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getLang } from "@/lib/lang";
 import { getDict } from "@/lib/i18n";
 import { learnerScope, includeDemoFromParams } from "@/lib/demo";
+import { MEASURED_READINGS } from "@/lib/measures";
 import DemoToggle from "@/components/specialist/DemoToggle";
 import { formatDate, dateLocale } from "@/lib/time";
 
@@ -34,8 +35,8 @@ export default async function SpecialistPage({
   const [accGroups, lastAttempts] = await Promise.all([
     prisma.attempt.groupBy({
       by: ["learnerId", "correct"],
-      // First readings only — retries follow the word being modelled.
-      where: { activityType: { in: ["READ_ALOUD", "PRACTICE"] }, isRetry: false },
+      // First readings in Read aloud only (src/lib/measures.ts).
+      where: MEASURED_READINGS,
       _count: true,
     }),
     prisma.attempt.groupBy({

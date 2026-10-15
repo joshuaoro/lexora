@@ -4,7 +4,7 @@
  * specialist–system agreement metric.
  */
 import {
-  BASE, json, check, section, report, query, one,
+  BASE, api, json, check, section, report, query, one,
   requireSpecialistLogin, createTestLearner, deleteTestLearner, endSuite,
 } from "./helpers.mjs";
 
@@ -139,6 +139,60 @@ check("75% accuracy stays below the 80% level-up line", below === 1, `L${below}`
 const above = await readTwelve(2); // 10 of 12 = 83%
 check("83% clears it", above === 2, `L${above}`);
 await deleteTestLearner(adaptive.email);
+
+/* ── 2b. practice readings stay out of every figure ────────────────────── */
+section("[2b] practice readings stay out of every figure");
+/** This learner's row of the summary export, as an object keyed by column. */
+async function summaryRow(learnerId) {
+  const lines = (await (await api("/api/export?what=summary", { cookie: specialist })).text())
+    .replace(/^﻿/, "")
+    .trim()
+    .split("\r\n");
+  const cols = lines[0].split(",");
+  const cells = lines.slice(1).map((l) => l.split(",")).find((c) => c[cols.indexOf("learner_id")] === learnerId);
+  return cells ? Object.fromEntries(cols.map((c, i) => [c, cells[i]])) : null;
+}
+const measured = await createTestLearner("measured");
+const mWords = await query(`SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo" ORDER BY text LIMIT 2`);
+// One Read aloud misread puts the word on the list and is the only measured reading.
+await json("/api/attempts", {
+  cookie: measured.cookie,
+  method: "POST",
+  body: { activityType: "READ_ALOUD", wordId: mWords[0].id, target: mWords[0].text, browserTranscript: "zzzz", responseMs: 1500 },
+});
+const beforePractice = await summaryRow(measured.learnerId);
+for (let i = 0; i < 4; i++) {
+  await json("/api/attempts", {
+    cookie: measured.cookie,
+    method: "POST",
+    body: { activityType: "PRACTICE", wordId: mWords[0].id, target: mWords[0].text, browserTranscript: mWords[0].text, responseMs: 1200 },
+  });
+}
+// A specialist scoring a practice reading must not reach the agreement figure.
+const pAttempt = await one(
+  `SELECT id FROM "Attempt" WHERE "learnerId" = $1 AND "activityType" = 'PRACTICE' ORDER BY "createdAt" DESC LIMIT 1`,
+  [measured.learnerId]
+);
+await json("/api/reviews", { cookie: specialist, method: "POST", body: { attemptId: pAttempt.id, agrees: true, blind: true } });
+const afterPractice = await summaryRow(measured.learnerId);
+check(
+  "practice readings do not count as measured readings",
+  beforePractice?.oral_attempts === "1" && afterPractice?.oral_attempts === "1",
+  `oral_attempts ${beforePractice?.oral_attempts} → ${afterPractice?.oral_attempts}`
+);
+check(
+  "nor change accuracy",
+  afterPractice?.oral_accuracy_pct === beforePractice?.oral_accuracy_pct,
+  `${beforePractice?.oral_accuracy_pct}% → ${afterPractice?.oral_accuracy_pct}%`
+);
+check(
+  "nor enter the agreement sample when scored",
+  afterPractice?.attempts_reviewed === "0",
+  `attempts_reviewed ${afterPractice?.attempts_reviewed}`
+);
+const mLevel = await one(`SELECT level FROM "LearnerProfile" WHERE id = $1`, [measured.learnerId]);
+check("nor move the level", mLevel.level === 1, `L${mLevel.level}`);
+await deleteTestLearner(measured.email);
 
 /* ── 3. practice list ──────────────────────────────────────────────────── */
 section("[3] practice list and mastery");
