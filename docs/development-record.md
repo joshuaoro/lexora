@@ -51,7 +51,7 @@ Three companion documents:
 | **Code, total** | **172** | **25,194** |
 | `docs/` and README — documents and instruments | 15 | 7,007 |
 
-16 migrations, 10 automated audit suites, 512 assertions (as of 16 October 2026).
+16 migrations, 10 automated audit suites, 518 assertions (as of 16 October 2026).
 
 ---
 
@@ -2075,22 +2075,39 @@ a11y scan waited on a hidden button, and `reporting-audit`'s missing-recording
 check met Vercel's bot challenge (a 403 HTML page with `x-vercel-mitigated:
 challenge`), which it now records as a skip, as the integrity suite does.
 
+**The final review** — a fresh reviewer over the whole branch — found the
+speech sequencing leaky in two ways, fixed the same day. A clip cut while
+still loading raised an `AbortError` that `playUiClip` took for a failure, so
+the device's own voice read the line out over whatever had cut it. And a
+paused `<audio>` fires neither `ended` nor `error`, so a cut model never
+finished: it held the mic until its 8-second cap, then could free it while a
+newer model was speaking. A cut clip now settles at once, without the
+fallback, and a model releases the mic only if no newer prompt has taken it
+(`modelGen`). Practice's first model had also cut the instruction spoken on
+Start 350 ms in, on every run; it now waits for it, 15 seconds at most.
+Pressing the mic silences the app first, and *Pakinggan ulit* is held while
+the re-read records. Six checks pin these (`ui-audit` §1c and §1d,
+`reporting-audit` §4b and §4c), each seen failing against the previous
+deployment. They read `AUDIO_PROBE` (`tests/helpers.mjs`), a passive page
+script that logs when the app's clips play, end or are cut, and anything
+handed to the device's voice.
+
 ---
 
 ## 9. Verification
 
 ### 9.1 The suites
 
-Ten suites, **512 checks** (16 October 2026, after §8.24). Run with `npm run audit [url]`.
+Ten suites, **518 checks** (16 October 2026, after §8.24 and its final review). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 67 | Authorization, validation, data scoping, erasure, the letter-sound routes, and the two RLS checks in §10.1a |
 | `logic-audit` | 40 | Scoring strictness, the skill-progression map (both sides of 80%), agreement, practice lessons, checks and mastery, and that a practice reading moves no measure |
-| `ui-audit` | 45 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the model after a Read aloud reading, a practice lesson and a check, the Reader's settings and Show syllables, specialist workflows and the Practice readings panel, responsive sweep |
+| `ui-audit` | 49 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the model after a Read aloud reading and its timing (a cut model never falls back to the device's voice or frees the mic mid-speech), a practice lesson after the whole instruction, and a check, the Reader's settings and Show syllables, specialist workflows and the Practice readings panel, responsive sweep |
 | `links-audit` | 57 | Every route reachable from the navigation, as each role. One check per learner page it finds, so it grows by one for each learner enrolled (four learners on 16 October; a learner left behind by a crashed suite adds one, as on 10 October) |
 | `stale-session-audit` | 27 | A learner or specialist erased mid-session |
-| `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention (the missing-recording check is recorded as a skip when Vercel's firewall challenges it) |
+| `reporting-audit` | 45 | Decoding time, calibration band, retries (with "Pakinggan ulit" held during the take, and the mic silencing the app), phase, retention (the missing-recording check is recorded as a skip when Vercel's firewall challenges it) |
 | `decoding-audit` | 74 | Probe walls, latency guard, stress caveat, exports (`practice_mode` last), Filipino |
 | `calibration-audit` | 99 | Calibration arithmetic (§4 runs two or three checks, depending on whether the live sample can be fitted), agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
