@@ -36,8 +36,8 @@ of that date (*76-11 LEXORA*, .docx and .pdf), whose text is otherwise the propo
 |---|---|---|---|
 | 1 | Display customization, TTS with synchronized highlighting, adjustable speed, reading focus tools; the extent they address the access needs the specialists identified | Settings (font, size, letter/word spacing, line height, colour overlay, focus ruler, speech rate); Reader (word-by-word TTS with highlighting) | **Instrument 06, Part A** — specialists rate each feature against each need; weighted mean, Table 1 |
 | 2 | Accuracy of the pre-trained ASR, as percentage of agreement with a reading specialist on the same recordings | Read aloud records and scores; specialists review each recording **blind**; the app computes agreement | **Percentage of agreement**, on blind reviews of first readings of real words (data guide §5.2) |
-| 3 | Immediate pronunciation feedback and a personalized practice list; whether the list matches the words most frequently misread, verified by a specialist | Feedback after every reading, with the word modelled and "Now you try it!"; practice list built from misreads, each word showing the misreads the specialist **confirmed or overturned** | **Instrument 06, Part B** — percentage of list words the specialist confirms |
-| 4 | Adaptive exercises driven by recorded accuracy; whether the assigned level matches the decoding level a specialist assesses | Levels 1–5 following the **skill-progression map** (§4); a *Skill progression* panel per learner | **Instrument 06, Part C** — blind assessment against the assigned level; percentage matching |
+| 3 | Immediate pronunciation feedback and a personalized practice list; whether the list matches the words most frequently misread, verified by a specialist | Feedback after every reading, with the word modelled ("Ang salitang ito ay …") and "Ikaw naman!"; practice list built from Read aloud misreads, taught as lessons and checked on later days, each word showing the misreads the specialist **confirmed or overturned** | **Instrument 06, Part B** — percentage of list words the specialist confirms |
+| 4 | Adaptive exercises driven by recorded accuracy; whether the assigned level matches the decoding level a specialist assesses | Levels 1–5 following the **skill-progression map** (§4), read from Read aloud first readings only (practice readings follow a lesson, so they are left out); a *Skill progression* panel per learner | **Instrument 06, Part C** — blind assessment against the assigned level; percentage matching |
 | 5 | Dashboard of accuracy, error patterns and completed activities over time; usefulness of the reports | Dashboard, Reports, specialist learner pages, exports | The records described per child; **Instrument 06, Part D** — weighted mean |
 | 6 | Software quality (ISO/IEC 25010, three specialists) and user acceptance (pictorial scale, five children) | — | **Instrument 03** (weighted mean, Table 1) and **Instrument 04** (frequency and percentage, Table 2) |
 
@@ -143,7 +143,7 @@ the five above.
 
 **Instructional content reviewed by the specialists before use** — the consultation
 brief is that review, with every item listed in its appendices and a sign-off line
-(decision 14). The specialists can also record any word, and now any word's syllables,
+(decision 15). The specialists can also record any word, and now any word's syllables,
 in their own voice from the word bank; learners then hear the recording.
 
 **Reading activity data** — "the words presented during each reading session, the
@@ -153,6 +153,21 @@ and linked to the learner's profile." All recorded, with one small gap: a word o
 when a child leaves an activity, unanswered, is not stored (the session's totals count
 answered words). If the manuscript claims every word *presented*, say *every word read
 or skipped*.
+
+**The teaching sequence and the practice list (16 October).** At the reading specialist's
+consultation, Read aloud began modeling the word after every reading, and the practice
+list began teaching each word before testing it. A reading taken just after the child
+heard the word measures repetition, not decoding, so only the first, unmodeled Read aloud
+reading is measured; practice readings and second attempts are recorded and excluded.
+This keeps Objectives 2–4 measuring decoding. **Suggested manuscript wording:**
+
+> After each reading, the system models the target word for the learner ("Ang salitang
+> ito ay …") and invites a second attempt, which is recorded separately and excluded from
+> all measures. Words on the personalized practice list are first taught by modeling and
+> then checked, without modeling, on a later day; a word leaves the list after two correct
+> checks on different days. Only the learner's first, unmodeled reading of a word in the
+> Read Aloud activity enters the reading-accuracy, adaptive-difficulty and agreement
+> measures.
 
 ---
 
@@ -313,7 +328,7 @@ application, so add them to Fig. 1.
 | Syllable breakdown | **Show syllables** in the Reader (added 10 October; also a saved setting), which splits each word where the word bank does (ba-hay); *Count the syllables* and *Blend the parts*; the feedback after every reading. Read aloud never splits the word, because the split would do part of the decoding being measured |
 | Adaptive reading exercises | Levels 1–5 on the skill-progression map (§4) |
 | Speech-to-text | Whisper, through Groq |
-| Pronunciation feedback | After every reading, with the word modelled and "Now you try it!" |
+| Pronunciation feedback | After every reading, with the word modelled ("Tama! …", "Ang salitang ito ay …") and "Ikaw naman!"; practice words taught before they are checked |
 | Personalized word lists | The practice list, built from misreads |
 | Reading history | *Recent activities* on Reports and on the specialist's learner page |
 | Performance monitoring, analytics, reports | Dashboard, Reports, error patterns, the Cohort overview, exports |
@@ -357,7 +372,7 @@ validation evidence, **not as results**.
 | Latency guard in the level rule | Part of the adaptive mechanism (Objective 4): promotion waits while correct readings slow |
 | Decoding probe (made-up words) and the decoding-vs-recall panel | A specialist tool for telling decoding from memorising the bank; supplementary record |
 | Start and end of testing | A descriptive record for planning; **not** a gain |
-| "Now you try it!" re-read | Part of immediate pronunciation feedback (Objective 3) |
+| The model after every reading, the "Ikaw naman!" re-read, and practice lessons and checks | Part of immediate pronunciation feedback and the practice list (Objective 3); none of these readings is measured |
 | IEP draft | Part of the progress reports (Objective 5; rated in instrument 06, D7) |
 | Cohort overview | The specialist's working view; not for circulation (§3) |
 | `/diagnostics` | ASR integration validation, per device |
@@ -380,7 +395,8 @@ each one:
    and 27 lone-vowel words stay out of blending and syllable counting.
 2. Confirming the 80% thresholds and the 50% demotion line (decision 8), and that every
    session includes a listening activity.
-3. The blending and sound-change activities as built (decisions 11–12).
+3. The blending and sound-change activities as built (decisions 11–12), and the model's
+   wording after every reading and in practice lessons (decision 14).
 4. Who completes instrument 06, when, and how decoding level is assessed (decision 13).
 5. Whether Table 2's labels, which describe ease of use, should be generalised for the
    two pictorial items about enjoyment and wanting to use it again (instrument 04).

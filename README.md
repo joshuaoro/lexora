@@ -18,7 +18,7 @@ LEXORA is a web-based reading support and progress-tracking application focused 
 |---|-----------|----------------|---|
 | 1 | Dyslexia-friendly display customization (fonts, size, letter/word spacing, line height, color overlays, focus ruler), TTS with synchronized word highlighting, adjustable reading speed | **Settings** page, **Reader** page. The focus ruler is pointer-driven, so it works with mouse, touch and stylus. The Reader's *Show syllables* splits each word where the word bank does (the syllable breakdown in the proposal's Figs. 1–2) | Specialists rate each feature against the access needs they identified — [instrument 06](docs/instruments/06-objective-verification.md) Part A, weighted mean |
 | 2 | Accuracy of the pre-trained ASR in detecting word-level reading errors, against a reading specialist's scoring of the same recordings | **Read aloud** exercise; **Specialist → learner → Scoring reliability check** (records audio; the specialist scores each recording blind, *read correctly* or *misread*) | **Percentage of agreement**, computed by the app; discrepancies refine the acceptance threshold |
-| 3 | Immediate pronunciation feedback + a personalized practice word list from frequently misread words | Exercise feedback panels; a corrective **"Now you try it!"** re-read; **Practice list** (auto-populated on misreads), each word showing the misreads its specialist confirmed or overturned | A specialist verifies the list against the child's frequent misreads — instrument 06 Part B, percentage |
+| 3 | Immediate pronunciation feedback + a personalized practice word list from frequently misread words | Exercise feedback panels; the word modelled after every reading (*"Ang salitang ito ay …"*) and an **"Ikaw naman!"** re-read; **Practice list** (auto-populated on Read aloud misreads, each word taught as a lesson and checked on a later day), each word showing the misreads its specialist confirmed or overturned | A specialist verifies the list against the child's frequent misreads — instrument 06 Part B, percentage |
 | 4 | Adaptive word-level exercises whose difficulty follows recorded reading accuracy | Adaptive level 1–5 (`src/lib/adaptive.ts`) following the proposal's **skill-progression map** — phonological awareness, then single-word decoding — shown per learner in the **Skill progression** panel; specialists can override | A specialist's blind assessment of decoding level against the assigned level — instrument 06 Part C, percentage |
 | 5 | Progress-tracking dashboard: reading accuracy, word-level error patterns, completed activities over time | **Dashboard**, **Reports** (printable), **Specialist** learner views, **Cohort overview**. Reader time counts towards "minutes practiced"; an activity left partway still counts its minutes but is not an activity *completed* | The records themselves, described per child; specialists rate each report's usefulness — instrument 06 Part D |
 | 6 | Software quality (ISO/IEC 25010:2023, three specialists) and user acceptance (three-point pictorial scale, five children) | The app is the artifact under evaluation | [Instrument 03](docs/instruments/03-iso-25010-questionnaire.md), weighted mean; [instrument 04](docs/instruments/04-pictorial-scale.md), frequency and percentage |
@@ -46,7 +46,7 @@ scope.
   that makes (*mata*). The two sounds are the reading specialists' own recordings (word bank
   → *Letter sounds*), because the speech voice says a lone letter by its name; a word pair is
   used once both of its sounds are recorded.
-- **Practice list** — the child's own misread words, revisited until two correct readings in a row master them.
+- **Practice list** — the child's own misread words, each taught first (LEXORA says it, then the child reads) and checked alone on a later day; two correct checks on different days master it. Practice readings count toward no figure.
 - **Silly words** — the decoding probe. Stage-matched non-words that cannot be read from memory, so they separate decoding from sight-word recall. Assessment only: no audio, no verdict shown to the child, no effect on level or practice, scored afterwards by a specialist listening to the recording. Rests for 7 days after a run.
 
 ### Speech recognition (oral reading assessment)
@@ -230,7 +230,7 @@ Cebuano translation, before they reach a family.
 
 ### Data gathering and analysis guide
 [`docs/data-guide.md`](docs/data-guide.md) is the Chapter 3 and Chapter 4 companion:
-every column of every export and what it means, the four filters that silently corrupt
+every column of every export and what it means, the five filters that silently corrupt
 an analysis if missed, the collection protocol from consultation to close-out, the
 evaluation instruments, and the analysis objective by objective — using only the
 proposal's descriptive measures (frequency and percentage, weighted mean, percentage of
@@ -615,7 +615,7 @@ Keep a copy off the machine that produced it.
 ## Tests
 
 ```bash
-npm run audit             # all 10 suites against http://localhost:3000 (487 checks)
+npm run audit             # all 10 suites against http://localhost:3000 (512 checks)
 npm run audit -- <url>    # or against the deployment
 npm run audit:api         # authorization, validation, erasure, RLS  (67)
 npm run audit:logic       # scoring, skill-progression map, mastery, review  (26)

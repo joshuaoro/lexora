@@ -51,7 +51,7 @@ Three companion documents:
 | **Code, total** | **172** | **25,194** |
 | `docs/` and README — documents and instruments | 15 | 7,007 |
 
-15 migrations, 10 automated audit suites, 487 assertions (as of 16 October 2026).
+16 migrations, 10 automated audit suites, 512 assertions (as of 16 October 2026).
 
 ---
 
@@ -2011,26 +2011,90 @@ answered and, for syllables, that the count shows one card per part and ends
 on that number. Written first and run against the previous deployment, five
 of its checks failed. `a11y-audit` scans *Count the syllables* mid-question.
 
+### 8.24 Read aloud teaches, Practice checks, 16 October
+
+The same consultation asked that Read aloud teach: model the word first ("Ang
+salitang ito ay …"), then let the child read; after a miss, say it again and
+let them try once more. Modeling first collides with Objectives 2–4. The
+reading LEXORA scores, the specialist reviews and the level is set from is
+meant to be a child decoding a word unaided; a reading taken a second after
+hearing the word measures repetition. So the request was split between the
+two activities, and the research team chose it over the alternatives (spec
+`docs/superpowers/specs/2026-10-16-read-aloud-teaching-sequence-design.md`):
+
+- **Read aloud reads first and teaches after.** The child's first reading is
+  unchanged and is still the only one measured. LEXORA then always says the
+  word: "Tama! *bahay*" after a correct reading, "Ang salitang ito ay *bahay*"
+  after a miss or a skip, with **Pakinggan ulit** to repeat it and **Ikaw
+  naman!** for the second try, saved as a retry as before.
+- **Practice teaches first and checks later.** A word is a *lesson* — modeled,
+  then read — until a later day, when it becomes a *check*, read alone. Two
+  correct checks on different days master it (it was two correct readings in
+  a row). A missed check is corrected on the spot, counts as that day's
+  lesson, and resets the count. A second run on the same day offers words not
+  yet seen that day first, so it is not all lessons again.
+
+**The server decides the mode.** `PracticeItem` gained `lastTaughtOn` and
+`lastSeenOn` (Manila calendar dates) and `Attempt` gained `practiceMode`; the
+migration added three nullable columns, after the backup
+`lexora-2026-10-15T18-19-26`. `src/lib/practice.ts` decides lesson or check
+from the dates when the reading is saved and applies the result, so what is
+stored never rests on what the browser claims. The browser is told the mode
+only to show it: **Pakinggan muna** or **Ikaw muna** on the card, "✓ 1 sa 2
+nang mag-isa" after a correct check, and "Natutunan mo na! 🎉" on the second.
+
+**The measures in one place.** Practice readings now follow a lesson, so they
+stop counting. `src/lib/measures.ts` holds the rule — Read aloud first
+readings only — and replaced fifteen copies of `["READ_ALOUD", "PRACTICE"]`,
+in ten files, in the statistics, the level rule, the calibration, the divergence panel, the
+specialist pages and the exports. The 44 practice readings already stored,
+all on the demo learners, left the figures with it.
+
+**The microphone waits for the model.** While LEXORA speaks, the mic and the
+retry are disabled, so the child cannot record over the word or have it
+recorded. Playback is capped at 8 seconds: a clip that stalls cannot lock a
+child out. The model's five phrases were synthesized in both languages
+ahead of time.
+
+**The specialist's view.** Each learner page gained *Practice readings* —
+lesson, check or re-read, the result and the recording — apart from the
+review list, so none of it enters agreement. Practice-list words show their
+checks ("✓ 1 of 2 checks"). The readings export gained `practice_mode` as
+its last column, so no existing column moved.
+
+**Tests**, each written first and watched fail against the previous
+deployment: `npm run practice:check` (seven checks on the Manila day boundary
+and the mode rule); `logic-audit` §2b (a practice reading moves no measure)
+and §3 rewritten for lessons, checks and mastery, with a day made to pass in
+SQL and an off-list word saving no mode; `ui-audit` §1c (after a skip, "Your
+turn!", "Hear it again" and the retry mic once the model ends), §1d (a lesson,
+then a check the next day, and the list's progress) and §6 (the panel);
+`a11y-audit` scans Practice mid-item; `decoding-audit` checks the new column is
+last. Two test faults surfaced on the way and were fixed in the tests: the
+a11y scan waited on a hidden button, and `reporting-audit`'s missing-recording
+check met Vercel's bot challenge (a 403 HTML page with `x-vercel-mitigated:
+challenge`), which it now records as a skip, as the integrity suite does.
+
 ---
 
 ## 9. Verification
 
 ### 9.1 The suites
 
-Ten suites, **487 checks** (16 October 2026). Run with `npm run audit [url]`.
+Ten suites, **512 checks** (16 October 2026, after §8.24). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 67 | Authorization, validation, data scoping, erasure, the letter-sound routes, and the two RLS checks in §10.1a |
-| `logic-audit` | 26 | Scoring strictness, the skill-progression map (both sides of 80%), mastery, agreement |
-| `ui-audit` | 38 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the Reader's settings and Show syllables, specialist workflows, responsive sweep |
-| `links-audit` | 56 | Every route reachable from the navigation, as each role. One check per learner page it finds, so it grows by one for each learner enrolled (57 on 10 October, when a crashed suite had left a test learner behind) |
+| `logic-audit` | 40 | Scoring strictness, the skill-progression map (both sides of 80%), agreement, practice lessons, checks and mastery, and that a practice reading moves no measure |
+| `ui-audit` | 45 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the model after a Read aloud reading, a practice lesson and a check, the Reader's settings and Show syllables, specialist workflows and the Practice readings panel, responsive sweep |
+| `links-audit` | 57 | Every route reachable from the navigation, as each role. One check per learner page it finds, so it grows by one for each learner enrolled (four learners on 16 October; a learner left behind by a crashed suite adds one, as on 10 October) |
 | `stale-session-audit` | 27 | A learner or specialist erased mid-session |
-| `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention |
-| `decoding-audit` | 72 | Probe walls, latency guard, stress caveat, exports, Filipino |
+| `reporting-audit` | 43 | Decoding time, calibration band, retries, phase, retention (the missing-recording check is recorded as a skip when Vercel's firewall challenges it) |
+| `decoding-audit` | 74 | Probe walls, latency guard, stress caveat, exports (`practice_mode` last), Filipino |
 | `calibration-audit` | 99 | Calibration arithmetic (§4 runs two or three checks, depending on whether the live sample can be fitted), agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
 | `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
-| `a11y-audit` | 21 | WCAG 2.1 AA via axe-core (the Reader with syllables shown, and Count the syllables mid-question, included), keyboard, reduced motion |
+| `a11y-audit` | 22 | WCAG 2.1 AA via axe-core (the Reader with syllables shown, Count the syllables mid-question and Practice mid-item included), keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
 | `prod-smoke` | — | Real Groq audio, serverless TTS, live `SPECIALIST_CODE` |
 

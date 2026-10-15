@@ -81,7 +81,7 @@ driver.
 ## Test
 
 ```bash
-npm run audit                                     # 10 suites, 487 checks, against localhost:3000
+npm run audit                                     # 10 suites, 512 checks, against localhost:3000
 npm run audit -- https://lexora-snowy-six.vercel.app
 npm run audit:prod -- <url>                       # post-deploy smoke
 ```

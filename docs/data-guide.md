@@ -93,25 +93,26 @@ BOM, so Excel and SPSS open them without mangling Filipino characters.
 Download from the specialist dashboard, or:
 `/api/export?what=<name>[&learnerId=…]`
 
-### 2.0 Four filters that silently corrupt an analysis
+### 2.0 Five filters that silently corrupt an analysis
 
 Read these before computing anything.
 
 **① `is_retry = 1` — exclude from every accuracy and latency figure.**
 
-A retry is the second reading in the *"Now you try it!"* correction, taken after
-the child has just heard the word pronounced. Instructionally it is the point of
-the exercise. Statistically it is not an independent measure of decoding.
+A retry is the second reading in the correction — *"Ang salitang ito ay …"*, then
+*"Ikaw naman!"* — taken after the child has just heard the word pronounced.
+Instructionally it is the point of the exercise. Statistically it is not an
+independent measure of decoding.
 
-Measured on the current data — the inflation is small but systematic and always
-upward:
+Measured on 13 August, over Read aloud and Practice first readings (both were
+counted then; see ⑤) — the inflation is small but systematic and always upward:
 
 | Learner | First readings only | Retries included |
 |---|---|---|
 | Ana | **63.6%** (n=22) | 65.4% (n=26) |
 | Juan | **81.7%** (n=126) | 81.9% (n=127) |
 
-The left column is correct and matches what the app reports. Report retries
+The left column is the right one. Report retries
 separately as re-reads after modelling (`retries`, `retries_correct`,
 `retry_success_pct`) — a real and interesting behaviour, just not accuracy. Do not
 call them self-correction: in running-record terms that is a child fixing an error
@@ -140,7 +141,19 @@ Tagging is optional by design — a blank is honest missing data. So a tag
 distribution describes only the misreadings someone tagged. Always report
 "categories recorded for N of M reviewed misreadings (X%)" beside it.
 
-### 2.1 `attempts` — 28 columns, one row per word reading
+**⑤ Measure Read aloud first readings only — `activity_type = READ_ALOUD`,
+`is_retry = 0`.**
+
+Since 16 October the practice list teaches. A *lesson* is read straight after
+LEXORA has said the word, and a *check* is a word taught on an earlier day
+(`practice_mode`), so neither is a child decoding a word unaided. Reading
+accuracy, the level, agreement and the calibration all read Read aloud first
+readings only, and every figure in `summary` and `calibration` already applies
+this. Before 16 October Practice readings were counted too; their rows stay in
+`attempts` with `practice_mode` blank. Report practice as its own record — words
+taught, checked and learned — not as accuracy.
+
+### 2.1 `attempts` — 29 columns, one row per word reading
 
 The raw data. Everything else can be recomputed from this.
 
@@ -174,6 +187,7 @@ The raw data. Everything else can be recomputed from this.
 | `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets the blind percentage of agreement (§5.2) be recomputed from the rows |
 | `learner_id` | A stable, meaningless id for the child — the join key across `attempts`, `sessions` and `summary`. Join on this, never on `learner`: two children can share a first name |
 | `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.5. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
+| `practice_mode` | Practice only: `lesson` (read straight after LEXORA modeled the word) or `check` (read alone, on a later day). Blank for every other activity and for practice readings saved before 16 October. The last column, so no earlier column moved when it was added (filter ⑤) |
 
 **`specialist_review` vs `specialist_correct`.** The first stores whether the
 specialist *agreed with the machine*; the second is their own verdict, already
@@ -195,7 +209,7 @@ results on every reading the machine got wrong.
 
 ### 2.3 `summary` — 28 columns, one row per learner
 
-Pre-aggregated, and every figure already applies filter ①. This is the
+Pre-aggregated, and every figure already applies filters ① and ⑤. This is the
 convenient file; `attempts` is the authoritative one.
 
 **Identity** `learner`, `learner_id`, `level`, `marungko_stage` — no email: an
@@ -216,7 +230,7 @@ a random string — but it must not be published next to anything that does.
 `practice_words_active`, `practice_words_mastered`
 
 **Agreement** `attempts_reviewed`, `reviews_agreed`, `agreement_pct` — over
-first readings of real words (`READ_ALOUD`, `PRACTICE`, `is_retry = 0`), the same
+Read aloud first readings of real words (`READ_ALOUD`, `is_retry = 0`), the same
 population the `calibration` export fits. Probe reviews are *not* in it: on a
 non-word the recogniser returns the nearest real word, so its verdict is wrong
 by construction and would pull agreement down whenever a child decoded well.
@@ -456,7 +470,7 @@ rating. A need no feature addresses is a finding; report it, do not drop it.
 ### 5.2 Objective 2 — percentage of agreement
 
 **Source** the `agreement-conditions` export, or `attempts`: first readings of
-real words (`activity_type` `READ_ALOUD` or `PRACTICE`, `is_retry = 0`,
+real words (`activity_type = READ_ALOUD`, `is_retry = 0`,
 `is_pseudoword = 0`) that carry a specialist verdict (`specialist_correct` not
 empty).
 
@@ -506,7 +520,9 @@ are left out: they were not generated.
 
 The **immediate pronunciation feedback** half of the objective is a feature to
 describe and demonstrate (the corrective sequence: the verdict, the word
-modelled, "Now you try"), supported by the specialists' ratings of A1 (the
+modelled — "Ang salitang ito ay …" — and "Ikaw naman!"; and on the practice list,
+a lesson before each new word and a check on a later day), supported by the
+specialists' ratings of A1 (the
 functions they need) and G3 (feedback to the child is encouraging) on the ISO
 questionnaire.
 
@@ -534,11 +550,12 @@ recorded — then report how useful the specialists judged it.
 **Reading accuracy** `summary.oral_accuracy_pct`, or from `attempts`:
 
 ```
-accuracy = correct = 1 AND is_retry = 0 AND activity_type IN (READ_ALOUD, PRACTICE)
-           ÷ all rows with is_retry = 0 and the same activity types
+accuracy = correct = 1 AND is_retry = 0 AND activity_type = READ_ALOUD
+           ÷ all rows with is_retry = 0 and activity_type = READ_ALOUD
 ```
 
-Retries measure repetition (filter ①). The listening activities are not oral
+Retries measure repetition (filter ①); practice readings follow a lesson
+(filter ⑤). The listening activities are not oral
 reading — `LISTEN_CHOOSE` is recognition, `BLEND` and `SYLLABLES` are syllable
 awareness, `RHYME`, `FIRST_SOUND` and `CHANGE_SOUND` are sound awareness — and are reported as
 their own frequencies. Probe items are excluded (filter ③).

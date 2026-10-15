@@ -148,10 +148,14 @@ will demonstrate:
    maximum, or when the mic is tapped again.
 5. The audio goes to the server, Whisper transcribes it, the app scores the transcript
    against the target and shows immediate feedback.
-6. **If wrong:** the correct pronunciation plays, then **"Now you try it!"** invites a
-   second reading — so the last time the child says a word they missed, they say it
-   right. That re-read is recorded as a *retry* and is **excluded from every statistic**
-   (it measures repetition, not decoding).
+6. **Then LEXORA models the word, every time.** After a correct reading it says
+   *"Tama! bahay"*. After a miss or a skip it says *"Ang salitang ito ay bahay"*, shows
+   **Pakinggan ulit** to hear that again, and **Ikaw naman!** invites a second reading —
+   so the last time the child says a word they missed, they say it right. The microphone
+   waits while LEXORA speaks (8 seconds at most). The second reading is recorded as a
+   *retry* and is **excluded from every statistic** (it measures repetition, not
+   decoding). If it is wrong too, the app shows *"Magandang subok. Babalikan natin ito."*
+   and moves on; the word is already on the practice list from the first miss.
 
 **Silly words is different and the difference is the point.** No audio is ever played,
 no verdict is shown to the child, it never affects their level, and none of it enters
@@ -160,8 +164,23 @@ run.
 
 ### Practice list `/practice`
 
-Words the child previously misread. Two correct readings in a row master a word and
-retire it from the list. A specialist can also pin words here manually.
+Words the child misread in Read aloud. A specialist can also pin words here manually.
+Each word is taught first and checked later:
+
+- **A lesson** — the card says **Pakinggan muna**. LEXORA says the word first (*"Ang
+  salitang ito ay bahay. Ikaw naman!"*), then the child reads it.
+- **A check** — on a later day the card says **Ikaw muna**, and the child reads the word
+  alone, with no model before it. LEXORA confirms or corrects afterwards. A correct check
+  shows its progress (*✓ 1 sa 2 nang mag-isa*).
+- A word leaves the list after **two correct checks on different days** — the second
+  ends with *"Natutunan mo na!"*. A misread check is corrected on the spot, its count
+  starts over, and it is checked again on a later day.
+- A second run on the same day offers the words not yet seen that day first. A run made
+  only of words already seen today stays lessons, and says *"Bukas, susubukan mo na itong
+  mag-isa!"*.
+- **Practice readings count toward no figure** — not accuracy, the level, agreement or
+  the calibration. Specialists hear them on the learner page, in the *Practice readings*
+  panel.
 
 ### Reader `/reader`
 
@@ -411,9 +430,10 @@ word-level reading only, Filipino, Marungko.
    - Press **Listen to this** — *"almost no device has a Filipino voice, so the app
      ships its own; a browser reading Tagalog produces something a child cannot follow."*
    - Press the mic and **read the word correctly.** Show the feedback.
-   - Press the mic and **read the next word wrong on purpose.** Show the correction, then
-     the **"Now you try it!"** re-read. Say plainly: *this re-read is recorded but
-     excluded from every statistic, because the child has just been told the answer.*
+   - Press the mic and **read the next word wrong on purpose.** Show the correction
+     (*"Ang salitang ito ay …"*), then the **Ikaw naman!** re-read. Say plainly: *this
+     re-read is recorded but excluded from every statistic, because the child has just
+     been told the answer.*
 4. **Exercises → Silly words** — run two or three items. *"These are made-up words. A real
    word can be read from memory; a word that has never existed can only be decoded. This
    is how the study tells 'learned to read' apart from 'learned these 254 words'. The
@@ -510,7 +530,7 @@ npm run password:set -- learner2@lexora.ph --generate --random
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 487 checks
+npm run audit                  # 512 checks
 npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
 
@@ -736,7 +756,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 487 checks
+npm run audit                  # all 10 suites, 512 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values

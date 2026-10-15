@@ -150,7 +150,8 @@ that order. To move **up** a level, a child must meet both at their current leve
    accurate but slow).
 
 **50% or less** on the readings → **down** a level; phonological awareness plays no part in
-moving down. A practice word is mastered after two correct readings in a row. A new
+moving down. A practice word leaves the list after two correct checks on different days
+(decision 14). A new
 *Skill progression* panel on each learner's page shows where the child stands on both,
 and you can set the level by hand at any time.
 
@@ -256,7 +257,28 @@ The proposal has a reading specialist verify two things LEXORA produces:
 you assess decoding level for Objective 4 (your usual method; Appendix F lists the words
 by level) ______________________
 
-### 14. Signing off the content
+### 14. Teaching after reading, and practice lessons (16 October)
+
+**Now:** as you asked on 16 October, LEXORA teaches the word as well as scoring it.
+
+- **Read aloud.** The child reads first, unaided — that first reading is the one the study
+  measures. Then LEXORA always says the word: *"Tama! bahay"* after a correct reading,
+  *"Ang salitang ito ay bahay"* after a miss or a skip. After a miss the child can press
+  **Pakinggan ulit** to hear it again, and **Ikaw naman!** invites a second try. The
+  second try is saved but counts toward nothing: the child has just heard the answer.
+- **Practice list.** Each word is taught before it is tested. The first time it comes up
+  it is a **lesson** (*Pakinggan muna*): LEXORA says *"Ang salitang ito ay bahay. Ikaw
+  naman!"* and the child reads after it. On a later day it is a **check** (*Ikaw muna*):
+  the child reads alone, then hears the word. A word leaves the list after **two correct
+  checks on different days**, and a missed check starts the count again.
+- **What counts.** Practice readings follow a lesson, so like second tries they are left
+  out of accuracy, the level and agreement. Only the child's first, unmodeled reading in
+  Read aloud is measured. You can still hear every practice reading on the learner page,
+  in *Practice readings*.
+
+**Decide:** ☐ the model wording as given ☐ change to: ______________________
+
+### 15. Signing off the content
 
 The proposal: "The instructional content is reviewed by the reading specialists for
 appropriateness before use." The appendices below are that content, generated from the
