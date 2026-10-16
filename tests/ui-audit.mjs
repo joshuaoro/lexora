@@ -597,9 +597,10 @@ await waitForLevel(juanId, levelBefore);
 await query(`UPDATE "LearnerProfile" SET stage = $2 WHERE id = $1`, [juanId, before.stage]);
 
 check("data-protection panel is present", (await sp.locator("text=Data protection").count()) === 1);
+// The heading, not the phrase: the Re-reads panel's note names this panel too.
 check(
   "the learner page lists practice readings in their own panel",
-  (await sp.locator("text=Practice readings").count()) === 1
+  (await sp.getByRole("heading", { name: "Practice readings" }).count()) === 1
 );
 
 // The panel lists the readings themselves: the correct check §1d recorded for

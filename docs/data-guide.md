@@ -187,7 +187,7 @@ The raw data. Everything else can be recomputed from this.
 | `review_blind` | 1 = the machine's transcript, verdict and similarity were hidden until the specialist had judged; 0 = anchored; blank if unreviewed. Lets the blind percentage of agreement (§5.2) be recomputed from the rows |
 | `learner_id` | A stable, meaningless id for the child — the join key across `attempts`, `sessions` and `summary`. Join on this, never on `learner`: two children can share a first name |
 | `review_tags` | What the specialist heard, semicolon-separated tag ids (`vowel;stress`), from the vocabulary in §5.5. Blank on a reviewed row means *untagged* — honest missing data, so apply filter ④ |
-| `practice_mode` | Practice only: `lesson` (read straight after LEXORA modeled the word) or `check` (read alone, on a later day). Blank for every other activity and for practice readings saved before 16 October. The last column, so no earlier column moved when it was added (filter ⑤) |
+| `practice_mode` | Practice only: `lesson` (read straight after LEXORA modeled the word) or `check` (read alone, on a later day). A Practice re-read (`is_retry = 1`) is always `lesson`: the first reading it follows has already made the word that day's lesson. Blank for every other activity, for practice readings saved before 16 October, and for a reading of a word no longer on the list (unpinned mid-run). The last column, so no earlier column moved when it was added (filter ⑤) |
 
 **`specialist_review` vs `specialist_correct`.** The first stores whether the
 specialist *agreed with the machine*; the second is their own verdict, already
@@ -236,7 +236,12 @@ non-word the recogniser returns the nearest real word, so its verdict is wrong
 by construction and would pull agreement down whenever a child decoded well.
 They are reported in the `pseudo_*` columns instead.
 
-**Re-reads after modelling** `retries`, `retries_correct`, `retry_success_pct`
+**Re-reads after modelling** `retries`, `retries_correct`, `retry_success_pct` —
+Read aloud re-reads only: the second try after *"Ikaw naman!"*, following a missed
+first reading. Practice re-reads are not counted here; they are in `attempts`
+(`activity_type = PRACTICE`, `is_retry = 1`). The specialist's learner page splits
+them the same way: *Re-reads after hearing the word* shows Read aloud pairs, and
+*Practice readings* lists Practice re-reads with the other practice readings.
 
 **Decoding latency** `median_decode_ms`, `timed_readings` — median milliseconds
 over correct, first, plausible readings

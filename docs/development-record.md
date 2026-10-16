@@ -38,20 +38,21 @@ Three companion documents:
 | [`docs/deferred-ideas.md`](deferred-ideas.md) | What was considered and deliberately not built, feeding Future Work |
 | **this document** | How and why it came to be that way |
 
-**Scale of the artifact**, for orientation:
+**Scale of the artifact**, for orientation (16 October 2026; every tracked file in
+each folder, lines as `wc -l` counts them):
 
 | Area | Files | Lines |
 |---|---:|---:|
-| `src/app/` — routes and API handlers | 60 | 4,994 |
-| `src/components/` — UI | 31 | 6,011 |
-| `src/lib/` — domain logic | 30 | 5,100 |
-| `prisma/` — schema, migrations, word banks, seed | 21 | 1,645 |
-| `scripts/` — operational tooling | 16 | 2,165 |
-| `tests/` — audit suites | 14 | 5,279 |
-| **Code, total** | **172** | **25,194** |
-| `docs/` and README — documents and instruments | 15 | 7,007 |
+| `src/app/` — routes and API handlers | 61 | 5,217 |
+| `src/components/` — UI | 35 | 6,925 |
+| `src/lib/` — domain logic | 34 | 5,939 |
+| `prisma/` — schema, migrations, word banks, seed | 23 | 1,690 |
+| `scripts/` — operational tooling | 17 | 2,326 |
+| `tests/` — audit suites | 14 | 6,253 |
+| **Code, total** | **184** | **28,350** |
+| `docs/` and README — documents, instruments, and §8.24's design spec and plan | 17 | 8,998 |
 
-16 migrations, 10 automated audit suites, 518 assertions (as of 16 October 2026).
+16 migrations, 10 automated audit suites, 532 assertions (as of 16 October 2026).
 
 ---
 
@@ -2092,25 +2093,68 @@ deployment. They read `AUDIO_PROBE` (`tests/helpers.mjs`), a passive page
 script that logs when the app's clips play, end or are cut, and anything
 handed to the device's voice.
 
+### 8.25 The final review's loose ends, 16 October
+
+The research team took up most of the review's minor findings the same day.
+
+- **No more skipped checks.** A probe showed Vercel's bot protection
+  challenging node's `fetch` after 20 requests while a headless browser on the
+  same session was never challenged, before or after. `browserApi` in
+  `tests/helpers.mjs` sends a request from a signed-in page. The
+  missing-recording check in `reporting-audit` falls back to it once node is
+  challenged, and the speech-budget test in `session-integrity-audit` switches
+  to it for the rest of its run. Both used to record a skip; both are now
+  always exercised, and the integrity suite always counts 38.
+- **Unpinning.** A specialist can take back a word they pinned (an **×** on the
+  chip; `DELETE /api/learners/[id]/practice`). Only pinned words: the generated
+  words are the list the specialist verifies for Objective 3, so the route
+  refuses them. A generated word the specialist later pinned keeps its misses,
+  so unpinning returns it to the generated list rather than removing it. Review
+  focus 3 is now tested as written: a word unpinned while the child's run still
+  holds it is saved with no mode.
+- **A model on its way as the child leaves** no longer plays on the next page:
+  the session's cleanup cancels a scheduled one.
+- **"Bukas, susubukan mo na itong mag-isa!"** was printed on the start screen
+  only. It is now spoken with the instruction when such a run starts, read on
+  the start screen's speaker, and shown with its own speaker on the end screen,
+  since "Play again" goes straight to the words. All three lines are
+  pre-generated.
+- **Re-reads in one place each.** The learner page's *Re-reads* panel shows
+  Read aloud re-reads only, matching the summary export's `retries`; Practice
+  re-reads are in *Practice readings*. The data guide now says both, and that a
+  Practice re-read always carries `practice_mode = lesson`.
+- **Two weak tests made strict.** The practice-list check now requires "1 of 2"
+  after a correct check (it passed on "0 of 2"). The panel check now finds the
+  check reading's own row and its mode (it found only the title).
+- **Small interface fixes.** While the mic waits for LEXORA, the line under it
+  says *Pakinggan muna si LEXORA…* rather than "Press the mic". A lesson card
+  has **Pakinggan ulit** to hear the model again before reading. The manual says
+  the child taps **Susunod na salita** after a failed re-read; the app does not
+  move on by itself.
+
+Each change in behaviour has a check written first and seen failing against the
+previous deployment. The two strengthened tests passed there too: the behaviour
+was right, and only the tests were loose.
+
 ---
 
 ## 9. Verification
 
 ### 9.1 The suites
 
-Ten suites, **518 checks** (16 October 2026, after §8.24 and its final review). Run with `npm run audit [url]`.
+Ten suites, **532 checks** (16 October 2026, after §8.25). Run with `npm run audit [url]`.
 
 | Suite | Checks | Covers |
 |---|---:|---|
 | `api-audit` | 67 | Authorization, validation, data scoping, erasure, the letter-sound routes, and the two RLS checks in §10.1a |
-| `logic-audit` | 40 | Scoring strictness, the skill-progression map (both sides of 80%), agreement, practice lessons, checks and mastery, and that a practice reading moves no measure |
-| `ui-audit` | 49 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the model after a Read aloud reading and its timing (a cut model never falls back to the device's voice or frees the mic mid-speech), a practice lesson after the whole instruction, and a check, the Reader's settings and Show syllables, specialist workflows and the Practice readings panel, responsive sweep |
+| `logic-audit` | 45 | Scoring strictness, the skill-progression map (both sides of 80%), agreement, practice lessons, checks and mastery, unpinning (only pinned words; a word unpinned mid-run saves no mode), and that a practice reading moves no measure |
+| `ui-audit` | 56 | The dashboard's listening nudge, complete learner journeys (blending and change the sound included), the listening prompts heard rather than shown and the syllable count, the model after a Read aloud reading and its timing (a cut model never falls back to the device's voice or frees the mic mid-speech, and never follows the child off the page), a practice lesson after the whole instruction, its status line and replay, the end screen's note for tomorrow, and a check counted one of two, the Reader's settings and Show syllables, specialist workflows, the Practice readings panel and unpinning, responsive sweep |
 | `links-audit` | 57 | Every route reachable from the navigation, as each role. One check per learner page it finds, so it grows by one for each learner enrolled (four learners on 16 October; a learner left behind by a crashed suite adds one, as on 10 October) |
 | `stale-session-audit` | 27 | A learner or specialist erased mid-session |
-| `reporting-audit` | 45 | Decoding time, calibration band, retries (with "Pakinggan ulit" held during the take, and the mic silencing the app), phase, retention (the missing-recording check is recorded as a skip when Vercel's firewall challenges it) |
+| `reporting-audit` | 47 | Decoding time, calibration band, retries (with "Pakinggan ulit" held during the take, the mic silencing the app, and Practice re-reads kept to their own panel), phase, retention (the missing-recording check is resent from a browser when Vercel's firewall challenges node — §8.25) |
 | `decoding-audit` | 74 | Probe walls, latency guard, stress caveat, exports (`practice_mode` last), Filipino |
 | `calibration-audit` | 99 | Calibration arithmetic (§4 runs two or three checks, depending on whether the live sample can be fitted), agreement first, blind scoring (what each button saves, no score without a recording), tags, demo, IEP, start/end record, Filipino throughout |
-| `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress (36 when Vercel's firewall challenges the speech-budget test, which is then recorded as a skip) |
+| `session-integrity-audit` | 38 | Language switch mid-exercise, partial progress, the speech budget (run from a browser once Vercel's firewall challenges node, so never skipped — §8.25) |
 | `a11y-audit` | 22 | WCAG 2.1 AA via axe-core (the Reader with syllables shown, Count the syllables mid-question and Practice mid-item included), keyboard, reduced motion |
 | `perf-audit` | — | Budgets on a throttled low-end device |
 | `prod-smoke` | — | Real Groq audio, serverless TTS, live `SPECIALIST_CODE` |

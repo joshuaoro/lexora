@@ -154,8 +154,9 @@ will demonstrate:
    so the last time the child says a word they missed, they say it right. The microphone
    waits while LEXORA speaks (8 seconds at most). The second reading is recorded as a
    *retry* and is **excluded from every statistic** (it measures repetition, not
-   decoding). If it is wrong too, the app shows *"Magandang subok. Babalikan natin ito."*
-   and moves on; the word is already on the practice list from the first miss.
+   decoding). If it is wrong too, the app shows *"Magandang subok. Babalikan natin ito."*,
+   and the child taps **Susunod na salita** to go on; the word is already on the practice
+   list from the first miss.
 
 **Silly words is different and the difference is the point.** No audio is ever played,
 no verdict is shown to the child, it never affects their level, and none of it enters
@@ -164,11 +165,13 @@ run.
 
 ### Practice list `/practice`
 
-Words the child misread in Read aloud. A specialist can also pin words here manually.
-Each word is taught first and checked later:
+Words the child misread in Read aloud. A specialist can also pin words here manually,
+and unpin them. Each word is taught first and checked later:
 
 - **A lesson** — the card says **Pakinggan muna**. LEXORA says the word first (*"Ang
-  salitang ito ay bahay. Ikaw naman!"*), then the child reads it.
+  salitang ito ay bahay. Ikaw naman!"*), then the child reads it. While LEXORA speaks,
+  the microphone waits and the line under it says *Pakinggan muna si LEXORA…*;
+  **Pakinggan ulit** on the card plays the word again before the child reads.
 - **A check** — on a later day the card says **Ikaw muna**, and the child reads the word
   alone, with no model before it. LEXORA confirms or corrects afterwards. A correct check
   shows its progress (*✓ 1 sa 2 nang mag-isa*).
@@ -177,7 +180,8 @@ Each word is taught first and checked later:
   starts over, and it is checked again on a later day.
 - A second run on the same day offers the words not yet seen that day first. A run made
   only of words already seen today stays lessons, and says *"Bukas, susubukan mo na itong
-  mag-isa!"*.
+  mag-isa!"* — shown on the start screen and at the end of the run beside **Ulitin**,
+  and spoken with the instruction when the run starts.
 - **Practice readings count toward no figure** — not accuracy, the level, agreement or
   the calibration. Specialists hear them on the learner page, in the *Practice readings*
   panel.
@@ -251,7 +255,11 @@ and Print. Then, top to bottom:
    practice list. Probe non-words are not offered: the practice list teaches, and a
    taught non-word stops measuring decoding. Each practice word shows how often the
    system scored it misread (×n) and, once you have reviewed those readings, how many you
-   **confirmed** and **overturned** — the evidence for verifying the list (Objective 3).
+   **confirmed** and **overturned** — the evidence for verifying the list (Objective 3) —
+   and its checks so far (✓ 1 of 2). A word you pinned has an **×** to unpin it. A word
+   the system put there has none: those are the list you verify for Objective 3, so they
+   stay. If you pinned a word the system had already listed, unpinning puts it back as
+   the system's, with its misses.
 2. **Skill progression** — the proposal's map at the child's current level: phonological
    awareness (the listening activities, ≥ 8 answers, 80%) and then single-word decoding
    (≥ 8 readings, 80%, not slowing). Both must be met to move up. If a child's level has
@@ -267,16 +275,20 @@ and Print. Then, top to bottom:
    both from your verdicts.
 6. **Borderline readings (Threshold calibration)** — readings that scored just below the
    acceptance line, with audio, so you can hear whether the line is set right.
-7. **Re-reads after hearing the word** — a missed word, and the child's second go at it
-   after LEXORA said it. Kept apart from accuracy. Not self-correction: that is unprompted,
-   and you record it with the "Self-corrected" observation on a review.
-8. **Start and end of testing (Phase comparison)** — what the app recorded in sessions
+7. **Re-reads after hearing the word** — a word missed in Read aloud, and the child's
+   second go at it after LEXORA said it. Kept apart from accuracy. Not self-correction:
+   that is unprompted, and you record it with the "Self-corrected" observation on a review.
+8. **Practice readings** — the practice list's readings, newest first: each marked
+   *lesson* (read straight after LEXORA said the word), *check* (read alone, on a later
+   day) or *re-read*, with the result and the recording. None of them counts toward any
+   figure, and Practice re-reads are listed here, not under item 7.
+9. **Start and end of testing (Phase comparison)** — what the app recorded in sessions
    tagged as the first and the last of testing. A record for planning, **not** a measure
    of improvement: the study does not measure reading gains.
-9. **Study timeline** — optionally tag sessions `BASELINE`, `REGULAR` or `ENDLINE`. It is
-   retroactive: you can tag sessions after the fact.
-10. **Full report** — everything the learner sees in their own report.
-11. **Data controls** — clear recordings, or erase the participant entirely.
+10. **Study timeline** — optionally tag sessions `BASELINE`, `REGULAR` or `ENDLINE`. It is
+    retroactive: you can tag sessions after the fact.
+11. **Full report** — everything the learner sees in their own report.
+12. **Data controls** — clear recordings, or erase the participant entirely.
 
 Dates and times on every screen are Philippine time (Asia/Manila), whatever machine
 serves the page.
@@ -530,7 +542,7 @@ npm run password:set -- learner2@lexora.ph --generate --random
 
 # 5. Confirm it all took effect
 npm run secrets:check          # must report 0 failures
-npm run audit                  # 518 checks
+npm run audit                  # 532 checks
 npm run audit:prod -- <url>    # 22 checks: real Whisper audio, serverless TTS
 ```
 
@@ -756,7 +768,7 @@ npm run audio:generate         # fill in missing word clips
 npm run audio:instructions     # warm the spoken instruction lines
 
 # Verification
-npm run audit                  # all 10 suites, 518 checks
+npm run audit                  # all 10 suites, 532 checks
 npm run audit -- <url>         # against the deployment
 npm run audit:a11y             # WCAG 2.1 AA
 npm run calibration:check      # κ / MCC against hand-computed values
