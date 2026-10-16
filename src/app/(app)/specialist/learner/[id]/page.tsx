@@ -11,6 +11,7 @@ import ThresholdCalibration from "@/components/specialist/ThresholdCalibration";
 import SessionPhases, { type PhaseSession } from "@/components/specialist/SessionPhases";
 import Rereads, { type RereadPair } from "@/components/specialist/Rereads";
 import PracticePanel, { type PracticeReading } from "@/components/specialist/PracticePanel";
+import UnpinButton from "@/components/specialist/UnpinButton";
 import ReviewList, { type ReviewableAttempt } from "@/components/specialist/ReviewList";
 import { activeScoreThreshold } from "@/lib/scoring";
 import { isScoredActivity } from "@/lib/activity";
@@ -148,9 +149,10 @@ export default async function LearnerDetailPage({
         word: { select: { stressNote: true } },
       },
     }),
-    // Re-reads, newest first. Each is paired below with the miss it followed.
+    // Read aloud re-reads, newest first. Each is paired below with the miss it
+    // followed. A Practice re-read is listed in the Practice panel instead.
     prisma.attempt.findMany({
-      where: { learnerId: id, isRetry: true },
+      where: { learnerId: id, isRetry: true, activityType: { in: MEASURED_READING_TYPES } },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {
@@ -428,6 +430,9 @@ export default async function LearnerDetailPage({
                       {p.streak > 0 && ` · ${t.practiceProgress(p.streak)}`}
                       {reviewed && ` · ${t.practiceReviewed(reviewed.confirmed, reviewed.overturned)}`}
                     </span>
+                    {p.source === "SPECIALIST" && (
+                      <UnpinButton learnerId={profile.id} wordId={p.wordId} word={p.word.text} lang={lang} />
+                    )}
                   </span>
                 );
               })}

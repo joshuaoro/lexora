@@ -208,6 +208,9 @@ export default function ExerciseSession({
    */
   const isProbe = type === "PSEUDO_PROBE";
   const isOral = type === "READ_ALOUD" || type === "PRACTICE" || isProbe;
+  /** A Practice run made only of words already seen today: all lessons, checked tomorrow. */
+  const allSeenToday = (list: ExerciseItem[]) =>
+    type === "PRACTICE" && list.length > 0 && list.every((i) => i.practice?.seenToday);
   const intro = t.intro[type];
 
   /**
@@ -245,8 +248,15 @@ export default function ExerciseSession({
     // inside the app, which fires no page event at all.
     const onHide = () => flushProgress(false);
     window.addEventListener("pagehide", onHide);
+    // The ref objects are taken here and read when the screen goes, so the
+    // cleanup sees whatever is scheduled at that moment.
+    const timer = modelTimer;
+    const gen = modelGen;
     return () => {
       window.removeEventListener("pagehide", onHide);
+      // A model still waiting to start would otherwise play on the next page.
+      if (timer.current) clearTimeout(timer.current);
+      gen.current++;
       stopSpeaking();
       flushProgress(false);
     };
@@ -392,8 +402,11 @@ export default function ExerciseSession({
     // now hears it without having to know to ask for it. Only for the spoken
     // activities: the receptive ones play the target word by themselves, and
     // two voices at once helps nobody. Practice's first model or prompt waits
-    // for it to finish.
-    const instruction = isOral ? speakUi(intro.how, lang, settings.ttsRate) : undefined;
+    // for it to finish. A Practice run of words already seen today is all
+    // lessons, and says so (spec 2026-10-16, §3) — "Play again" skips the intro
+    // screen that shows it, so it is spoken here too.
+    const how = allSeenToday(serverItems) ? `${intro.how} ${t.tomorrowAlone}` : intro.how;
+    const instruction = isOral ? speakUi(how, lang, settings.ttsRate) : undefined;
     beginItem(0, serverItems, instruction);
   }
 
@@ -618,7 +631,7 @@ export default function ExerciseSession({
         <h1 className="text-3xl font-extrabold text-ink">{intro.title}</h1>
         <p className="mt-3 text-lg text-ink-soft">{intro.blurb}</p>
         <p className="mt-2 text-sm font-semibold text-ink-muted">{intro.how}</p>
-        {type === "PRACTICE" && items.length > 0 && items.every((i) => i.practice?.seenToday) && (
+        {allSeenToday(items) && (
           <p className="mt-3 rounded-xl bg-primary-soft px-4 py-2.5 text-sm font-bold text-primary">
             {t.tomorrowAlone}
           </p>
@@ -627,7 +640,7 @@ export default function ExerciseSession({
             decode text. This reads them out. */}
         <div className="mt-5 flex justify-center">
           <SpeakButton
-            text={`${intro.blurb} ${intro.how}`}
+            text={allSeenToday(items) ? `${intro.blurb} ${intro.how} ${t.tomorrowAlone}` : `${intro.blurb} ${intro.how}`}
             lang={lang}
             rate={settings.ttsRate}
             label={t.listen}
@@ -713,6 +726,14 @@ export default function ExerciseSession({
         {leveledUp && (
           <p className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-green-soft px-4 py-3 font-bold text-green">
             <PartyPopper size={20} /> {t.levelUp}
+          </p>
+        )}
+        {/* "Play again" goes straight to the words, past the intro screen
+            that would say this; the next run is read from the refreshed list. */}
+        {allSeenToday(serverItems) && (
+          <p className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-primary-soft px-4 py-2.5 text-sm font-bold text-primary">
+            {t.tomorrowAlone}
+            <SpeakButton text={t.tomorrowAlone} lang={lang} rate={settings.ttsRate} size="sm" />
           </p>
         )}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -832,8 +853,21 @@ export default function ExerciseSession({
                       ? t.listening
                       : micState === "processing" || posting
                         ? t.checking
-                        : t.pressMic}
+                        : modelPlaying
+                          ? t.modelSpeaking
+                          : t.pressMic}
                   </p>
+                  {/* A lesson can be heard again before the child reads; a
+                      check is read alone, so it has no replay. */}
+                  {type === "PRACTICE" && item.practice?.mode === "lesson" && (
+                    <button
+                      onClick={() => void playModel(item, "lesson")}
+                      disabled={micState !== "idle" || posting}
+                      className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink shadow-sm transition hover:bg-cream disabled:opacity-60"
+                    >
+                      <Volume2 size={16} /> {t.hearItAgain}
+                    </button>
+                  )}
                   {micState === "listening" && (
                     <p className="text-xs font-semibold text-ink-muted">{t.tapWhenDone}</p>
                   )}

@@ -9,7 +9,7 @@
 import { chromium } from "playwright-core";
 import {
   BASE, api, passwordFor, check, section, report, one, query,
-  createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND, AUDIO_PROBE,
+  createTestLearner, deleteTestLearner, endSuite, standInSounds, STAND_IN_SOUND, AUDIO_PROBE, until,
 } from "./helpers.mjs";
 
 console.log(`UI audit against ${BASE}`);
@@ -291,6 +291,33 @@ section("[1c] Read aloud teaches after the reading");
   );
   await r.close();
 }
+{
+  // The model starts 700 ms after the verdict. A child who leaves in that gap
+  // must not hear it on the next page.
+  const r = await ctx.newPage();
+  watch(r, "learner:read-aloud-leave");
+  await r.addInitScript(AUDIO_PROBE);
+  await r.goto(`${BASE}/exercises/read-aloud`, { waitUntil: "networkidle" });
+  await r.locator("button:has-text('Start!')").click();
+  const skip = r.locator("button:has-text('Skip this word')").first();
+  await skip.waitFor({ timeout: 30000 });
+  await skip.click();
+  await r.locator("button", { hasText: "Hear it again" }).first().waitFor({ timeout: 30000 });
+  // The sidebar link asks first (LeaveGuard); the child confirms at once.
+  await r.locator("a[href='/dashboard']").first().click();
+  const leaving = await r.evaluate(() => performance.now());
+  await r.getByRole("button", { name: "Leave", exact: true }).click();
+  await r.waitForURL("**/dashboard", { timeout: 15000, waitUntil: "commit" });
+  await new Promise((ok) => setTimeout(ok, 3000));
+  // A model that began while the exercise was still open is cut as it closes;
+  // one that plays on uncut started after it had gone.
+  const strays = await r.evaluate(
+    (t) => window.__audio.filter((e) => e.start > t && e.cut === null && e.src.includes("text=This word is")).length,
+    leaving
+  );
+  check("a model due as the child leaves does not play on the next page", strays === 0, `${strays} played`);
+  await r.close();
+}
 
 section("[1d] Practice teaches first, then checks on a later day");
 {
@@ -319,6 +346,16 @@ section("[1d] Practice teaches first, then checks on a later day");
     .then(() => true)
     .catch(() => false);
   check("a word new to Practice is a lesson, labelled “Listen first”", lessonLabel);
+  // While the mic waits for LEXORA, the line under it says so, not "Press the mic".
+  check(
+    "while LEXORA speaks first, the status says to listen",
+    await lessonPage
+      .getByText("Listen to LEXORA first")
+      .first()
+      .waitFor({ timeout: 5000 })
+      .then(() => true)
+      .catch(() => false)
+  );
   // Final review, 16 October: the first lesson's model cut the spoken
   // instruction 350 ms in, on every Practice run.
   const order = await lessonPage
@@ -338,6 +375,60 @@ section("[1d] Practice teaches first, then checks on a later day");
     order?.how != null && order.how.cut === null && order.how.end !== null && order.how.end <= order.leadStart,
     JSON.stringify(order)
   );
+
+  // A lesson can be heard again before the child reads.
+  await lessonPage
+    .getByRole("button", { name: "Press and read the word aloud" })
+    .and(lessonPage.locator(":enabled"))
+    .waitFor({ timeout: 20000 })
+    .catch(() => {});
+  const leads = () => lessonPage.evaluate(() => window.__audio.filter((e) => e.src.includes("text=This word is")).length);
+  const leadsBefore = await leads();
+  const replay = lessonPage.getByRole("button", { name: "Hear it again" });
+  const canReplay = (await replay.count()) > 0;
+  if (canReplay) await replay.first().click();
+  const replayed = canReplay
+    ? await lessonPage
+        .waitForFunction((n) => window.__audio.filter((e) => e.src.includes("text=This word is")).length > n, leadsBefore, {
+          timeout: 15000,
+        })
+        .then(() => true)
+        .catch(() => false)
+    : false;
+  check("a lesson card plays the model again on request", replayed, canReplay ? "" : "no replay button");
+
+  // Finish the run. Every word on the list has now been seen today, so the
+  // next run is all lessons: the end screen says so, and "Play again" says it.
+  for (let n = 0; n < 12; n++) {
+    if ((await lessonPage.getByRole("button", { name: /Play again/ }).count()) > 0) break;
+    const skipWord = lessonPage.getByRole("button", { name: "Skip this word" });
+    await skipWord.and(lessonPage.locator(":enabled")).waitFor({ timeout: 30000 });
+    await skipWord.click();
+    await lessonPage.getByRole("button", { name: /Next word|Finish/ }).first().waitFor({ timeout: 30000 });
+    await lessonPage.getByRole("button", { name: /Next word|Finish/ }).first().click();
+    await lessonPage
+      .getByRole("button", { name: /Skip this word|Play again/ })
+      .first()
+      .waitFor({ timeout: 30000 });
+  }
+  const tomorrow = "Tomorrow you'll try these on your own!";
+  check(
+    "after a run, the end screen says tomorrow's words will be read alone",
+    await lessonPage
+      .getByText(tomorrow)
+      .first()
+      .waitFor({ timeout: 15000 })
+      .then(() => true)
+      .catch(() => false)
+  );
+  await lessonPage.getByRole("button", { name: /Play again/ }).click();
+  check(
+    "and “Play again” says it aloud with the instruction",
+    await lessonPage
+      .waitForFunction((s) => window.__audio.some((e) => e.src.includes(s)), tomorrow, { timeout: 15000 })
+      .then(() => true)
+      .catch(() => false)
+  );
   await lessonPage.close();
 
   // A day passes for every word on the list: each is now a check.
@@ -355,11 +446,19 @@ section("[1d] Practice teaches first, then checks on a later day");
   check("a word taught on an earlier day is a check, labelled “You first”", checkLabel);
   await checkPage.close();
 
+  // One correct check on the first word: the list must show one of two, not
+  // merely a progress row (which "0 of 2" would also satisfy).
+  await api("/api/attempts", {
+    cookie: learner.cookie,
+    method: "POST",
+    body: { activityType: "PRACTICE", wordId: pWords[0].id, target: pWords[0].text, browserTranscript: pWords[0].text, responseMs: 1500 },
+  });
   const listPage = await ctx.newPage();
   await listPage.goto(`${BASE}/practice`, { waitUntil: "networkidle" });
   check(
-    "the practice list shows progress toward reading each word alone",
-    (await listPage.locator("[aria-label*='read on your own']").count()) >= 1
+    "the practice list shows a correct check as one of two",
+    (await listPage.locator("[aria-label='1 of 2 read on your own']").count()) === 1,
+    `${await listPage.locator("[aria-label='1 of 2 read on your own']").count()} at 1 of 2`
   );
   await listPage.close();
 }
@@ -502,6 +601,47 @@ check(
   "the learner page lists practice readings in their own panel",
   (await sp.locator("text=Practice readings").count()) === 1
 );
+
+// The panel lists the readings themselves: the correct check §1d recorded for
+// the test learner appears with its word and its mode.
+const checked = await one(
+  `SELECT target FROM "Attempt" WHERE "learnerId" = $1 AND "practiceMode" = 'check' ORDER BY "createdAt" DESC LIMIT 1`,
+  [learner.learnerId]
+);
+await sp.goto(`${BASE}/specialist/learner/${learner.learnerId}`, { waitUntil: "networkidle" });
+// Newest first, so the word's first row is that check. Its own row is read,
+// not the panel: the panel's explanation also contains the word "check".
+const checkRow = sp
+  .locator("section", { has: sp.getByRole("heading", { name: "Practice readings" }) })
+  .locator("li", { hasText: checked?.target ?? "—" })
+  .first();
+const checkRowText = (await checkRow.count()) ? await checkRow.innerText() : "";
+check(
+  "the panel lists a practice check with its word and mode",
+  checked !== null && /\bcheck\b/.test(checkRowText),
+  checked ? `row: ${checkRowText.replace(/\s+/g, " ")}` : "no check recorded"
+);
+
+// A word the specialist pinned can be unpinned from the same page.
+const toPin = await one(
+  `SELECT id, text FROM "Word" WHERE level = 1 AND NOT "isPseudo"
+     AND id NOT IN (SELECT "wordId" FROM "PracticeItem" WHERE "learnerId" = $1)
+   ORDER BY text LIMIT 1`,
+  [learner.learnerId]
+);
+await sp.request.post(`${BASE}/api/learners/${learner.learnerId}/practice`, { data: { wordId: toPin.id } });
+await sp.reload({ waitUntil: "networkidle" });
+const unpin = sp.getByRole("button", { name: `Unpin ${toPin.text}` });
+const canUnpin = (await unpin.count()) > 0;
+if (canUnpin) await unpin.click();
+const gone = canUnpin
+  ? await until(
+      async () =>
+        !(await one(`SELECT 1 FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, toPin.id])),
+      { timeout: 15000 }
+    )
+  : null;
+check("a pinned word can be unpinned from the learner page", gone === true, canUnpin ? "" : "no unpin control");
 
 await sp.goto(`${BASE}/specialist/words`, { waitUntil: "networkidle" });
 check("word bank shows accepted spellings", (await sp.locator("text=Accepted spellings").count()) === 1);

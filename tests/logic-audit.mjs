@@ -292,6 +292,45 @@ await json(`/api/learners/${learner.learnerId}/practice`, { cookie: specialist, 
 const pinned = await one(`SELECT source FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, pinWord.id]);
 check("specialist can pin a practice word", pinned?.source === "SPECIALIST");
 
+// Unpinning. Only a word the specialist pinned can come off: the generated
+// words are what the specialist verifies for Objective 3, so they stay.
+const unpinAs = (cookie, wordId) =>
+  json(`/api/learners/${learner.learnerId}/practice`, { cookie, method: "DELETE", body: { wordId } });
+const rowOf = (wordId) =>
+  one(`SELECT source, "missCount" FROM "PracticeItem" WHERE "learnerId" = $1 AND "wordId" = $2`, [learner.learnerId, wordId]);
+check("a learner cannot unpin a word", (await unpinAs(learner.cookie, pinWord.id)).status === 401);
+const autoTry = await unpinAs(specialist, second.wordId);
+check(
+  "a generated word cannot be unpinned",
+  autoTry.status === 409 && (await rowOf(second.wordId))?.source === "AUTO",
+  `HTTP ${autoTry.status}`
+);
+// Review focus 3, literally: the word is unpinned while the child's run still
+// holds it, and the run's next reading of it is saved with no mode.
+await practiceRead({ wordId: pinWord.id, text: pinWord.text }, pinWord.text);
+const unpinned = await unpinAs(specialist, pinWord.id);
+check(
+  "a specialist can unpin a word they pinned",
+  unpinned.status === 200 && !(await rowOf(pinWord.id)),
+  `HTTP ${unpinned.status}`
+);
+const late = await practiceRead({ wordId: pinWord.id, text: pinWord.text }, pinWord.text);
+check(
+  "a reading of a word unpinned mid-run is saved, with no mode",
+  late.status === 200 && (await lastMode()) === null && late.body.practice === null,
+  `HTTP ${late.status}`
+);
+// A generated word the specialist pinned keeps its misses: unpinned, it goes
+// back to the generated list rather than off it.
+await json(`/api/learners/${learner.learnerId}/practice`, { cookie: specialist, method: "POST", body: { wordId: second.wordId } });
+await unpinAs(specialist, second.wordId);
+const restored = await rowOf(second.wordId);
+check(
+  "a generated word that was pinned returns to the generated list when unpinned",
+  restored?.source === "AUTO" && restored.missCount === 1,
+  JSON.stringify(restored)
+);
+
 /* ── 5. agreement metric ───────────────────────────────────────────────── */
 section("[5] scoring reliability review");
 const attempt = await one(`SELECT id FROM "Attempt" WHERE "learnerId" = $1 ORDER BY "createdAt" DESC LIMIT 1`, [learner.learnerId]);

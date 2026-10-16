@@ -41,6 +41,7 @@ import {
   cleanupTestAccounts,
   until,
   AUDIO_PROBE,
+  browserApi,
 } from "./helpers.mjs";
 
 console.log(`Reporting audit against ${BASE}`);
@@ -513,13 +514,30 @@ async function main() {
                2500, 'server', true, 'data:audio/webm;base64,AAAA', NOW())`,
       [rid, id]
     );
+    // A Practice re-read belongs to the Practice panel, not this one, which
+    // pairs Read aloud re-reads with the reading they followed.
+    await query(
+      `INSERT INTO "Attempt"
+         (id, "learnerId", "activityType", target, transcript, score, correct,
+          "responseMs", engine, "isRetry", "practiceMode", "createdAt")
+       VALUES ($1, $2, 'PRACTICE', 'zzpractised', 'zzpractised', 1, true,
+               2500, 'server', true, 'lesson', NOW())`,
+      [cuid("att"), id]
+    );
 
     const spage2 = await (await contextWithCookie(specCookie)).newPage();
     await spage2.goto(`${BASE}/specialist/learner/${id}`, { waitUntil: "networkidle" });
     const panel2 = await panelText(spage2, "Re-reads after hearing the word");
+    const practicePanel = await panelText(spage2, "Practice readings");
 
     check("the re-reads panel is shown", panel2.length > 0, "section present");
     check("the re-read word is listed", panel2.includes("zzcorrected"), "");
+    check("a Practice re-read is not listed among the Read aloud re-reads", !panel2.includes("zzpractised"), "");
+    check(
+      "it is listed under Practice readings, as a re-read",
+      /zzpractised[\s\S]*re-read/.test(practicePanel),
+      practicePanel.slice(0, 120).replace(/\s+/g, " ")
+    );
     check(
       "the re-read has a play control",
       (await spage2.getByRole("button", { name: /Play the re-read of zzcorrected/i }).count()) > 0,
@@ -640,21 +658,25 @@ async function main() {
     const anon = await api(`/api/attempt-audio/${withClip}`);
     check("and only by a specialist", anon.status === 403, `HTTP ${anon.status}`);
 
-    const missing = await api(`/api/attempt-audio/${cuid("att")}`, { cookie: specCookie });
+    const missingPath = `/api/attempt-audio/${cuid("att")}`;
+    let missing = await api(missingPath, { cookie: specCookie });
+    let route = "node";
     if (missing.headers.get("x-vercel-mitigated")) {
-      // Vercel's bot protection answered, not the app: on 16 October this came
-      // back as a 403 HTML challenge page, twice, after the suite's burst of
-      // requests, while the same request alone gave 404. The app cannot be
-      // judged through a challenge, so it is skipped, as the integrity suite
-      // does for the speech budget.
-      check(
-        "a missing recording is a 404 — skipped, the host challenged the traffic",
-        true,
-        "run against localhost, or again later, to exercise it"
-      );
-    } else {
-      check("a missing recording is a 404", missing.status === 404, `HTTP ${missing.status}`);
+      // Vercel's bot protection answered, not the app — a 403 HTML challenge
+      // page after the suite's burst of requests. A browser is not challenged
+      // (see browserApi), so the same request is made from one.
+      const bctx = await contextWithCookie(specCookie);
+      const bpage = await bctx.newPage();
+      await bpage.goto(`${BASE}/specialist`, { waitUntil: "domcontentloaded" });
+      missing = await browserApi(bpage, missingPath);
+      route = "browser, after node was challenged";
+      await bctx.close();
     }
+    check(
+      "a missing recording is a 404",
+      missing.status === 404,
+      `HTTP ${missing.status} via ${route}${missing.headers.get("x-vercel-mitigated") ? " — challenged" : ""}`
+    );
   }
 
   await deleteTestLearner(rl.email);

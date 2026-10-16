@@ -36,6 +36,7 @@ import {
   deleteTestLearner,
   cleanupTestAccounts,
   until,
+  browserApi,
 } from "./helpers.mjs";
 
 console.log(`Session-integrity audit against ${BASE}`);
@@ -465,57 +466,58 @@ async function main() {
   //
   // Hammering one endpoint is also what a bot looks like, and the host says so:
   // Vercel answers 403 with x-vercel-mitigated=challenge partway through a run
-  // like this. Those responses say nothing about the app, and reading them as
-  // failures sent me chasing a bug that was not there — so they are detected
-  // and reported as a skip rather than counted.
+  // like this. Those responses say nothing about the app. They used to be
+  // reported as a skip; a browser is not challenged (see browserApi), so once
+  // node is, the rest of the requests are made from a signed-in page instead.
   const budgeted = await createTestLearner("quota");
-  const challenged = (res) => res.headers.get("x-vercel-mitigated") === "challenge";
-  const askAs = (text) =>
-    api(`/api/speech?lang=fil&text=${encodeURIComponent(text)}`, { cookie: budgeted.cookie });
+  const challenged = (res) => Boolean(res.headers.get("x-vercel-mitigated"));
+  const budgetPage = await pageFor(budgeted.cookie);
+  await budgetPage.page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded" });
+  let viaBrowser = false;
+  const askAs = async (text) => {
+    const path = `/api/speech?lang=fil&text=${encodeURIComponent(text)}`;
+    if (!viaBrowser) {
+      const res = await api(path, { cookie: budgeted.cookie });
+      if (!challenged(res)) return res;
+      viaBrowser = true;
+    }
+    return browserApi(budgetPage.page, path);
+  };
 
   let replays = 0;
-  let blocked = false;
-  for (let i = 0; i < 25 && !blocked; i++) {
+  let stillChallenged = 0;
+  for (let i = 0; i < 25; i++) {
     const res = await askAs(FIL);
-    if (challenged(res)) blocked = true;
+    if (challenged(res)) stillChallenged++;
     else if (res.ok) replays++;
   }
+  check(
+    "replaying a cached line is never rationed",
+    replays === 25,
+    `${replays}/25 served${viaBrowser ? ", from a browser after node was challenged" : ""}${stillChallenged ? `, ${stillChallenged} challenged even there` : ""}`
+  );
 
-  if (blocked) {
-    check(
-      "speech budget skipped — the host challenged the traffic",
-      true,
-      "run `npm run audit:integrity` against localhost to exercise it"
-    );
-  } else {
-    check("replaying a cached line is never rationed", replays === 25, `${replays}/25 served`);
-
-    const stamp = Date.now();
-    let minted = 0;
-    let refused = 0;
-    for (let i = 0; i < 26 && !blocked; i++) {
-      const res = await askAs(`Pagsubok bilang ${stamp}-${i}.`);
-      if (challenged(res)) blocked = true;
-      else if (res.status === 200) minted++;
-      else if (res.status === 429) refused++;
-    }
-
-    if (blocked) {
-      check("speech budget partially skipped — challenged mid-run", true, `${minted} minted first`);
-    } else {
-      check(
-        "minting new phrases is capped",
-        refused > 0 && minted <= 20,
-        `${minted} synthesized, ${refused} refused`
-      );
-      check(
-        "and a cached line still plays after the cap is hit",
-        (await askAs(FIL)).ok,
-        "the ordinary path is unaffected"
-      );
-    }
-    await query(`DELETE FROM "SpeechClip" WHERE text LIKE $1`, [`Pagsubok bilang ${stamp}%`]);
+  const stamp = Date.now();
+  let minted = 0;
+  let refused = 0;
+  for (let i = 0; i < 26; i++) {
+    const res = await askAs(`Pagsubok bilang ${stamp}-${i}.`);
+    if (challenged(res)) stillChallenged++;
+    else if (res.status === 200) minted++;
+    else if (res.status === 429) refused++;
   }
+  check(
+    "minting new phrases is capped",
+    refused > 0 && minted <= 20,
+    `${minted} synthesized, ${refused} refused${stillChallenged ? `, ${stillChallenged} challenged` : ""}`
+  );
+  check(
+    "and a cached line still plays after the cap is hit",
+    (await askAs(FIL)).ok,
+    "the ordinary path is unaffected"
+  );
+  await query(`DELETE FROM "SpeechClip" WHERE text LIKE $1`, [`Pagsubok bilang ${stamp}%`]);
+  await budgetPage.ctx.close();
 
   await deleteTestLearner(budgeted.email);
 

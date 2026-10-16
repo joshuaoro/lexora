@@ -232,6 +232,7 @@ const en = {
     checkFirst: "Try it on your own first!",
     checkProgress: (n: number) => `✓ ${n} of 2 read on your own`,
     tomorrowAlone: "Tomorrow you'll try these on your own!",
+    modelSpeaking: "Listen to LEXORA first…",
     nowYouTry: "Your turn!",
     tryItNow: "Say it",
     retryGood: "That's it! Well done.",
@@ -314,6 +315,8 @@ const en = {
     practiceCheck: "check",
     practiceReread: "re-read",
     practiceProgress: (n: number) => `✓ ${n} of 2 checks`,
+    unpinAria: (w: string) => `Unpin ${w}`,
+    unpinFailed: "Could not unpin — try again.",
     difficultyLevel: "Difficulty level",
     levelOption: (l: number) => `Level ${l}`,
     levelStage: (level: number, stage: number) => `Level ${level} · Marungko stage ${stage}`,
@@ -405,10 +408,10 @@ const en = {
     // recorded as an observation on a review. These follow the app saying the word.
     rereadTitle: "Re-reads after hearing the word",
     rereadSub:
-      "A missed word, then the same word read again after the child heard it said. Compare the two takes. This is not self-correction — the child had just been told the answer — so these re-reads are kept out of accuracy and the reliability check, and nothing here affects the reported figures.",
+      "A word missed in Read aloud, then the same word read again after the child heard it said. Compare the two takes. This is not self-correction — the child had just been told the answer — so these re-reads are kept out of accuracy and the reliability check, and nothing here affects the reported figures. A Practice re-read is listed under Practice readings.",
     rereadChip: (n: number, total: number) => `right on the re-read (${n} of ${total})`,
     rereadEmpty:
-      "Nothing yet. A pair appears here each time the learner misses a word in a read-aloud activity and takes the “Your turn!” that follows.",
+      "Nothing yet. A pair appears here each time the learner misses a word in Read aloud and takes the “Your turn!” that follows.",
     rereadFirst: "First try",
     rereadAfter: "After hearing it",
     rereadNothing: "nothing heard",
@@ -1111,6 +1114,7 @@ const fil: Dict = {
     checkFirst: "Subukan mo muna!",
     checkProgress: (n) => `✓ ${n} sa 2 nang mag-isa`,
     tomorrowAlone: "Bukas, susubukan mo na itong mag-isa!",
+    modelSpeaking: "Pakinggan muna si LEXORA…",
     nowYouTry: "Ikaw naman!",
     tryItNow: "Basahin mo",
     retryGood: "Ayan! Magaling ka.",
@@ -1178,6 +1182,8 @@ const fil: Dict = {
     practiceCheck: "pagsusuri",
     practiceReread: "muling basa",
     practiceProgress: (n) => `✓ ${n} sa 2 pagsusuri`,
+    unpinAria: (w) => `Alisin ang pin sa ${w}`,
+    unpinFailed: "Hindi naalis — subukan ulit.",
     difficultyLevel: "Antas ng hirap",
     levelOption: (l) => `Level ${l}`,
     levelStage: (level, stage) => `Level ${level} · Marungko stage ${stage}`,
@@ -1262,7 +1268,7 @@ const fil: Dict = {
 
     rereadTitle: "Muling pagbasa matapos marinig ang salita",
     rereadSub:
-      "Isang salitang namali, at ang muling pagbasa nito matapos marinig ng bata ang tamang bigkas. Paghambingin ang dalawa. Hindi ito kusang pagtatama — narinig na ng bata ang sagot — kaya hindi ito kasama sa accuracy at sa pagsusuri ng scoring, at walang epekto ito sa mga iniuulat na bilang.",
+      "Isang salitang namali sa Basahin nang malakas, at ang muling pagbasa nito matapos marinig ng bata ang tamang bigkas. Paghambingin ang dalawa. Hindi ito kusang pagtatama — narinig na ng bata ang sagot — kaya hindi ito kasama sa accuracy at sa pagsusuri ng scoring, at walang epekto ito sa mga iniuulat na bilang. Ang muling pagbasa sa praktis ay nasa Mga pagbasa sa praktis.",
     rereadChip: (n, total) => `tama sa muling pagbasa (${n} sa ${total})`,
     rereadEmpty:
       "Wala pa. Lilitaw rito ang isang pares tuwing mamamali ang mag-aaral sa isang salita sa Basahin nang malakas at gagawin ang kasunod na “Ikaw naman!”.",

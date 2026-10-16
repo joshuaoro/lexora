@@ -65,8 +65,16 @@ function phrasesFor(lang: Lang): string[] {
     d.session.modelConfirm,
     d.session.modelYourTurn,
     d.session.checkFirst,
-    d.session.learnedIt
+    d.session.learnedIt,
+    d.session.tomorrowAlone
   );
+  // A Practice run of words already seen today says so with its instruction,
+  // on the intro button and on Start (and "Play again").
+  const practice = d.session.intro.PRACTICE;
+  if (practice) {
+    out.push(`${practice.blurb} ${practice.how} ${d.session.tomorrowAlone}`);
+    out.push(`${practice.how} ${d.session.tomorrowAlone}`);
+  }
 
   return [...new Set(out.map((s) => s.trim()).filter(Boolean))];
 }

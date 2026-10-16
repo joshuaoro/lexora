@@ -107,6 +107,42 @@ export async function api(path, { cookie, method = "GET", body, headers } = {}) 
   }
 }
 
+/**
+ * The same request as api(), sent from inside a browser page that is on BASE
+ * and signed in as the account to act as.
+ *
+ * Vercel's bot protection answers a burst of scripted requests with a 403
+ * challenge (x-vercel-mitigated: challenge). Probed on 16 October: node's fetch
+ * was challenged after 20 requests, while a headless browser on the same
+ * session, before and after, never was. So a check that is challenged, or that
+ * has to make many requests, repeats them this way rather than skipping. The
+ * body is not returned: these checks read the status and the headers.
+ */
+export async function browserApi(page, path, { method = "GET", body, headers } = {}) {
+  const r = await page.evaluate(
+    async ({ path, method, body, headers }) => {
+      // no-store: a reply from the browser's own cache would say nothing
+      // about what the server does with the request.
+      const res = await fetch(path, {
+        method,
+        cache: "no-store",
+        headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const h = {};
+      res.headers.forEach((v, k) => (h[k] = v));
+      await res.arrayBuffer();
+      return { status: res.status, headers: h };
+    },
+    { path, method, body, headers }
+  );
+  return {
+    status: r.status,
+    ok: r.status >= 200 && r.status < 300,
+    headers: { get: (name) => r.headers[name.toLowerCase()] ?? null },
+  };
+}
+
 export async function json(path, opts) {
   const res = await api(path, opts);
   return { status: res.status, body: await res.json().catch(() => ({})) };
